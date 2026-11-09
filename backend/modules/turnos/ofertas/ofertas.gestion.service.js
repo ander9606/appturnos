@@ -481,12 +481,14 @@ module.exports = {
     const oferta = await OfertasModel.obtenerPorId(empresaId, id);
     if (!oferta) throw new AppError('Oferta no encontrada', 404);
     if (oferta.estado === 'cancelada') return;
-    if (oferta.estado === 'completada') {
-      throw new AppError('No se puede marcar como fallida una oferta completada', 409);
-    }
+    // Una oferta 'completada' sí puede darse por fallida: al marcar salida el
+    // último trabajador el sistema la completa solo (CostoLaborService), y
+    // aun así el gestor puede necesitar compensar por fuerza mayor.
 
     const activas = await AsignacionesModel.listarActivasConTarifa(empresaId, id);
-    const enProgreso = activas.filter((a) => a.estado === 'en_progreso');
+    // 'completado' también compensa: quien ya cerró su turno (marcó salida)
+    // antes de que el gestor diera la oferta por fallida no debe quedar fuera.
+    const enProgreso = activas.filter((a) => a.estado === 'en_progreso' || a.estado === 'completado');
     const motivoFinal = (motivo || '').trim() || 'Fuerza mayor';
 
     const overrides = new Map((compensaciones || []).map((c) => [Number(c.asignacion_id), Number(c.monto)]));
@@ -523,7 +525,7 @@ module.exports = {
       });
     }));
 
-    const otros = activas.filter((a) => a.estado !== 'en_progreso');
+    const otros = activas.filter((a) => a.estado !== 'en_progreso' && a.estado !== 'completado');
     const destinatariosOtros = otros.map((a) => a.usuario_id).filter(Boolean);
     if (destinatariosOtros.length) {
       await NotificacionesService.notificarVarios(destinatariosOtros, {

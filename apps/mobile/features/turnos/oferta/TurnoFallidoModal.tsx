@@ -26,7 +26,7 @@ export function TurnoFallidoModal({
   onClose: () => void;
   onDone: () => void;
 }) {
-  const enProgreso = oferta.asignaciones.filter((a) => a.estado === 'en_progreso');
+  const enProgreso = oferta.asignaciones.filter((a) => a.estado === 'en_progreso' || a.estado === 'completado');
   const otros = oferta.asignaciones.filter((a) =>
     a.estado !== 'en_progreso' && a.estado !== 'completado' && a.estado !== 'cancelado'
   );

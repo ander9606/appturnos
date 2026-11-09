@@ -98,11 +98,18 @@ describe('OfertasService.marcarFallida', () => {
     expect(NotificacionesService.notificar).not.toHaveBeenCalledWith(expect.objectContaining({ usuarioId: 30 }));
   });
 
-  test('rechaza marcar fallida una oferta ya completada', async () => {
+  test('permite marcar fallida una oferta ya completada (se completa sola al marcar salida)', async () => {
     OfertasModel.obtenerPorId.mockResolvedValue({ ...OFERTA, estado: 'completada' });
+    AsignacionesModel.listarActivasConTarifa.mockResolvedValue([
+      { id: 100, estado: 'completado', trabajador_id: 1, usuario_id: 10, trabajador_nombre: 'Ana', trabajador_apellido: 'Ruiz', tarifa_dia: '120000' },
+    ]);
+    OfertasModel.marcarFallida.mockResolvedValue([100]);
 
-    await expect(OfertasService.marcarFallida(7, 999, 1)).rejects.toMatchObject({ statusCode: 409 });
-    expect(OfertasModel.marcarFallida).not.toHaveBeenCalled();
+    await OfertasService.marcarFallida(7, 999, 1, { compensaciones: [{ asignacion_id: 100, monto: 50000 }] });
+
+    expect(OfertasModel.marcarFallida).toHaveBeenCalledWith(
+      7, 1, [{ asignacionId: 100, monto: 50000 }], 'Fuerza mayor', 999
+    );
   });
 
   test('no hace nada si la oferta ya estaba cancelada', async () => {
@@ -112,5 +119,21 @@ describe('OfertasService.marcarFallida', () => {
 
     expect(OfertasModel.marcarFallida).not.toHaveBeenCalled();
     expect(NotificacionesService.notificar).not.toHaveBeenCalled();
+  });
+});
+
+describe('OfertasService.marcarFallida — quien ya marcó salida', () => {
+  test('también se compensa a quien ya quedó completado', async () => {
+    OfertasModel.obtenerPorId.mockResolvedValue(OFERTA);
+    AsignacionesModel.listarActivasConTarifa.mockResolvedValue([
+      { id: 100, estado: 'completado', trabajador_id: 1, usuario_id: 10, trabajador_nombre: 'Ana', trabajador_apellido: 'Ruiz', tarifa_dia: '120000' },
+    ]);
+    OfertasModel.marcarFallida.mockResolvedValue([100]);
+
+    await OfertasService.marcarFallida(7, 999, 1);
+
+    expect(OfertasModel.marcarFallida).toHaveBeenCalledWith(
+      7, 1, [{ asignacionId: 100, monto: 120000 }], 'Fuerza mayor', 999
+    );
   });
 });

@@ -145,7 +145,7 @@ module.exports = {
        JOIN trabajadores t ON t.id = a.trabajador_id
        JOIN oferta_puestos p ON p.id = a.puesto_id
        WHERE a.empresa_id = ? AND a.oferta_id = ?
-         AND a.estado NOT IN ('completado', 'cancelado')`,
+         AND a.estado != 'cancelado'`,
       [empresaId, ofertaId]
     );
     return filas;

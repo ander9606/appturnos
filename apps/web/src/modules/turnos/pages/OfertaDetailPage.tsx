@@ -140,6 +140,9 @@ export function OfertaDetailPage() {
   const { data: enProgresoData } = useAsignaciones({ oferta_id: ofertaId, estado: 'en_progreso' });
   const enProgreso: Asignacion[] = enProgresoData?.data?.data ?? [];
   const hayEnProgreso = enProgreso.length > 0;
+  // Quien ya marcó salida también se compensa si el gestor da el turno por fallido.
+  const { data: cerradasData } = useAsignaciones({ oferta_id: ofertaId, estado: 'completado' });
+  const compensables: Asignacion[] = [...enProgreso, ...(cerradasData?.data?.data ?? [])];
   const [showFallidoModal, setShowFallidoModal] = useState(false);
 
   const eliminarPuesto = useEliminarPuesto();
@@ -579,7 +582,7 @@ export function OfertaDetailPage() {
               >
                 <CheckCircle2 size={14} /> {completar.isPending ? 'Marcando...' : 'Marcar completada'}
               </button>
-              {hayEnProgreso && (
+              {compensables.length > 0 && (
                 <button
                   onClick={() => setShowFallidoModal(true)}
                   className="flex items-center gap-1.5 border border-border hover:bg-muted text-sm font-medium px-3 py-1.5 rounded-lg transition-colors text-foreground"
@@ -604,6 +607,20 @@ export function OfertaDetailPage() {
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* La oferta se completa sola al marcar salida el último trabajador: aun así
+          se puede dar por fallida (fuerza mayor) y fijar la compensación. */}
+      {puedeGestionar && oferta.estado === 'completada' && compensables.length > 0 && (
+        <div className="sticky bottom-0 -mx-6 px-6 py-3 mt-4 border-t border-border bg-background flex items-center gap-3">
+          <button
+            onClick={() => setShowFallidoModal(true)}
+            className="flex items-center gap-1.5 border border-border hover:bg-muted text-sm font-medium px-3 py-1.5 rounded-lg transition-colors text-foreground"
+            title="Cancelar por fuerza mayor, compensando a quien ya trabajó"
+          >
+            <AlertTriangle size={14} /> Turno fallido
+          </button>
         </div>
       )}
 
@@ -655,7 +672,7 @@ export function OfertaDetailPage() {
       {showFallidoModal && oferta && (
         <TurnoFallidoModal
           oferta={oferta}
-          enProgreso={enProgreso}
+          enProgreso={compensables}
           puestos={puestos}
           marcarFallida={marcarFallida}
           onClose={() => setShowFallidoModal(false)}
