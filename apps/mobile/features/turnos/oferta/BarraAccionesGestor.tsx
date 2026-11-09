@@ -34,10 +34,10 @@ export function BarraAccionesGestor({ oferta, puedeGestionar, puedeCancelarOfert
     && oferta.estado !== 'completada' && oferta.estado !== 'cancelada' && oferta.estado !== 'borrador';
   const mostrarCancelarOferta = puedeCancelarOferta
     && oferta.estado !== 'cancelada' && oferta.estado !== 'completada';
-  const hayEnProgreso = oferta.asignaciones.some((a) => a.estado === 'en_progreso');
-  // Turno fallido solo tiene sentido si hay alguien ya marcó ingreso para
-  // compensar — sin eso es exactamente "Cancelar oferta".
-  const mostrarTurnoFallido = mostrarCancelarOferta && hayEnProgreso;
+  // Turno fallido solo tiene sentido si hay alguien que ya marcó ingreso (en
+  // curso o ya con salida) para compensar — sin eso es "Cancelar oferta".
+  const hayCompensables = oferta.asignaciones.some((a) => a.estado === 'en_progreso' || a.estado === 'completado');
+  const mostrarTurnoFallido = mostrarCancelarOferta && hayCompensables;
 
   async function ejecutarCompletar(capearHoras: boolean) {
     try {

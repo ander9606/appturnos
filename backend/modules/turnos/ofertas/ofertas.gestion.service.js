@@ -486,7 +486,9 @@ module.exports = {
     }
 
     const activas = await AsignacionesModel.listarActivasConTarifa(empresaId, id);
-    const enProgreso = activas.filter((a) => a.estado === 'en_progreso');
+    // 'completado' también compensa: quien ya cerró su turno (marcó salida)
+    // antes de que el gestor diera la oferta por fallida no debe quedar fuera.
+    const enProgreso = activas.filter((a) => a.estado === 'en_progreso' || a.estado === 'completado');
     const motivoFinal = (motivo || '').trim() || 'Fuerza mayor';
 
     const overrides = new Map((compensaciones || []).map((c) => [Number(c.asignacion_id), Number(c.monto)]));
@@ -523,7 +525,7 @@ module.exports = {
       });
     }));
 
-    const otros = activas.filter((a) => a.estado !== 'en_progreso');
+    const otros = activas.filter((a) => a.estado !== 'en_progreso' && a.estado !== 'completado');
     const destinatariosOtros = otros.map((a) => a.usuario_id).filter(Boolean);
     if (destinatariosOtros.length) {
       await NotificacionesService.notificarVarios(destinatariosOtros, {

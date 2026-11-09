@@ -114,3 +114,19 @@ describe('OfertasService.marcarFallida', () => {
     expect(NotificacionesService.notificar).not.toHaveBeenCalled();
   });
 });
+
+describe('OfertasService.marcarFallida — quien ya marcó salida', () => {
+  test('también se compensa a quien ya quedó completado', async () => {
+    OfertasModel.obtenerPorId.mockResolvedValue(OFERTA);
+    AsignacionesModel.listarActivasConTarifa.mockResolvedValue([
+      { id: 100, estado: 'completado', trabajador_id: 1, usuario_id: 10, trabajador_nombre: 'Ana', trabajador_apellido: 'Ruiz', tarifa_dia: '120000' },
+    ]);
+    OfertasModel.marcarFallida.mockResolvedValue([100]);
+
+    await OfertasService.marcarFallida(7, 999, 1);
+
+    expect(OfertasModel.marcarFallida).toHaveBeenCalledWith(
+      7, 1, [{ asignacionId: 100, monto: 120000 }], 'Fuerza mayor', 999
+    );
+  });
+});
