@@ -610,6 +610,20 @@ export function OfertaDetailPage() {
         </div>
       )}
 
+      {/* La oferta se completa sola al marcar salida el último trabajador: aun así
+          se puede dar por fallida (fuerza mayor) y fijar la compensación. */}
+      {puedeGestionar && oferta.estado === 'completada' && compensables.length > 0 && (
+        <div className="sticky bottom-0 -mx-6 px-6 py-3 mt-4 border-t border-border bg-background flex items-center gap-3">
+          <button
+            onClick={() => setShowFallidoModal(true)}
+            className="flex items-center gap-1.5 border border-border hover:bg-muted text-sm font-medium px-3 py-1.5 rounded-lg transition-colors text-foreground"
+            title="Cancelar por fuerza mayor, compensando a quien ya trabajó"
+          >
+            <AlertTriangle size={14} /> Turno fallido
+          </button>
+        </div>
+      )}
+
       {showPuestoForm && (
         <PuestoFormModal
           ofertaId={ofertaId}
