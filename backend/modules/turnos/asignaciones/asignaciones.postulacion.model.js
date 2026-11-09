@@ -398,6 +398,38 @@ module.exports = {
   },
 
   /**
+   * El trabajador AUTORIZA la propuesta de compensación: recién ahora el turno pasa a 'fallido' y su pago
+   * pasa a ser la compensación propuesta + el bono ya otorgado (el pago extra deja de contar). Conserva las
+   * horas y la salida reales. Atómico: solo actúa si sigue 'completado' con la propuesta pendiente.
+   * @returns {Promise<boolean>} true si esta llamada la aplicó.
+   */
+  async autorizarCompensacion(empresaId, id) {
+    const ahora = ahoraColombiaSQL();
+    const [res] = await pool.query(
+      `UPDATE asignaciones_turno
+       SET estado = 'fallido', pago_extra = 0, pago_total = compensacion_propuesta + bono_monto,
+           fallido_por = compensacion_propuesta_por, fallido_at = ?,
+           compensacion_decision = 'autorizada', compensacion_decision_at = ?
+       WHERE id = ? AND empresa_id = ? AND estado = 'completado' AND compensacion_decision = 'pendiente'`,
+      [ahora, ahora, id, empresaId]
+    );
+    return res.affectedRows > 0;
+  },
+
+  /**
+   * El trabajador NO autoriza: el turno sigue 'completado' y se le paga según su contrato.
+   * @returns {Promise<boolean>} true si esta llamada la registró.
+   */
+  async rechazarCompensacion(empresaId, id) {
+    const [res] = await pool.query(
+      `UPDATE asignaciones_turno SET compensacion_decision = 'rechazada', compensacion_decision_at = ?
+       WHERE id = ? AND empresa_id = ? AND estado = 'completado' AND compensacion_decision = 'pendiente'`,
+      [ahoraColombiaSQL(), id, empresaId]
+    );
+    return res.affectedRows > 0;
+  },
+
+  /**
    * El trabajador da por enterado un turno fallido. Idempotente: si ya lo aceptó conserva
    * la primera fecha (WHERE fallido_aceptado_at IS NULL). Solo sobre asignaciones 'fallido'.
    * @returns {Promise<boolean>} true si esta llamada fue la que lo aceptó.

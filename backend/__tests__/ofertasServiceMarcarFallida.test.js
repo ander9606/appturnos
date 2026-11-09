@@ -256,3 +256,83 @@ describe('OfertasService.marcarFallida — reporte de costo a logiq360', () => {
     expect(CostoLaborService.verificarYEmitir).toHaveBeenCalledWith(7, 1, { correccion: false });
   });
 });
+
+describe('OfertasService.marcarFallida — bajarle el pago a quien ya trabajó necesita su autorización', () => {
+  const trabajo = (extra = {}) => ({
+    id: 100, estado: 'completado', trabajador_id: 1, usuario_id: 10, trabajador_nombre: 'Ana', trabajador_apellido: 'Ruiz',
+    tarifa_dia: '120000', pago_total: '135000', bono_monto: '0', ...extra,
+  });
+
+  beforeEach(() => {
+    OfertasModel.obtenerPorId.mockResolvedValue({ ...OFERTA, estado: 'completada' });
+    OfertasModel.marcarFallida.mockResolvedValue([]);
+  });
+
+  test('si la compensación le baja el pago: queda como propuesta, no se aplica ni se toca su contrato', async () => {
+    AsignacionesModel.listarActivasConTarifa.mockResolvedValue([trabajo()]);
+
+    await OfertasService.marcarFallida(7, 999, 1); // por defecto: tarifa $120.000 < pago $135.000
+
+    expect(OfertasModel.marcarFallida).toHaveBeenCalledWith(7, 1, [], 'Fuerza mayor', 999, [{ asignacionId: 100, monto: 120000 }]);
+    expect(ContratosModel.resetearFirma).not.toHaveBeenCalled();
+    expect(CuentasCobroService.actualizarPorTurnoFirmado).not.toHaveBeenCalled();
+  });
+
+  test('al trabajador se le avisa que debe autorizar, con el pago actual y el propuesto; no el aviso de fallido', async () => {
+    AsignacionesModel.listarActivasConTarifa.mockResolvedValue([trabajo()]);
+
+    await OfertasService.marcarFallida(7, 999, 1);
+
+    expect(NotificacionesService.notificar).toHaveBeenCalledTimes(1);
+    expect(NotificacionesService.notificar).toHaveBeenCalledWith(expect.objectContaining({
+      usuarioId: 10,
+      tipo: 'asignacion.compensacion_propuesta',
+      mensaje: expect.stringMatching(/\$135\.000 a \$120\.000.*hasta que lo autorices/),
+    }));
+  });
+
+  test('el bono ya otorgado cuenta: compensación + bono contra lo que ya tiene', async () => {
+    // pago $135.000 (incluye bono $20.000); compensación $120.000 + bono $20.000 = $140.000 → no baja el pago.
+    AsignacionesModel.listarActivasConTarifa.mockResolvedValue([trabajo({ bono_monto: '20000' })]);
+    OfertasModel.marcarFallida.mockResolvedValue([100]);
+
+    await OfertasService.marcarFallida(7, 999, 1);
+
+    expect(OfertasModel.marcarFallida).toHaveBeenCalledWith(7, 1, [{ asignacionId: 100, monto: 120000 }], 'Fuerza mayor', 999);
+  });
+
+  test('si la compensación es igual o mayor que su pago: se aplica de una vez, sin autorización', async () => {
+    AsignacionesModel.listarActivasConTarifa.mockResolvedValue([trabajo({ pago_total: '120000' })]);
+    OfertasModel.marcarFallida.mockResolvedValue([100]);
+
+    await OfertasService.marcarFallida(7, 999, 1);
+
+    expect(OfertasModel.marcarFallida).toHaveBeenCalledWith(7, 1, [{ asignacionId: 100, monto: 120000 }], 'Fuerza mayor', 999);
+    expect(NotificacionesService.notificar).toHaveBeenCalledWith(expect.objectContaining({ tipo: 'asignacion.fallido' }));
+    expect(ContratosModel.obtenerPorAsignacion).toHaveBeenCalled();
+  });
+
+  test('quien sigue en curso nunca necesita autorización (aún no tiene pago por horas)', async () => {
+    AsignacionesModel.listarActivasConTarifa.mockResolvedValue([trabajo({ estado: 'en_progreso', pago_total: '999999' })]);
+    OfertasModel.marcarFallida.mockResolvedValue([100]);
+
+    await OfertasService.marcarFallida(7, 999, 1);
+
+    expect(OfertasModel.marcarFallida).toHaveBeenCalledWith(7, 1, [{ asignacionId: 100, monto: 120000 }], 'Fuerza mayor', 999);
+  });
+
+  test('mezcla: uno que baja (propuesta) y uno que no (inmediato) en la misma oferta', async () => {
+    AsignacionesModel.listarActivasConTarifa.mockResolvedValue([
+      trabajo(),
+      trabajo({ id: 101, usuario_id: 11, trabajador_id: 2, estado: 'en_progreso', pago_total: null }),
+    ]);
+    OfertasModel.marcarFallida.mockResolvedValue([101]);
+
+    await OfertasService.marcarFallida(7, 999, 1);
+
+    expect(OfertasModel.marcarFallida).toHaveBeenCalledWith(
+      7, 1, [{ asignacionId: 101, monto: 120000 }], 'Fuerza mayor', 999, [{ asignacionId: 100, monto: 120000 }]
+    );
+  });
+});
+

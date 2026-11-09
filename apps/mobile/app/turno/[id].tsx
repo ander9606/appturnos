@@ -29,7 +29,7 @@ import { useTheme }            from '@/lib/theme';
 import { useAuthStore }        from '@/features/auth/useAuthStore';
 import { useNovedades }        from '@/features/novedades/useNovedades';
 import { ReportarNovedadModal } from '@/features/novedades/ReportarNovedadModal';
-import { useAsignacion, useMarcarIngreso, useMarcarEgreso, useCalificar, useReconfirmarAsignacion, useCancelarPropiaAsignacion, useAceptarFallido } from '@/features/turnos/useTurnos';
+import { useAsignacion, useMarcarIngreso, useMarcarEgreso, useCalificar, useReconfirmarAsignacion, useCancelarPropiaAsignacion, useAceptarFallido, useDecidirCompensacion } from '@/features/turnos/useTurnos';
 import { confirm } from '@/lib/confirmDialog';
 import { useGeofence, type GeofenceTarget } from '@/features/turnos/useGeofence';
 import { useUbicacionLibre }   from '@/features/turnos/useUbicacionLibre';
@@ -53,6 +53,7 @@ import { DescuentosCard }       from '@/features/turnos/detalle/DescuentosCard';
 import { CorregirHorarioButton } from '@/features/turnos/detalle/CorregirHorarioButton';
 import { CorregirIngresoEgresoModal } from '@/features/turnos/detalle/CorregirIngresoEgresoModal';
 import { BonoModal }            from '@/features/turnos/detalle/BonoModal';
+import { CompensacionPropuestaCard } from '@/features/turnos/detalle/CompensacionPropuestaCard';
 import { DescuentoModal }       from '@/features/turnos/detalle/DescuentoModal';
 
 export default function TurnoDetailScreen() {
@@ -87,6 +88,7 @@ export default function TurnoDetailScreen() {
   const reconfirmarMutation = useReconfirmarAsignacion();
   const cancelarPropiaMutation = useCancelarPropiaAsignacion();
   const aceptarFallidoMutation = useAceptarFallido();
+  const decidirCompensacionMutation = useDecidirCompensacion();
 
   // ── Live timer: elapsed (en_progreso) + countdown (confirmado) ───────
   useEffect(() => {
@@ -361,6 +363,7 @@ export default function TurnoDetailScreen() {
 
   const { estado, oferta_titulo, oferta_descripcion, oferta_notas_adicionales, oferta_externo_notas,
           hora_ingreso_real, hora_egreso_real, pago_total, compensacion_motivo, fallido_aceptado_at,
+          compensacion_propuesta, compensacion_decision, bono_monto,
           calificacion, calificacion_comentario,
           trabajador_telefono, trabajador_ranking, trabajador_total_calificaciones } = asignacion;
 
@@ -435,6 +438,29 @@ export default function TurnoDetailScreen() {
                 guardando={calificarMutation.isPending}
               />
             </>
+          )}
+
+          {/* ── Propuesta de compensación: el gestor dio por fallido un turno que ya trabajaste y te bajaría el
+              pago. No se aplica sin tu autorización; mientras tanto (o si no la das) se paga según el contrato. ── */}
+          {estado === 'completado' && !soloLectura && compensacion_propuesta != null
+            && (compensacion_decision === 'pendiente' || compensacion_decision === 'rechazada') && (
+            <CompensacionPropuestaCard
+              decision={compensacion_decision}
+              pagoActual={Number(pago_total) || 0}
+              propuesta={Number(compensacion_propuesta) || 0}
+              bono={Number(bono_monto) || 0}
+              motivo={compensacion_motivo}
+              esGestor={isGestor}
+              pendiente={decidirCompensacionMutation.isPending}
+              onDecidir={async (autoriza) => {
+                try {
+                  await decidirCompensacionMutation.mutateAsync({ id: asignacion.id, autoriza });
+                  showToast(autoriza ? 'Autorizaste el cambio de pago.' : 'Listo, se te paga según tu contrato.');
+                } catch (err) {
+                  showAlert('Error', err instanceof ApiError ? err.message : 'No se pudo registrar tu decisión.');
+                }
+              }}
+            />
           )}
 
           {/* ── Fallido: resumen de la compensación ──────────────────── */}

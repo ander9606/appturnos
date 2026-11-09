@@ -285,6 +285,20 @@ export function useReconfirmarAsignacion() {
   });
 }
 
+/** El trabajador decide sobre la propuesta de bajarle el pago de un turno que ya trabajó (autoriza o no). */
+export function useDecidirCompensacion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, autoriza }: { id: number; autoriza: boolean }) =>
+      autoriza ? turnosApi.autorizarCompensacion(id) : turnosApi.rechazarCompensacion(id),
+    onSuccess: (_, { id }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(id) });
+      qc.invalidateQueries({ queryKey: ['asignaciones'] });
+    },
+  });
+}
+
 /** El trabajador da por enterado su turno fallido (fuerza mayor) y la compensación. */
 export function useAceptarFallido() {
   const qc = useQueryClient();

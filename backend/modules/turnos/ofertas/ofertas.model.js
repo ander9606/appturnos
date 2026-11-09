@@ -827,10 +827,23 @@ const OfertasModel = {
    * UPDATE, su fila ya no está 'en_progreso' y el WHERE no la toca; el
    * caller no debe notificarle una compensación que nunca se aplicó.
    */
-  async marcarFallida(empresaId, id, compensaciones, motivo, usuarioId) {
+  async marcarFallida(empresaId, id, compensaciones, motivo, usuarioId, propuestas = []) {
     return enTransaccion(async (conn) => {
       const ahora = ahoraColombiaSQL();
       const actualizados = [];
+
+      // `propuestas`: quien ya trabajó y quedaría con MENOS pago no se cambia solo — queda una propuesta que
+      // el trabajador autoriza o no (ver AsignacionesService.autorizarCompensacion). Su turno sigue 'completado'
+      // y su pago intacto mientras tanto; por eso estas filas no van en `actualizados`.
+      for (const { asignacionId, monto } of propuestas) {
+        await conn.query(
+          `UPDATE asignaciones_turno
+           SET compensacion_propuesta = ?, compensacion_propuesta_por = ?, compensacion_propuesta_at = ?,
+               compensacion_decision = 'pendiente', compensacion_decision_at = NULL, compensacion_motivo = ?
+           WHERE id = ? AND empresa_id = ? AND oferta_id = ? AND estado = 'completado'`,
+          [monto, usuarioId, ahora, motivo, asignacionId, empresaId, id]
+        );
+      }
 
       for (const { asignacionId, monto } of compensaciones) {
         const [res] = await conn.query(

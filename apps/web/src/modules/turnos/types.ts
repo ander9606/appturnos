@@ -201,6 +201,9 @@ export interface Asignacion {
   /** Solo presente cuando estado === 'fallido' — monto de la compensación y por qué. */
   pago_total?: number | null;
   compensacion_motivo?: string | null;
+  /** Propuesta de compensación sobre un turno ya trabajado que bajaría el pago: 'pendiente' espera la autorización del trabajador (mientras tanto se paga según contrato); 'rechazada' no la dio. */
+  compensacion_propuesta?: number | string | null;
+  compensacion_decision?: 'pendiente' | 'autorizada' | 'rechazada' | null;
 }
 
 /** Descuentos de un turno con el tope legal (art. 113 CST: 1/5 de la tarifa del día). */

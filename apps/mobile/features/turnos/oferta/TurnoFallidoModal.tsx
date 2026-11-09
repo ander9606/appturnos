@@ -74,15 +74,24 @@ export function TurnoFallidoModal({
     }
 
     // Paso de confirmación: acción definitiva, así que se muestra qué cambia para cada persona.
+    // Quien ya trabajó y quedaría con MENOS pago no se cambia solo: es una propuesta que el trabajador debe autorizar
+    // (mientras tanto se le paga según su contrato). Misma regla que OfertasService.marcarFallida.
+    const bajaElPago = (a: (typeof enProgreso)[number], i: number) =>
+      a.estado === 'completado' && a.pago_total != null
+      && compensaciones[i].monto + (Number(a.bono_monto) || 0) < Number(a.pago_total);
     const lineas = enProgreso.map((a, i) => {
       const nuevo = formatCOP(compensaciones[i].monto);
+      if (bajaElPago(a, i)) {
+        return `• ${nombreDe(a)}: propuesta de ${formatCOP(Number(a.pago_total))} a ${nuevo} (necesita su autorización; mientras tanto se le paga según su contrato)`;
+      }
       return a.estado === 'completado' && a.pago_total != null
         ? `• ${nombreDe(a)}: de ${formatCOP(Number(a.pago_total))} a ${nuevo}`
         : `• ${nombreDe(a)}: ${nuevo}`;
     });
+    const hayPropuestas = enProgreso.some((a, i) => bajaElPago(a, i));
     const ok = await confirm({
       title: 'Confirmar turno fallido',
-      message: `Se cancelará "${oferta.titulo}" y esto no se puede deshacer.\n\nCompensación:\n${lineas.join('\n')}\n\nQuien ya había terminado su turno pasa de su pago a esa compensación. Confirma que la tarea NO se realizó: si se realizó, debe pagarse según el contrato.`,
+      message: `Se cancelará "${oferta.titulo}" y esto no se puede deshacer.\n\nCompensación:\n${lineas.join('\n')}\n\n${hayPropuestas ? 'A quien ya trabajó y quedaría con menos pago no se le cambia solo: el trabajador debe autorizarlo. ' : 'Quien ya había terminado su turno pasa de su pago a esa compensación. '}Confirma que la tarea NO se realizó: si se realizó, debe pagarse según el contrato.`,
       cancelLabel: 'Volver',
       confirmLabel: 'Sí, dar por fallido',
       destructive: true,
