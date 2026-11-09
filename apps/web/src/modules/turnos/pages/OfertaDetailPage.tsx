@@ -1105,6 +1105,9 @@ function TurnoFallidoModal({
         El turno se cancelará por fuerza mayor. Quienes ya marcaron ingreso recibirán la compensación
         que definas abajo; el resto queda cancelado sin pago, como siempre.
       </p>
+      <p className="text-sm font-medium text-warning bg-warning-light rounded-lg px-3 py-2 mb-4">
+        Úsalo solo si la tarea no se realizó. Si la labor sí se realizó, se paga según el contrato: no la des por fallida.
+      </p>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {confirmando && (
           <div className="rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm flex flex-col gap-2">
@@ -1122,7 +1125,7 @@ function TurnoFallidoModal({
               ))}
             </ul>
             <p className="text-xs text-muted-foreground">
-              Quien ya había terminado su turno pasa de su pago a esa compensación.
+              Quien ya había terminado su turno pasa de su pago a esa compensación. Confirma que la tarea NO se realizó: si se realizó, debe pagarse según el contrato.
             </p>
           </div>
         )}

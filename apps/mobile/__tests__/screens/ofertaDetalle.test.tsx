@@ -267,6 +267,16 @@ describe('información principal', () => {
     expect(screen.queryByText(/nadie lo marcó como completado/)).toBeNull();
   });
 
+  test('el aviso de fuerza mayor (compensación / pago según contrato) lo ve el trabajador, no el gestor', () => {
+    mockRol = 'trabajador_turnos';
+    const { unmount } = montar();
+    expect(screen.getByText('Si la labor sí se realiza, se te paga según tu contrato.')).toBeTruthy();
+    unmount();
+    mockRol = 'admin_empresa';
+    montar();
+    expect(screen.queryByText('Si la labor sí se realiza, se te paga según tu contrato.')).toBeNull();
+  });
+
   test('la franja de color distingue un evento pasado', () => {
     const colorFranja = () => {
       const franja = screen.UNSAFE_getAllByType(View)

@@ -301,6 +301,8 @@ Un turno completado paga **la tarifa del día del puesto + el bono − los descu
 
 ### Turno fallido (fuerza mayor)
 
+- **Cuándo aplica:** solo si la tarea **no se realizó**. Si la labor sí se realizó, se paga **según el contrato**; no se da por fallida. El sistema no puede saber si la tarea se hizo: lo decide el gestor, y el modal se lo recuerda antes de confirmar.
+- **Aviso al trabajador:** antes de postularse, en el detalle de la oferta, se le explica que si por fuerza mayor el turno se cancela y la tarea no se realiza, recibe una compensación (mínimo la mitad de la tarifa de su puesto), y que si la labor sí se realiza se le paga según su contrato.
 - `admin_empresa` o `jefe_turnos` pueden cancelar una oferta completa por fuerza mayor (corte de luz, emergencia, etc.) cuando ya hay alguien marcado como ingresado.
 - Quien ya marcó ingreso (en curso) queda **fallido** en vez de cancelado, y recibe una **compensación** por su tiempo: por default, la tarifa completa de su puesto; el gestor puede digitar otro monto para esa persona puntual. Quien aún no había llegado queda cancelado, sin pago, como con cualquier otra cancelación.
 - **Mínimo:** la compensación de cada persona no puede ser menor a la **mitad de la tarifa del puesto** (si la tarifa es $120.000, el mínimo es $60.000). El gestor puede subirla, no bajarla de ahí. Antes de confirmar, la app muestra a cada persona su pago anterior y la compensación nueva, y avisa que no se puede deshacer.

@@ -82,7 +82,7 @@ export function TurnoFallidoModal({
     });
     const ok = await confirm({
       title: 'Confirmar turno fallido',
-      message: `Se cancelará "${oferta.titulo}" y esto no se puede deshacer.\n\nCompensación:\n${lineas.join('\n')}\n\nQuien ya había terminado su turno pasa de su pago a esa compensación.`,
+      message: `Se cancelará "${oferta.titulo}" y esto no se puede deshacer.\n\nCompensación:\n${lineas.join('\n')}\n\nQuien ya había terminado su turno pasa de su pago a esa compensación. Confirma que la tarea NO se realizó: si se realizó, debe pagarse según el contrato.`,
       cancelLabel: 'Volver',
       confirmLabel: 'Sí, dar por fallido',
       destructive: true,
@@ -117,6 +117,11 @@ export function TurnoFallidoModal({
             El turno se cancelará por fuerza mayor. Quienes ya marcaron ingreso recibirán la compensación
             que definas abajo; el resto queda cancelado sin pago, como siempre.
           </Text>
+          <View className="bg-warning-light rounded-xl px-4 py-3">
+            <Text className="text-sm font-medium text-warning">
+              Úsalo solo si la tarea no se realizó. Si la labor sí se realizó, se paga según el contrato: no la des por fallida.
+            </Text>
+          </View>
 
           <View className="gap-1.5">
             <Text className="text-sm font-semibold text-foreground">Motivo</Text>

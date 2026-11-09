@@ -48,6 +48,13 @@ beforeEach(() => {
 });
 
 describe('TurnoFallidoModal', () => {
+  test('advierte que solo se use si la tarea no se realizó (si se realizó, se paga según contrato)', async () => {
+    montar();
+    expect(screen.getByText(/Úsalo solo si la tarea no se realizó/)).toBeTruthy();
+    await confirmar();
+    expect(mockConfirm.mock.calls[0][0].message).toContain('la tarea NO se realizó');
+  });
+
   test('muestra el mínimo (la mitad de la tarifa) bajo cada compensación', () => {
     montar();
     expect(screen.getAllByText(/Mínimo .*60\.000.*mitad de la tarifa/)).toHaveLength(2);
