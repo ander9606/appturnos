@@ -839,6 +839,7 @@ const OfertasModel = {
         await conn.query(
           `UPDATE asignaciones_turno
            SET compensacion_propuesta = ?, compensacion_propuesta_por = ?, compensacion_propuesta_at = ?,
+               compensacion_pago_anterior = pago_total,
                compensacion_decision = 'pendiente', compensacion_decision_at = NULL, compensacion_motivo = ?
            WHERE id = ? AND empresa_id = ? AND oferta_id = ? AND estado = 'completado'`,
           [monto, usuarioId, ahora, motivo, asignacionId, empresaId, id]

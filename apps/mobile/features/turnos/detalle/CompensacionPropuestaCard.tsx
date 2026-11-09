@@ -2,7 +2,6 @@ import React from 'react';
 import { View } from 'react-native';
 import { Text } from '@/components/ui/Text';
 import { Button } from '@/components/ui/Button';
-import { confirm } from '@/lib/confirmDialog';
 import { formatCOP } from '@/lib/formatters';
 import { COLORS } from '@/lib/designTokens';
 
@@ -28,18 +27,6 @@ export function CompensacionPropuestaCard({
 }) {
   const nuevoPago = propuesta + bono;
   const motivoTxt = (motivo || 'fuerza mayor').toLowerCase();
-
-  async function autorizar() {
-    // Paso explícito: es el consentimiento del trabajador a que le bajen el pago.
-    const ok = await confirm({
-      title: 'Autorizar el cambio de pago',
-      message: `Tu pago por este turno pasará de ${formatCOP(pagoActual)} a ${formatCOP(nuevoPago)} (compensación por ${motivoTxt}). ¿Autorizas el cambio?`,
-      cancelLabel: 'Volver',
-      confirmLabel: 'Sí, autorizo',
-      destructive: true,
-    });
-    if (ok) await onDecidir(true);
-  }
 
   return (
     <View
@@ -73,9 +60,15 @@ export function CompensacionPropuestaCard({
             <Button label="No autorizo" variant="secondary" fullWidth disabled={pendiente} onPress={() => onDecidir(false)} />
           </View>
           <View className="flex-1">
-            <Button label="Autorizo" fullWidth loading={pendiente} onPress={autorizar} />
+            <Button label="Autorizo" fullWidth loading={pendiente} onPress={() => onDecidir(true)} />
           </View>
         </View>
+      )}
+      {/* Autorización de un toque: el consentimiento va escrito junto al botón, con el antes y el después. */}
+      {decision === 'pendiente' && !esGestor && (
+        <Text className="text-xs text-muted-foreground">
+          Al tocar «Autorizo» aceptas que tu pago por este turno pase de {formatCOP(pagoActual)} a {formatCOP(nuevoPago)}.
+        </Text>
       )}
     </View>
   );

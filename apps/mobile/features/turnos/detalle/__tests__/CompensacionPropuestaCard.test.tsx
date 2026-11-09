@@ -2,51 +2,43 @@ import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { CompensacionPropuestaCard } from '../CompensacionPropuestaCard';
 
-// Bajarle el pago a quien ya trabajó necesita SU autorización: la tarjeta pide el sí explícito (con el antes y el
-// después) y deja claro que sin él se le paga según su contrato.
-const mockConfirm = jest.fn();
-jest.mock('@/lib/confirmDialog', () => ({ confirm: (...a: unknown[]) => mockConfirm(...a) }));
+// Bajarle el pago a quien ya trabajó necesita SU autorización, de un toque: el consentimiento va escrito junto al
+// botón (con el antes y el después) y la tarjeta deja claro qué pasa si no responde o no autoriza.
 
 const onDecidir = jest.fn();
 const base = { pagoActual: 135000, propuesta: 120000, bono: 0, motivo: 'Fuerza mayor', pendiente: false, onDecidir };
 
-beforeEach(() => { jest.clearAllMocks(); mockConfirm.mockResolvedValue(true); });
+beforeEach(() => { jest.clearAllMocks(); });
 
 describe('CompensacionPropuestaCard — trabajador', () => {
   test('pendiente: explica el cambio, que no se aplica sin su autorización y que si no, se paga según contrato', () => {
     render(<CompensacionPropuestaCard {...base} decision="pendiente" esGestor={false} />);
     expect(screen.getByText('Necesitamos tu autorización')).toBeTruthy();
-    expect(screen.getByText(/de \$135\.000 a \$120\.000/)).toBeTruthy();
+    expect(screen.getByText(/Se propone cambiar tu pago de \$135\.000 a \$120\.000/)).toBeTruthy();
     expect(screen.getByText(/Mientras no respondas, este turno queda en espera: no se suma a tu pago hasta que decidas. Si no lo autorizas, se te paga según tu contrato/)).toBeTruthy();
   });
 
-  test('«Autorizo» pide confirmar con el antes y el después y recién ahí decide que sí', async () => {
+  test('«Autorizo» autoriza con UN toque, sin diálogo extra', async () => {
     render(<CompensacionPropuestaCard {...base} decision="pendiente" esGestor={false} />);
     await act(async () => { fireEvent.press(screen.getByText('Autorizo')); });
-    expect(mockConfirm).toHaveBeenCalledWith(expect.objectContaining({
-      title: 'Autorizar el cambio de pago',
-      message: expect.stringMatching(/pasará de \$135\.000 a \$120\.000/),
-    }));
+    expect(onDecidir).toHaveBeenCalledTimes(1);
     expect(onDecidir).toHaveBeenCalledWith(true);
   });
 
-  test('si en la confirmación vuelve atrás, no se decide nada', async () => {
-    mockConfirm.mockResolvedValue(false);
-    render(<CompensacionPropuestaCard {...base} decision="pendiente" esGestor={false} />);
-    await act(async () => { fireEvent.press(screen.getByText('Autorizo')); });
-    expect(onDecidir).not.toHaveBeenCalled();
+  test('el consentimiento está escrito junto al botón, con el antes y el después', () => {
+    render(<CompensacionPropuestaCard {...base} bono={10000} decision="pendiente" esGestor={false} />);
+    expect(screen.getByText('Al tocar «Autorizo» aceptas que tu pago por este turno pase de $135.000 a $130.000.')).toBeTruthy();
   });
 
-  test('«No autorizo» decide que no, sin diálogo', async () => {
+  test('«No autorizo» decide que no', async () => {
     render(<CompensacionPropuestaCard {...base} decision="pendiente" esGestor={false} />);
     await act(async () => { fireEvent.press(screen.getByText('No autorizo')); });
-    expect(mockConfirm).not.toHaveBeenCalled();
     expect(onDecidir).toHaveBeenCalledWith(false);
   });
 
   test('el bono ya otorgado se suma al pago propuesto', () => {
     render(<CompensacionPropuestaCard {...base} bono={10000} decision="pendiente" esGestor={false} />);
-    expect(screen.getByText(/de \$135\.000 a \$130\.000/)).toBeTruthy();
+    expect(screen.getByText(/Se propone cambiar tu pago de \$135\.000 a \$130\.000/)).toBeTruthy();
   });
 
   test('rechazada: sin botones, se le paga según su contrato', () => {

@@ -2,6 +2,7 @@
 
 const { pool } = require('../../config/database');
 const { descifrar } = require('../../utils/firmaCrypto');
+const { CLAUSULA_FUERZA_MAYOR_ACTIVA } = require('../../config/constants');
 
 /** Acceso a datos de contratos diarios (tabla contratos_diarios). */
 const ContratosModel = {
@@ -15,7 +16,7 @@ const ContratosModel = {
     const [res] = await ejecutor.query(
       `INSERT INTO contratos_diarios
          (empresa_id, tipo_contrato, asignacion_id, numero_contrato, fecha, descripcion_labor, valor_dia, salario_minimo_validado, firmado_trabajador, clausula_fuerza_mayor)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 1)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
        ON DUPLICATE KEY UPDATE
          tipo_contrato = VALUES(tipo_contrato),
          fecha = VALUES(fecha),
@@ -31,6 +32,8 @@ const ContratosModel = {
         datos.descripcionLabor,
         datos.valorDia,
         datos.salarioMinimoValidado ? 1 : 0,
+        // Solo lleva la cláusula de fuerza mayor si el interruptor está encendido al crearlo (ver constants.js).
+        CLAUSULA_FUERZA_MAYOR_ACTIVA ? 1 : 0,
       ]
     );
     // Si insertId es 0, significa que fue un update (contrato ya existía)
