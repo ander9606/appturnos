@@ -376,7 +376,7 @@ export function OfertaDetailPage() {
           ) : asignaciones.length === 0 ? (
             <EmptyState title="Sin asignaciones" />
           ) : (
-            <div className="bg-card border border-border rounded-xl overflow-auto flex-1">
+            <div className="bg-card border border-border rounded-xl overflow-auto max-h-[600px]">
               <table className="text-sm min-w-[1100px] w-full">
                 <colgroup>
                   <col style={{ width: '200px' }} /> {/* Trabajador */}
