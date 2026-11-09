@@ -377,7 +377,16 @@ export function OfertaDetailPage() {
             <EmptyState title="Sin asignaciones" />
           ) : (
             <div className="bg-card border border-border rounded-xl overflow-auto flex-1">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm table-fixed">
+                <colgroup>
+                  <col className="w-44" /> {/* Trabajador */}
+                  <col className="w-36" /> {/* Puesto */}
+                  <col className="w-48" /> {/* Estado */}
+                  <col className="w-24" /> {/* Ingreso */}
+                  <col className="w-24" /> {/* Egreso */}
+                  <col className="w-16" /> {/* Cal. */}
+                  <col className="w-auto" /> {/* Acciones */}
+                </colgroup>
                 <thead className="sticky top-0 bg-card z-10">
                   <tr className="bg-muted text-muted-foreground text-xs uppercase border-b border-border">
                     <th className="text-left px-4 py-3 font-medium">Trabajador</th>
@@ -392,26 +401,28 @@ export function OfertaDetailPage() {
                 <tbody>
                   {asignaciones.map(a => (
                     <tr key={a.id} className="border-t border-border/60 hover:bg-muted transition-colors">
-                      <td className="px-4 py-3 font-medium text-foreground">
+                      <td className="px-4 py-3 font-medium text-foreground truncate" title={`${a.trabajador_nombre} ${a.trabajador_apellido}`}>
                         {a.trabajador_nombre} {a.trabajador_apellido}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{a.cargo_nombre}</td>
+                      <td className="px-4 py-3 text-muted-foreground truncate" title={a.cargo_nombre}>{a.cargo_nombre}</td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_ASIG_BADGE[a.estado]}`}>
-                          {ESTADO_ASIG_LABEL[a.estado]}
-                        </span>
-                        {a.estado === 'completado' && a.compensacion_decision === 'pendiente' && (
-                          <span className="block text-[11px] font-medium text-warning mt-1" title="Se propuso cambiar su pago por fuerza mayor; solo se aplica si el trabajador lo autoriza. Mientras no responda, el turno queda en espera: no suma ni resta.">
-                            Pendiente de autorización del trabajador
+                        <div className="flex flex-col gap-1">
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap w-fit ${ESTADO_ASIG_BADGE[a.estado]}`}>
+                            {ESTADO_ASIG_LABEL[a.estado]}
                           </span>
-                        )}
-                        {a.estado === 'completado' && a.compensacion_decision === 'rechazada' && (
-                          <span className="block text-[11px] font-medium text-muted-foreground mt-1" title="El trabajador no autorizó el cambio de pago: se le paga según su contrato.">
-                            No autorizó el cambio de pago
-                          </span>
-                        )}
+                          {a.estado === 'completado' && a.compensacion_decision === 'pendiente' && (
+                            <span className="text-[11px] font-medium text-warning leading-tight" title="Se propuso cambiar su pago por fuerza mayor; solo se aplica si el trabajador lo autoriza. Mientras no responda, el turno queda en espera: no suma ni resta.">
+                              Pend. autorización
+                            </span>
+                          )}
+                          {a.estado === 'completado' && a.compensacion_decision === 'rechazada' && (
+                            <span className="text-[11px] font-medium text-muted-foreground leading-tight" title="El trabajador no autorizó el cambio de pago: se le paga según su contrato.">
+                              No autorizó cambio
+                            </span>
+                          )}
+                        </div>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                         <span className="inline-flex items-center gap-1.5">
                           {a.hora_ingreso_real ?? '—'}
                           {a.sospechoso === 1 && (
@@ -421,8 +432,8 @@ export function OfertaDetailPage() {
                           )}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{a.hora_egreso_real ?? '—'}</td>
-                      <td className="px-4 py-3 text-center text-muted-foreground">
+                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{a.hora_egreso_real ?? '—'}</td>
+                      <td className="px-4 py-3 text-center text-muted-foreground whitespace-nowrap">
                         {a.calificacion != null ? (
                           <span className="text-warning font-medium">{a.calificacion}★</span>
                         ) : '—'}
