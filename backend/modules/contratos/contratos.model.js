@@ -14,8 +14,8 @@ const ContratosModel = {
     const numeroContrato = `CT-${datos.anio}-${datos.asignacionId}`;
     const [res] = await ejecutor.query(
       `INSERT INTO contratos_diarios
-         (empresa_id, tipo_contrato, asignacion_id, numero_contrato, fecha, descripcion_labor, valor_dia, salario_minimo_validado, firmado_trabajador)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+         (empresa_id, tipo_contrato, asignacion_id, numero_contrato, fecha, descripcion_labor, valor_dia, salario_minimo_validado, firmado_trabajador, clausula_fuerza_mayor)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 1)
        ON DUPLICATE KEY UPDATE
          tipo_contrato = VALUES(tipo_contrato),
          fecha = VALUES(fecha),
@@ -56,7 +56,7 @@ const ContratosModel = {
     const [filas] = await pool.query(
       `SELECT c.id, c.empresa_id, c.asignacion_id, c.numero_contrato, c.fecha,
               c.descripcion_labor, c.valor_dia, c.firmado_trabajador, c.firmado_at,
-              c.firma_b64, c.pdf_url, c.created_at,
+              c.firma_b64, c.pdf_url, c.created_at, c.clausula_fuerza_mayor,
               a.trabajador_id, a.estado AS asignacion_estado,
               a.bono_monto, a.bono_motivo,
               t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
@@ -110,7 +110,7 @@ const ContratosModel = {
     const [filas] = await pool.query(
       `SELECT c.id, c.empresa_id, c.asignacion_id, c.numero_contrato, c.fecha,
               c.descripcion_labor, c.valor_dia, c.firmado_trabajador, c.firmado_at,
-              c.firma_b64, c.pdf_url, c.created_at,
+              c.firma_b64, c.pdf_url, c.created_at, c.clausula_fuerza_mayor,
               a.trabajador_id, a.estado AS asignacion_estado,
               a.bono_monto, a.bono_motivo,
               t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,

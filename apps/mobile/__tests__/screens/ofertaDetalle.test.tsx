@@ -270,11 +270,11 @@ describe('información principal', () => {
   test('el aviso de fuerza mayor (compensación / pago según contrato) lo ve el trabajador, no el gestor', () => {
     mockRol = 'trabajador_turnos';
     const { unmount } = montar();
-    expect(screen.getByText('Si la labor sí se realiza, se te paga según tu contrato.')).toBeTruthy();
+    expect(screen.getByText('Si el turno se cancela por fuerza mayor')).toBeTruthy();
     unmount();
     mockRol = 'admin_empresa';
     montar();
-    expect(screen.queryByText('Si la labor sí se realiza, se te paga según tu contrato.')).toBeNull();
+    expect(screen.queryByText('Si el turno se cancela por fuerza mayor')).toBeNull();
   });
 
   test('la franja de color distingue un evento pasado', () => {
