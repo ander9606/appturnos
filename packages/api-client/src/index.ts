@@ -79,6 +79,7 @@ export { gruposTurnoApi, esAvisoCierre } from './grupos-turno';
 export type {
   GrupoTurno,
   GrupoTurnoDetalle,
+  CostosGrupo,
   TurnoDeGrupo,
   EstadoGrupo,
   FaseGrupo,

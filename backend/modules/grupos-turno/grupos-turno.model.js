@@ -84,6 +84,29 @@ const GruposTurnoModel = {
     return filas.map((f) => ({ ...f, plazas: Number(f.plazas), plazas_cubiertas: Number(f.plazas_cubiertas), fallidos: Number(f.fallidos) }));
   },
 
+  /**
+   * Asignaciones de los turnos del grupo que cuentan para el costo (confirmadas, en curso, completadas y fallidas), con
+   * lo necesario para valorarlas: pago, bono, horas, tarifa del puesto, si el contrato está firmado, si una compensación
+   * propuesta espera la respuesta del trabajador y los descuentos que ya aceptó. Un turno cancelado solo aporta sus fallidos (compensación): no se comprometen plazas en él.
+   */
+  async asignacionesParaCostos(empresaId, id) {
+    const [filas] = await pool.query(
+      `SELECT a.id, a.estado, a.trabajador_id, a.pago_total, a.bono_monto, a.horas_trabajadas, a.compensacion_decision, p.tarifa_dia,
+              COALESCE(cd.firmado_trabajador, 0) AS firmado,
+              COALESCE((SELECT SUM(d.monto) FROM descuentos_turno d
+                         WHERE d.asignacion_id = a.id AND d.estado = 'aceptado'), 0) AS descuento
+         FROM asignaciones_turno a
+         JOIN ofertas_turno o ON o.id = a.oferta_id
+         JOIN oferta_puestos p ON p.id = a.puesto_id
+         LEFT JOIN contratos_diarios cd ON cd.asignacion_id = a.id
+        WHERE o.grupo_id = ? AND o.empresa_id = ? AND a.empresa_id = ?
+          AND (a.estado IN ('completado', 'fallido')
+               OR (a.estado IN ('confirmado', 'en_progreso') AND o.estado <> 'cancelada'))`,
+      [id, empresaId, empresaId]
+    );
+    return filas;
+  },
+
   async crear(empresaId, datos, creadoPor) {
     const [res] = await pool.query(
       `INSERT INTO grupos_turno (empresa_id, nombre, descripcion, lugar, lugar_alias, latitud, longitud, creado_por)

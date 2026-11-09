@@ -74,6 +74,23 @@ export interface ActualizarGrupoPayload {
   longitud?: number | null;
 }
 
+/**
+ * Costos de un grupo (evento). Mismas reglas que la liquidación, para poder compararlo con el «saldo a pagar»:
+ * `real` es lo listo para pagar (turnos terminados con contrato firmado, más los fallidos, ya sin descuentos aceptados);
+ * lo terminado sin firmar va aparte (`sin_firmar`, su pago queda frenado hasta que firmen); `en_espera` son turnos con una
+ * compensación propuesta sin respuesta (no suman ni restan); `estimado` es lo que falta por hacer, a la tarifa de cada
+ * puesto; y `proyectado` = real + sin firmar + estimado.
+ */
+export interface CostosGrupo {
+  real: { total: number; tarifas: number; bonos: number; descuentos: number; turnos_pagados: number };
+  sin_firmar: { cantidad: number; monto: number };
+  en_espera: { cantidad: number };
+  estimado: { total: number; turnos: number };
+  proyectado: number;
+  trabajadores: number;
+  horas: number;
+}
+
 export const gruposTurnoApi = {
   /** Por defecto solo los activos. Los cerrados se piden con `estado: 'cerrado'` (o todos con 'todos'). */
   listar(estado: EstadoGrupo | 'todos' = 'activo'): Promise<GrupoTurno[]> {
@@ -83,6 +100,11 @@ export const gruposTurnoApi = {
   /** Resumen del grupo y sus turnos ordenados por fecha. */
   obtener(id: number): Promise<GrupoTurnoDetalle> {
     return api.get<GrupoTurnoDetalle>(`/api/grupos-turno/${id}`);
+  },
+
+  /** Lo pagado, lo comprometido y lo frenado del grupo. Solo lo ven los roles que ven la nómina. */
+  costos(id: number): Promise<CostosGrupo> {
+    return api.get<CostosGrupo>(`/api/grupos-turno/${id}/costos`);
   },
 
   /**
