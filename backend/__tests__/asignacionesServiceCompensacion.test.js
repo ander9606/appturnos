@@ -97,3 +97,43 @@ describe('AsignacionesService.rechazarCompensacion', () => {
     }));
   });
 });
+
+describe('AsignacionesService.alertarCompensacionesSinResponder', () => {
+  const fila = (id) => ({
+    id, empresa_id: 7, oferta_id: 3, trabajador_nombre: 'Ana', trabajador_apellido: 'Ruiz', oferta_titulo: 'Montaje Gala',
+  });
+
+  test('avisa una vez a los gestores de cada propuesta que lleva más de 48 h sin respuesta', async () => {
+    AsignacionesModel.listarCompensacionesSinResponder.mockResolvedValue([fila(500), fila(501)]);
+    AsignacionesModel.reclamarAlertaCompensacion.mockResolvedValue(true);
+
+    const alertadas = await AsignacionesService.alertarCompensacionesSinResponder();
+
+    expect(alertadas).toBe(2);
+    // El límite es "ahora - 48 h" en hora de Colombia (UTC-5): se compara contra Date.now() - 53 h como UTC.
+    const limite = AsignacionesModel.listarCompensacionesSinResponder.mock.calls[0][0];
+    expect(Math.abs(Date.parse(limite.replace(' ', 'T') + 'Z') - (Date.now() - 53 * 3_600_000))).toBeLessThan(60_000);
+    expect(NotificacionesService.notificarVarios).toHaveBeenCalledTimes(2);
+    expect(NotificacionesService.notificarVarios).toHaveBeenCalledWith([1, 2], expect.objectContaining({
+      tipo: 'asignacion.compensacion_sin_respuesta',
+      titulo: 'Compensación sin respuesta',
+      mensaje: expect.stringMatching(/Ana Ruiz lleva más de 48 h sin responder.*"Montaje Gala".*queda en espera: no suma ni resta/),
+      data: { oferta_id: 3, asignacion_id: 500 },
+    }));
+  });
+
+  test('si otro ciclo o instancia ya reclamó el aviso, no lo repite', async () => {
+    AsignacionesModel.listarCompensacionesSinResponder.mockResolvedValue([fila(500)]);
+    AsignacionesModel.reclamarAlertaCompensacion.mockResolvedValue(false);
+
+    await expect(AsignacionesService.alertarCompensacionesSinResponder()).resolves.toBe(0);
+    expect(NotificacionesService.notificarVarios).not.toHaveBeenCalled();
+  });
+
+  test('sin propuestas vencidas no hace nada', async () => {
+    AsignacionesModel.listarCompensacionesSinResponder.mockResolvedValue([]);
+    await expect(AsignacionesService.alertarCompensacionesSinResponder()).resolves.toBe(0);
+    expect(AsignacionesModel.reclamarAlertaCompensacion).not.toHaveBeenCalled();
+  });
+});
+

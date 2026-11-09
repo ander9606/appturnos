@@ -39,4 +39,25 @@ describe('AsignacionesPostulacionModel — propuesta de compensación', () => {
     expect(sql).not.toMatch(/pago_total|SET estado/);
     expect(sql).toMatch(/estado = 'completado' AND compensacion_decision = 'pendiente'/);
   });
+
+  test('listar sin responder: solo completados con propuesta pendiente, ya vencida y sin aviso previo', async () => {
+    pool.query.mockResolvedValue([[{ id: 500 }]]);
+
+    await expect(AsignacionesPostulacionModel.listarCompensacionesSinResponder('2026-11-07 10:00:00')).resolves.toEqual([{ id: 500 }]);
+
+    const [sql, params] = pool.query.mock.calls[0];
+    expect(sql).toMatch(/estado = 'completado' AND a\.compensacion_decision = 'pendiente'/);
+    expect(sql).toContain('a.compensacion_alerta_at IS NULL');
+    expect(sql).toContain('a.compensacion_propuesta_at <= ?');
+    expect(params).toEqual(['2026-11-07 10:00:00']);
+  });
+
+  test('reclamar el aviso es atómico: solo si no se avisó y sigue pendiente', async () => {
+    pool.query.mockResolvedValueOnce([{ affectedRows: 1 }]).mockResolvedValueOnce([{ affectedRows: 0 }]);
+
+    await expect(AsignacionesPostulacionModel.reclamarAlertaCompensacion(500)).resolves.toBe(true);
+    await expect(AsignacionesPostulacionModel.reclamarAlertaCompensacion(500)).resolves.toBe(false);
+    expect(pool.query.mock.calls[0][0]).toMatch(/compensacion_alerta_at IS NULL AND compensacion_decision = 'pendiente'/);
+  });
 });
+

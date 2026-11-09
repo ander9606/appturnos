@@ -78,6 +78,12 @@ const HORAS_CORTE_EDICION_OFERTA = 2;
  */
 const COMPENSACION_FALLIDO_MINIMA = 0.5;
 
+/**
+ * Horas que una propuesta de compensación puede quedar sin respuesta del trabajador antes de avisarle al gestor
+ * (una sola vez). Mientras tanto el turno está en espera: no suma ni resta (ver asignaciones.liquidacion.model.js).
+ */
+const HORAS_ALERTA_COMPENSACION_SIN_RESPUESTA = 48;
+
 // Fuente de verdad en TS: packages/api-client/src/turnos.ts → ESTADOS_ASIGNACION
 // Si añades un estado aquí, actualiza también ese array, el ESTADO_CONFIG en
 // apps/mobile/features/turnos/turnosUtils.ts, y todos los demás mapas listados
@@ -259,6 +265,7 @@ module.exports = {
   DIAS_GRACIA_SUSCRIPCION,
   HORAS_CORTE_EDICION_OFERTA,
   COMPENSACION_FALLIDO_MINIMA,
+  HORAS_ALERTA_COMPENSACION_SIN_RESPUESTA,
   ESTADOS_ASIGNACION,
   ESTADOS_PERIODO,
   RECARGOS,

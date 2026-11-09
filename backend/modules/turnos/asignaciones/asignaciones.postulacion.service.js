@@ -13,6 +13,8 @@ const { ajustarContratoYCuenta } = require('./fallido.postproceso');
 const AppError = require('../../../utils/AppError');
 const logger = require('../../../utils/logger');
 const { fmtFechaCorta } = require('./asignaciones.helpers');
+const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
+const { HORAS_ALERTA_COMPENSACION_SIN_RESPUESTA } = require('../../../config/constants');
 
 /**
  * Valida que la asignación sea del trabajador y tenga una propuesta de compensación pendiente.
@@ -231,6 +233,33 @@ module.exports = {
       });
     }
     return AsignacionesModel.obtenerConDetalles(dbEmpresaId, id);
+  },
+
+  /**
+   * Avisa al gestor (una sola vez por propuesta) de las propuestas de compensación que el trabajador lleva
+   * HORAS_ALERTA_COMPENSACION_SIN_RESPUESTA sin responder. Mientras no responda el turno está en espera: no suma ni
+   * resta en la liquidación. Lo llama turnos.worker.js. @returns {Promise<number>} cuántas alertas envió.
+   */
+  async alertarCompensacionesSinResponder() {
+    const limite = ahoraColombiaSQL(-HORAS_ALERTA_COMPENSACION_SIN_RESPUESTA * 3_600_000);
+    const filas = await AsignacionesModel.listarCompensacionesSinResponder(limite);
+    let alertadas = 0;
+    for (const f of filas) {
+      // Primero se reclama el aviso: si otra instancia (o un ciclo anterior) ya lo tomó, no se repite.
+      if (!(await AsignacionesModel.reclamarAlertaCompensacion(f.id))) continue;
+      const gestoresIds = await NotificacionesModel.idsGestoresTurnos(f.empresa_id);
+      if (gestoresIds.length > 0) {
+        await NotificacionesService.notificarVarios(gestoresIds, {
+          empresaId: f.empresa_id,
+          tipo: 'asignacion.compensacion_sin_respuesta',
+          titulo: 'Compensación sin respuesta',
+          mensaje: `${f.trabajador_nombre} ${f.trabajador_apellido} lleva más de ${HORAS_ALERTA_COMPENSACION_SIN_RESPUESTA} h sin responder la propuesta de compensación de "${f.oferta_titulo}". Mientras no responda, ese turno queda en espera: no suma ni resta en la liquidación.`,
+          data: { oferta_id: f.oferta_id, asignacion_id: f.id },
+        });
+      }
+      alertadas++;
+    }
+    return alertadas;
   },
 
   async reconfirmar(empresaId, id, usuarioId, acepta) {
