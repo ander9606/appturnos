@@ -377,15 +377,15 @@ export function OfertaDetailPage() {
             <EmptyState title="Sin asignaciones" />
           ) : (
             <div className="bg-card border border-border rounded-xl overflow-auto flex-1">
-              <table className="w-full text-sm table-fixed">
+              <table className="text-sm min-w-[1100px] w-full">
                 <colgroup>
-                  <col className="w-44" /> {/* Trabajador */}
-                  <col className="w-36" /> {/* Puesto */}
-                  <col className="w-48" /> {/* Estado */}
-                  <col className="w-24" /> {/* Ingreso */}
-                  <col className="w-24" /> {/* Egreso */}
-                  <col className="w-16" /> {/* Cal. */}
-                  <col className="w-auto" /> {/* Acciones */}
+                  <col style={{ width: '200px' }} /> {/* Trabajador */}
+                  <col style={{ width: '180px' }} /> {/* Puesto */}
+                  <col style={{ width: '200px' }} /> {/* Estado */}
+                  <col style={{ width: '140px' }} /> {/* Ingreso */}
+                  <col style={{ width: '140px' }} /> {/* Egreso */}
+                  <col style={{ width: '60px' }} /> {/* Cal. */}
+                  <col style={{ minWidth: '180px' }} /> {/* Acciones */}
                 </colgroup>
                 <thead className="sticky top-0 bg-card z-10">
                   <tr className="bg-muted text-muted-foreground text-xs uppercase border-b border-border">
