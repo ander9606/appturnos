@@ -128,6 +128,11 @@ function TurnoLineaRow({ t, primary }: { t: LiquidacionTurnoLinea; primary: stri
           {cop(t.pago_total)}
         </Text>
       </View>
+      {t.estado === 'fallido' && (
+        <Text className="text-[11px] font-semibold text-warning mt-1">
+          Turno fallido — compensación por {(t.compensacion_motivo || 'fuerza mayor').toLowerCase()}
+        </Text>
+      )}
       {sinFirmar && (
         <View className="flex-row items-center gap-1 mt-1">
           <Ionicons name="alert-circle-outline" size={12} color={COLORS.warningDark} />
@@ -370,6 +375,9 @@ function TurnoGroupCard({ item, primary }: { item: TurnoGrupo; primary: string }
                 <View className="flex-row items-center gap-2 mt-0.5 flex-wrap">
                   <Text className="text-xs text-muted-foreground">{l.cargo_nombre}</Text>
                   <Text className="text-xs text-muted-foreground">{l.horas_trabajadas.toFixed(1)}h</Text>
+                  {l.estado === 'fallido' && (
+                    <Text className="text-[10px] font-semibold text-warning">Turno fallido</Text>
+                  )}
                   {!l.firmado_trabajador && (
                     <View className="flex-row items-center gap-0.5">
                       <Ionicons name="alert-circle-outline" size={11} color={COLORS.warningDark} />
