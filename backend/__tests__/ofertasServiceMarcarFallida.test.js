@@ -29,6 +29,7 @@ const OfertasModel = require('../modules/turnos/ofertas/ofertas.model');
 const AsignacionesModel = require('../modules/turnos/asignaciones/asignaciones.model');
 const NotificacionesService = require('../modules/notificaciones/notificaciones.service');
 const ContratosModel = require('../modules/contratos/contratos.model');
+const CostoLaborService = require('../modules/integracion/costo-labor.service');
 const CuentasCobroService = require('../modules/cuentas-cobro/cuentas-cobro.service');
 const OfertasService = require('../modules/turnos/ofertas/ofertas.service');
 
@@ -229,5 +230,29 @@ describe('OfertasService.marcarFallida — quien ya tenía contrato y cuenta de 
 
     await expect(OfertasService.marcarFallida(7, 999, 1)).resolves.toBeUndefined();
     expect(OfertasModel.marcarFallida).toHaveBeenCalled();
+  });
+});
+
+describe('OfertasService.marcarFallida — reporte de costo a logiq360', () => {
+  const enCurso = { id: 100, estado: 'en_progreso', trabajador_id: 1, usuario_id: 10, trabajador_nombre: 'Ana', trabajador_apellido: 'Ruiz', tarifa_dia: '120000' };
+
+  test('oferta que ya estaba completada (costo ya reportado): el reenvío va marcado como corrección', async () => {
+    OfertasModel.obtenerPorId.mockResolvedValue({ ...OFERTA, estado: 'completada' });
+    AsignacionesModel.listarActivasConTarifa.mockResolvedValue([{ ...enCurso, estado: 'completado' }]);
+    OfertasModel.marcarFallida.mockResolvedValue([100]);
+
+    await OfertasService.marcarFallida(7, 999, 1);
+
+    expect(CostoLaborService.verificarYEmitir).toHaveBeenCalledWith(7, 1, { correccion: true });
+  });
+
+  test('oferta que nunca se había reportado: se emite normal, sin marca de corrección', async () => {
+    OfertasModel.obtenerPorId.mockResolvedValue(OFERTA);
+    AsignacionesModel.listarActivasConTarifa.mockResolvedValue([enCurso]);
+    OfertasModel.marcarFallida.mockResolvedValue([100]);
+
+    await OfertasService.marcarFallida(7, 999, 1);
+
+    expect(CostoLaborService.verificarYEmitir).toHaveBeenCalledWith(7, 1, { correccion: false });
   });
 });

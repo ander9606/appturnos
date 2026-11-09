@@ -569,7 +569,9 @@ module.exports = {
 
     // Igual que al cerrar un turno normal: la compensación es un costo de
     // mano de obra (logiq360) y debe caer dentro de un período de turnos.
-    await CostoLaborService.verificarYEmitir(empresaId, id).catch(() => {});
+    // Si la oferta ya estaba 'completada' su costo ya se había reportado a logiq360: este envío es una
+    // corrección con el total vigente (la compensación reemplaza al pago anterior), no un segundo costo.
+    await CostoLaborService.verificarYEmitir(empresaId, id, { correccion: oferta.estado === 'completada' }).catch(() => {});
     await PeriodosTurnosService.autoCrear(empresaId).catch(() => {});
   },
 
