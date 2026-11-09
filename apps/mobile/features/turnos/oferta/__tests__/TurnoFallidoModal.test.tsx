@@ -77,7 +77,7 @@ describe('TurnoFallidoModal', () => {
     const { message, destructive } = mockConfirm.mock.calls[0][0];
     expect(destructive).toBe(true);
     expect(message).toMatch(/Ana Ruiz: propuesta de .*135\.000.* a .*120\.000.*necesita su autorización/);
-    expect(message).toContain('mientras tanto se le paga según su contrato');
+    expect(message).toContain('mientras no responda, ese turno queda en espera y no suma ni resta');
     expect(message).toContain('el trabajador debe autorizarlo');
     expect(message).toContain('Luis Paz:');
     expect(message).not.toContain('Luis Paz: propuesta');

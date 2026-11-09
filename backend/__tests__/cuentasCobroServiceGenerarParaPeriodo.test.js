@@ -198,6 +198,22 @@ describe('CuentasCobroService.generarParaPeriodo', () => {
     expect(CuentasCobroModel.crear.mock.calls[0][1].items[0]).toMatchObject({ valor: 20000, descripcion: 'Turno A (ajuste por turno fallido)' });
   });
 
+  test('un turno en espera de autorización no bloquea la cuenta ni entra en ella todavía', async () => {
+    AsignacionesModel.liquidacion.mockResolvedValue([
+      trabajador([
+        turno({ asignacion_id: 1 }),
+        turno({ asignacion_id: 2, pago_total: 135000, firmado_trabajador: false, pendiente_autorizacion: true }),
+      ]),
+    ]);
+
+    const resultado = await CuentasCobroService.generarParaPeriodo(7, 10);
+
+    expect(resultado.bloqueados).toBe(0);
+    const { items, valorTotal } = CuentasCobroModel.crear.mock.calls[0][1];
+    expect(items.map((i) => i.asignacion_id)).toEqual([1]);
+    expect(valorTotal).toBe(60000);
+  });
+
   test('ya ajustado (cuenta de ajuste firmada) no vuelve a generar nada', async () => {
     CuentasCobroModel.listarPorPeriodoYTrabajador.mockResolvedValue([
       { id: 500, secuencia: 1, firmado_trabajador: 1, items: [{ asignacion_id: 1, valor: 60000 }] },

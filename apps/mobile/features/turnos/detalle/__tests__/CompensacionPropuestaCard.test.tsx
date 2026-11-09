@@ -17,7 +17,7 @@ describe('CompensacionPropuestaCard — trabajador', () => {
     render(<CompensacionPropuestaCard {...base} decision="pendiente" esGestor={false} />);
     expect(screen.getByText('Necesitamos tu autorización')).toBeTruthy();
     expect(screen.getByText(/de \$135\.000 a \$120\.000/)).toBeTruthy();
-    expect(screen.getByText(/Tu pago no cambia hasta que lo autorices; si no lo autorizas, se te paga según tu contrato/)).toBeTruthy();
+    expect(screen.getByText(/Mientras no respondas, este turno queda en espera: no se suma a tu pago hasta que decidas. Si no lo autorizas, se te paga según tu contrato/)).toBeTruthy();
   });
 
   test('«Autorizo» pide confirmar con el antes y el después y recién ahí decide que sí', async () => {
@@ -61,7 +61,7 @@ describe('CompensacionPropuestaCard — gestor', () => {
   test('pendiente: ve que espera al trabajador y no tiene botones', () => {
     render(<CompensacionPropuestaCard {...base} decision="pendiente" esGestor />);
     expect(screen.getByText('Esperando la autorización del trabajador')).toBeTruthy();
-    expect(screen.getByText(/mientras tanto se le paga según su contrato/)).toBeTruthy();
+    expect(screen.getByText(/Mientras no responda, este turno queda en espera: no suma ni resta en la liquidación/)).toBeTruthy();
     expect(screen.queryByText('Autorizo')).toBeNull();
     expect(screen.queryByText('No autorizo')).toBeNull();
   });

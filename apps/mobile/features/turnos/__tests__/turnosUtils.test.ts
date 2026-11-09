@@ -1,4 +1,4 @@
-import { getWeekDays, toISODate, getEstadoConfig } from '../turnosUtils';
+import { getWeekDays, toISODate, getEstadoConfig, turnoEnEspera, cuentaComoGanancia } from '../turnosUtils';
 import { bogotaToday } from '@/lib/formatters';
 import type { EstadoAsignacion } from '@api-client';
 import { ESTADOS_ASIGNACION } from '@api-client';
@@ -56,3 +56,26 @@ describe('getEstadoConfig', () => {
     }
   });
 });
+
+describe('turnos en espera de autorización (propuesta de compensación sin responder)', () => {
+  test('completado con propuesta pendiente: en espera, no cuenta como ganancia', () => {
+    const a = { estado: 'completado', compensacion_decision: 'pendiente' } as const;
+    expect(turnoEnEspera(a)).toBe(true);
+    expect(cuentaComoGanancia(a)).toBe(false);
+  });
+
+  test('completado normal, sin propuesta o con propuesta rechazada: cuenta (se paga según contrato)', () => {
+    expect(cuentaComoGanancia({ estado: 'completado' })).toBe(true);
+    expect(cuentaComoGanancia({ estado: 'completado', compensacion_decision: null })).toBe(true);
+    expect(cuentaComoGanancia({ estado: 'completado', compensacion_decision: 'rechazada' })).toBe(true);
+    expect(turnoEnEspera({ estado: 'completado', compensacion_decision: 'rechazada' })).toBe(false);
+  });
+
+  test('fallido (propuesta autorizada o compensación directa) cuenta; lo demás no', () => {
+    expect(cuentaComoGanancia({ estado: 'fallido', compensacion_decision: 'autorizada' })).toBe(true);
+    expect(cuentaComoGanancia({ estado: 'fallido' })).toBe(true);
+    expect(cuentaComoGanancia({ estado: 'cancelado' })).toBe(false);
+    expect(cuentaComoGanancia({ estado: 'en_progreso' })).toBe(false);
+  });
+});
+

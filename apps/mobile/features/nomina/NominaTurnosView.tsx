@@ -21,6 +21,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { Ionicons } from '@expo/vector-icons';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
+import { turnoEnEspera } from '@/features/turnos/turnosUtils';
 import { useTheme } from '@/lib/theme';
 import { usePeriodos } from './useNomina';
 import { TipoPeriodoBadge } from './TipoPeriodoBadge';
@@ -36,6 +37,7 @@ const SHORT_DAYS   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 
 // Un turno fallido (compensación por fuerza mayor) no tiene contrato que firmar: siempre cuenta.
 const sinFirma = (a: Asignacion) => a.estado !== 'fallido' && a.contrato_firmado === 0;
+const enEspera = turnoEnEspera;
 
 function isExtendido(a: Asignacion): { extendido: boolean; extraMin: number } {
   if (!a.hora_egreso_real || !a.hora_fin_estimada || !a.oferta_fecha) {
@@ -132,12 +134,13 @@ export function NominaTurnosView() {
   const totales = useMemo(() =>
     turnosPeriodo.reduce(
       (acc, a) => {
-        const firmado = !sinFirma(a);
+        const espera = enEspera(a);
+        const firmado = !sinFirma(a) && !espera;
         return {
           count: acc.count + 1,
           horas: acc.horas + (firmado ? Number(a.horas_trabajadas) || 0 : 0),
           pago:  acc.pago  + (firmado ? Number(a.pago_total) || 0 : 0),
-          pendientesFirma: acc.pendientesFirma + (firmado ? 0 : 1),
+          pendientesFirma: acc.pendientesFirma + (sinFirma(a) && !espera ? 1 : 0),
         };
       },
       { count: 0, horas: 0, pago: 0, pendientesFirma: 0 }
@@ -150,7 +153,7 @@ export function NominaTurnosView() {
   const porEmpresa = useMemo(() => {
     const map = new Map<string, number>();
     for (const a of turnosPeriodo) {
-      if (sinFirma(a)) continue;
+      if (sinFirma(a) || enEspera(a)) continue;
       const nombre = a.empresa_nombre ?? 'Otra empresa';
       map.set(nombre, (map.get(nombre) ?? 0) + (Number(a.pago_total) || 0));
     }
@@ -310,7 +313,13 @@ export function NominaTurnosView() {
           </Text>
         )}
 
-        {sinFirma(item) && (
+        {enEspera(item) && (
+          <Text className="text-xs text-warning font-medium mt-0.5">
+            En espera de tu autorización — no cuenta en el total todavía
+          </Text>
+        )}
+
+        {sinFirma(item) && !enEspera(item) && (
           <View className="flex-row items-center gap-1 mt-0.5">
             <Ionicons name="warning" size={11} color={COLORS.warningDark} />
             <Text className="text-xs text-warning font-medium">

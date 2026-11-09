@@ -67,6 +67,7 @@ const TurnosEventualModel = {
        JOIN periodos_turno_eventual p ON p.id = ?
        WHERE a.empresa_id = ?
          AND a.estado IN ('completado', 'fallido')
+         AND (a.compensacion_decision IS NULL OR a.compensacion_decision <> 'pendiente')
          AND t.tipo IN (?)
          AND o.fecha BETWEEN p.fecha_inicio AND p.fecha_fin
          ${filtroTrabajador}

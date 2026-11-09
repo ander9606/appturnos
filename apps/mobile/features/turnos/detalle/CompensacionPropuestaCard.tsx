@@ -55,8 +55,8 @@ export function CompensacionPropuestaCard({
       {decision === 'pendiente' && (
         <Text className="text-sm text-foreground">
           {esGestor
-            ? `El turno se canceló por ${motivoTxt}. Se propone cambiar su pago de ${formatCOP(pagoActual)} a ${formatCOP(nuevoPago)}. El cambio solo se aplica si el trabajador lo autoriza; mientras tanto se le paga según su contrato.`
-            : `El turno se canceló por ${motivoTxt}. Se propone cambiar tu pago de ${formatCOP(pagoActual)} a ${formatCOP(nuevoPago)} (compensación). Tu pago no cambia hasta que lo autorices; si no lo autorizas, se te paga según tu contrato.`}
+            ? `El turno se canceló por ${motivoTxt}. Se propone cambiar su pago de ${formatCOP(pagoActual)} a ${formatCOP(nuevoPago)}. El cambio solo se aplica si el trabajador lo autoriza. Mientras no responda, este turno queda en espera: no suma ni resta en la liquidación.`
+            : `El turno se canceló por ${motivoTxt}. Se propone cambiar tu pago de ${formatCOP(pagoActual)} a ${formatCOP(nuevoPago)} (compensación). Mientras no respondas, este turno queda en espera: no se suma a tu pago hasta que decidas. Si no lo autorizas, se te paga según tu contrato.`}
         </Text>
       )}
       {decision === 'rechazada' && (

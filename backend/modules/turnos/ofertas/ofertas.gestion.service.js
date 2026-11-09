@@ -554,7 +554,7 @@ module.exports = {
         usuarioId: a.usuario_id,
         tipo: 'asignacion.compensacion_propuesta',
         titulo: 'Necesitamos tu autorización',
-        mensaje: `El turno "${oferta.titulo}" se canceló por ${detalleMotivo}. Se propone cambiar tu pago de $${pagoActual(a).toLocaleString('es-CO')} a $${pagoNuevo(a).toLocaleString('es-CO')} (compensación). Tu pago no cambia hasta que lo autorices; si no lo autorizas, se te paga según tu contrato.`,
+        mensaje: `El turno "${oferta.titulo}" se canceló por ${detalleMotivo}. Se propone cambiar tu pago de $${pagoActual(a).toLocaleString('es-CO')} a $${pagoNuevo(a).toLocaleString('es-CO')} (compensación). Mientras no respondas, este turno queda en espera: no se suma a tu pago hasta que decidas. Si no lo autorizas, se te paga según tu contrato.`,
         data: { oferta_id: id, asignacion_id: a.id },
       });
     }));

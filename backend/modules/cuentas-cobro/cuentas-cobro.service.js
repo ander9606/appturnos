@@ -140,7 +140,8 @@ const CuentasCobroService = {
       const firmadas = cuentas.filter((c) => c.firmado_trabajador);
       const abierta = cuentas.find((c) => !c.firmado_trabajador) ?? null;
 
-      const sinFirmar = w.turnos.filter((t) => !t.firmado_trabajador).length;
+      // Un turno en espera de que el trabajador autorice una compensación no bloquea la cuenta ni entra en ella todavía.
+      const sinFirmar = w.turnos.filter((t) => !t.firmado_trabajador && !t.pendiente_autorizacion).length;
       if (cuentas.length === 0 && sinFirmar > 0) {
         bloqueados.push({ w, sinFirmar });
         continue;
@@ -155,7 +156,7 @@ const CuentasCobroService = {
       }
       const items = [];
       for (const t of w.turnos) {
-        if (!t.firmado_trabajador) continue;
+        if (!t.firmado_trabajador || t.pendiente_autorizacion) continue;
         const previo = cobrado.get(t.asignacion_id);
         if (previo === undefined) {
           items.push(itemCompleto(t));

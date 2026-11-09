@@ -287,7 +287,7 @@ describe('OfertasService.marcarFallida — bajarle el pago a quien ya trabajó n
     expect(NotificacionesService.notificar).toHaveBeenCalledWith(expect.objectContaining({
       usuarioId: 10,
       tipo: 'asignacion.compensacion_propuesta',
-      mensaje: expect.stringMatching(/\$135\.000 a \$120\.000.*hasta que lo autorices/),
+      mensaje: expect.stringMatching(/\$135\.000 a \$120\.000.*queda en espera: no se suma a tu pago hasta que decidas/),
     }));
   });
 

@@ -401,7 +401,7 @@ export function OfertaDetailPage() {
                           {ESTADO_ASIG_LABEL[a.estado]}
                         </span>
                         {a.estado === 'completado' && a.compensacion_decision === 'pendiente' && (
-                          <span className="block text-[11px] font-medium text-warning mt-1" title="Se propuso cambiar su pago por fuerza mayor; solo se aplica si el trabajador lo autoriza. Mientras tanto se le paga según su contrato.">
+                          <span className="block text-[11px] font-medium text-warning mt-1" title="Se propuso cambiar su pago por fuerza mayor; solo se aplica si el trabajador lo autoriza. Mientras no responda, el turno queda en espera: no suma ni resta.">
                             Pendiente de autorización del trabajador
                           </span>
                         )}
@@ -1133,7 +1133,7 @@ function TurnoFallidoModal({
                 <li key={a.id}>
                   {nombreDe(a)}:{' '}
                   {bajaElPago(a)
-                    ? <>propuesta de {fmtCOP(Number(a.pago_total))} a <strong className="text-foreground">{fmtCOP(Number(montos[a.id]) || 0)}</strong> (necesita su autorización; mientras tanto se le paga según su contrato)</>
+                    ? <>propuesta de {fmtCOP(Number(a.pago_total))} a <strong className="text-foreground">{fmtCOP(Number(montos[a.id]) || 0)}</strong> (necesita su autorización; mientras no responda, ese turno queda en espera y no suma ni resta)</>
                     : a.estado === 'completado' && a.pago_total != null
                       ? <>de {fmtCOP(Number(a.pago_total))} a <strong className="text-foreground">{fmtCOP(Number(montos[a.id]) || 0)}</strong></>
                       : <strong className="text-foreground">{fmtCOP(Number(montos[a.id]) || 0)}</strong>}

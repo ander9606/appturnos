@@ -82,7 +82,7 @@ export function TurnoFallidoModal({
     const lineas = enProgreso.map((a, i) => {
       const nuevo = formatCOP(compensaciones[i].monto);
       if (bajaElPago(a, i)) {
-        return `• ${nombreDe(a)}: propuesta de ${formatCOP(Number(a.pago_total))} a ${nuevo} (necesita su autorización; mientras tanto se le paga según su contrato)`;
+        return `• ${nombreDe(a)}: propuesta de ${formatCOP(Number(a.pago_total))} a ${nuevo} (necesita su autorización; mientras no responda, ese turno queda en espera y no suma ni resta)`;
       }
       return a.estado === 'completado' && a.pago_total != null
         ? `• ${nombreDe(a)}: de ${formatCOP(Number(a.pago_total))} a ${nuevo}`
