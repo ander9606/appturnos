@@ -35,6 +35,15 @@ export function useGrupo(id: number | null) {
   });
 }
 
+/** Costos del grupo. Cuelga de GRUPOS_KEY: cambiar turnos o cerrar el grupo lo refresca. */
+export function useCostosGrupo(id: number | null) {
+  return useQuery({
+    queryKey: [...GRUPOS_KEY, 'costos', id],
+    queryFn: () => gruposApi.costos(id!),
+    enabled: id !== null && Number.isFinite(id),
+  });
+}
+
 /** Cerrar o reabrir; el 409 del servidor ("tiene turnos sin terminar…") sale tal cual como aviso. */
 export function useCambiarEstadoGrupo() {
   const qc = useQueryClient();

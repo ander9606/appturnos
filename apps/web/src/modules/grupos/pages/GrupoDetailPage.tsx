@@ -9,6 +9,7 @@ import { MenuAcciones, type AccionMenu } from '@/shared/components/MenuAcciones'
 import { useCambiarEstadoGrupo, useGrupo } from '../hooks/useGrupos';
 import { FaseChip } from '../components/FaseChip';
 import { DuplicarTurnoModal } from '../components/DuplicarTurnoModal';
+import { CostosGrupo } from '../components/CostosGrupo';
 import { FilaTurno } from '../components/FilaTurno';
 import { EditarGrupoModal } from '../components/EditarGrupoModal';
 import { useOpcionesGrupos } from '@/modules/configuracion/hooks/useConfiguracion';
@@ -81,6 +82,8 @@ export function GrupoDetailPage() {
           </dl>
         )}
       </div>
+
+      <div className="mb-6"><CostosGrupo grupoId={g.id} /></div>
 
       <div className="flex items-center justify-between gap-3 mb-3">
         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Turnos ({g.turnos.length})</h2>

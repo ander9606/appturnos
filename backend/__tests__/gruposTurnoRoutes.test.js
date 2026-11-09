@@ -34,7 +34,7 @@ const pedir = (ruta, metodo = 'GET', cuerpo) => fetch(`${base}${ruta}`, {
 describe('empresa sin la función activada', () => {
   beforeEach(() => EmpresasModel.usaGruposTurno.mockResolvedValue(false));
 
-  test.each([['GET', '/', undefined], ['GET', '/3', undefined], ['POST', '/', { nombre: 'X' }], ['PATCH', '/3', { nombre: 'X' }], ['POST', '/3/cerrar', undefined], ['POST', '/3/reabrir', undefined]])(
+  test.each([['GET', '/', undefined], ['GET', '/3', undefined], ['POST', '/', { nombre: 'X' }], ['PATCH', '/3', { nombre: 'X' }], ['POST', '/3/cerrar', undefined], ['POST', '/3/reabrir', undefined], ['GET', '/3/costos', undefined]])(
     '%s %s → 403 y no llega al servicio', async (metodo, ruta, cuerpo) => {
       const r = await pedir(ruta, metodo, cuerpo);
       expect(r.status).toBe(403);
@@ -53,6 +53,19 @@ describe('empresa con la función activada', () => {
     expect(r.status).toBe(200);
     expect(Servicio.listar).toHaveBeenCalledWith(7, undefined);
     expect((await r.json()).data).toEqual([{ id: 1, nombre: 'Feria' }]);
+  });
+
+  test('GET /:id/costos devuelve el resumen del grupo de esta empresa', async () => {
+    Servicio.costos.mockResolvedValue({ proyectado: 150000 });
+    const r = await pedir('/3/costos');
+    expect(r.status).toBe(200);
+    expect(Servicio.costos).toHaveBeenCalledWith(7, '3'); // la empresa sale del token, nunca del cliente
+    expect((await r.json()).data).toEqual({ proyectado: 150000 });
+  });
+
+  test('GET /:id/costos con un id inválido → 422', async () => {
+    expect((await pedir('/abc/costos')).status).toBe(422);
+    expect(Servicio.costos).not.toHaveBeenCalled();
   });
 
   test('estado inválido → 422', async () => {

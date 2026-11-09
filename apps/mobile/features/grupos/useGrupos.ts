@@ -23,6 +23,15 @@ export function useGrupo(id: number) {
   });
 }
 
+/** Costos del grupo (lo pagado, lo comprometido y lo frenado). Cuelga de GRUPOS_KEY: cambiar turnos o cerrar lo refresca. */
+export function useCostosGrupo(id: number, enabled = true) {
+  return useQuery({
+    queryKey: [...GRUPOS_KEY, 'costos', id],
+    queryFn: () => gruposTurnoApi.costos(id),
+    enabled: enabled && Number.isFinite(id),
+  });
+}
+
 /** Cerrar o reabrir un grupo; refresca listas y detalle (todos cuelgan de GRUPOS_KEY). */
 export function useCambiarEstadoGrupo() {
   const qc = useQueryClient();

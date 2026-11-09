@@ -1,6 +1,7 @@
 'use strict';
 
 const GruposTurnoModel = require('./grupos-turno.model');
+const { resumirCostos } = require('./grupos-turno.costos');
 const AppError = require('../../utils/AppError');
 const { ahoraColombiaSQL } = require('../../utils/fechaColombia');
 
@@ -57,6 +58,12 @@ const GruposTurnoService = {
   async obtener(empresaId, id) {
     const grupo = await obtenerOFallar(empresaId, id);
     return { ...conFase(grupo), turnos: await GruposTurnoModel.turnos(empresaId, id) };
+  },
+
+  /** Resumen de costos del grupo: lo ya pagado, lo comprometido y lo que está frenado por contratos sin firmar. */
+  async costos(empresaId, id) {
+    await obtenerOFallar(empresaId, id);
+    return resumirCostos(await GruposTurnoModel.asignacionesParaCostos(empresaId, id));
   },
 
   async crear(empresaId, datos, creadoPor) {
