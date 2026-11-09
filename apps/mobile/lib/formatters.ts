@@ -102,7 +102,8 @@ export function formatTimeObj(date: Date): string {
 
 /** 1234567 → "$1.234.567" */
 export function formatCOP(amount: number): string {
-  return `$${amount.toLocaleString('es-CO', { maximumFractionDigits: 0 })}`;
+  // Negativo (p. ej. una cuenta de ajuste): "-$1.234", no "$-1.234".
+  return `${amount < 0 ? '-' : ''}$${Math.abs(amount).toLocaleString('es-CO', { maximumFractionDigits: 0 })}`;
 }
 
 /** 1234.56 → "1.234,56" */

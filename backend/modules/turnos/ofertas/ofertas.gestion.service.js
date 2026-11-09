@@ -18,6 +18,7 @@ const GeocodingService = require('../../geocoding/geocoding.service');
 const AppError = require('../../../utils/AppError');
 const {
   ROLES, MAX_OFERTAS_ACTIVAS_POR_EMPRESA, DIAS_GRACIA_ASIGNACIONES_COLGADAS, HORAS_CORTE_EDICION_OFERTA,
+  COMPENSACION_FALLIDO_MINIMA,
 } = require('../../../config/constants');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 const logger = require('../../../utils/logger');
@@ -494,6 +495,18 @@ module.exports = {
     const motivoFinal = (motivo || '').trim() || 'Fuerza mayor';
 
     const overrides = new Map((compensaciones || []).map((c) => [Number(c.asignacion_id), Number(c.monto)]));
+    // Piso: la compensación no puede bajar de la mitad de la tarifa del puesto (!(x >= min) también
+    // rechaza NaN). Se valida antes de tocar nada para que un monto bajo no deje el turno a medias.
+    for (const a of enProgreso) {
+      if (!overrides.has(a.id)) continue;
+      const minimo = Number(a.tarifa_dia) * COMPENSACION_FALLIDO_MINIMA;
+      if (!(overrides.get(a.id) >= minimo)) {
+        throw new AppError(
+          `La compensación de ${a.trabajador_nombre} ${a.trabajador_apellido} no puede ser menor a $${minimo.toLocaleString('es-CO')} (la mitad de la tarifa del turno).`,
+          422
+        );
+      }
+    }
     const montos = enProgreso.map((a) => ({
       asignacionId: a.id,
       monto: overrides.has(a.id) ? overrides.get(a.id) : Number(a.tarifa_dia),

@@ -85,6 +85,9 @@ function textoDesglose(item) {
   return texto;
 }
 
+/** "$ 1.234" o, si es negativo (cuenta de ajuste), "- $ 1.234". */
+const cop = (n) => `${Number(n) < 0 ? '- ' : ''}$ ${Math.abs(Number(n)).toLocaleString('es-CO')}`;
+
 /**
  * Genera el PDF de una cuenta de cobro (agregado de turnos de un período) y
  * lo escribe en `stream` (normalmente la respuesta HTTP). `cuenta` debe venir
@@ -111,7 +114,10 @@ async function generarCuentaCobroPdf(cuenta, stream) {
   doc.fontSize(16).font('Helvetica-Bold').text('CUENTA DE COBRO', { align: 'center' });
   doc.moveDown(0.3);
   doc.fontSize(10).font('Helvetica').text(`N.º ${cuenta.numero_cuenta}`, { align: 'center' });
-  if (cuenta.secuencia > 1) {
+  if (Number(cuenta.valor_total) < 0) {
+    doc.fontSize(9).font('Helvetica-Oblique')
+      .text('Cuenta de ajuste: descuenta lo ya cobrado de un turno dado por fallido (fuerza mayor) con una compensación menor', { align: 'center' });
+  } else if (cuenta.secuencia > 1) {
     doc.fontSize(9).font('Helvetica-Oblique')
       .text('Cuenta complementaria: diferencia de valores respecto a cuentas anteriores del período', { align: 'center' });
   }
@@ -178,7 +184,7 @@ async function generarCuentaCobroPdf(cuenta, stream) {
     doc.text(item.fecha, col.fecha, y, { width: 70 });
     doc.text(descripcion, col.desc, y, { width: 240 });
     doc.text(Number(item.horas).toFixed(1), col.horas, y, { width: 50, align: 'right' });
-    doc.text(`$ ${Number(item.valor).toLocaleString('es-CO')}`, col.valor, y, { width: 100, align: 'right' });
+    doc.text(cop(item.valor), col.valor, y, { width: 100, align: 'right' });
     doc.y = y + alturaDescripcion;
     doc.moveDown(0.3);
 
@@ -221,7 +227,7 @@ async function generarCuentaCobroPdf(cuenta, stream) {
       const y = doc.y;
       doc.font('Helvetica-Bold').fontSize(9);
       doc.text(`Subtotal ${sec.nombre ?? 'sin grupo'}`, col.desc, y, { width: 300 });
-      doc.text(`$ ${Number(sec.subtotal).toLocaleString('es-CO')}`, col.valor, y, { width: 100, align: 'right' });
+      doc.text(cop(sec.subtotal), col.valor, y, { width: 100, align: 'right' });
       doc.x = col.fecha; // el texto del subtotal deja el cursor en la columna de valores
       doc.moveDown(0.8);
       doc.font('Helvetica').fontSize(9);
@@ -232,7 +238,7 @@ async function generarCuentaCobroPdf(cuenta, stream) {
   doc.moveDown(0.4);
   doc.font('Helvetica-Bold').fontSize(11);
   doc.text(`Total turnos: ${cuenta.total_turnos}    Total horas: ${Number(cuenta.total_horas).toFixed(1)}`);
-  doc.text(`VALOR TOTAL: $ ${Number(cuenta.valor_total).toLocaleString('es-CO')}`);
+  doc.text(`VALOR TOTAL: ${cop(cuenta.valor_total)}`);
   doc.moveDown(1.5);
 
   doc

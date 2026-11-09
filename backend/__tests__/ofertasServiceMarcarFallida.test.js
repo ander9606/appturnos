@@ -69,11 +69,11 @@ describe('OfertasService.marcarFallida', () => {
 
     await OfertasService.marcarFallida(7, 999, 1, {
       motivo: 'Corte de luz en el edificio',
-      compensaciones: [{ asignacion_id: 100, monto: 50000 }],
+      compensaciones: [{ asignacion_id: 100, monto: 70000 }],
     });
 
     expect(OfertasModel.marcarFallida).toHaveBeenCalledWith(
-      7, 1, [{ asignacionId: 100, monto: 50000 }], 'Corte de luz en el edificio', 999
+      7, 1, [{ asignacionId: 100, monto: 70000 }], 'Corte de luz en el edificio', 999
     );
     // El motivo puntual del gestor debe quedar en el mensaje, no solo en el
     // detalle del turno — antes el texto venía fijo con "fuerza mayor" sin
@@ -82,7 +82,7 @@ describe('OfertasService.marcarFallida', () => {
       mensaje: expect.stringContaining('Corte de luz en el edificio'),
     }));
     expect(NotificacionesService.notificar).toHaveBeenCalledWith(expect.objectContaining({
-      mensaje: expect.stringContaining('$50.000'),
+      mensaje: expect.stringContaining('$70.000'),
     }));
   });
 
@@ -111,10 +111,10 @@ describe('OfertasService.marcarFallida', () => {
     ]);
     OfertasModel.marcarFallida.mockResolvedValue([100]);
 
-    await OfertasService.marcarFallida(7, 999, 1, { compensaciones: [{ asignacion_id: 100, monto: 50000 }] });
+    await OfertasService.marcarFallida(7, 999, 1, { compensaciones: [{ asignacion_id: 100, monto: 70000 }] });
 
     expect(OfertasModel.marcarFallida).toHaveBeenCalledWith(
-      7, 1, [{ asignacionId: 100, monto: 50000 }], 'Fuerza mayor', 999
+      7, 1, [{ asignacionId: 100, monto: 70000 }], 'Fuerza mayor', 999
     );
   });
 
@@ -138,6 +138,45 @@ describe('OfertasService.marcarFallida — quien ya marcó salida', () => {
 
     await OfertasService.marcarFallida(7, 999, 1);
 
+    expect(OfertasModel.marcarFallida).toHaveBeenCalledWith(
+      7, 1, [{ asignacionId: 100, monto: 120000 }], 'Fuerza mayor', 999
+    );
+  });
+});
+
+describe('OfertasService.marcarFallida — compensación mínima (la mitad de la tarifa del puesto)', () => {
+  const enCurso = { id: 100, estado: 'en_progreso', trabajador_id: 1, usuario_id: 10, trabajador_nombre: 'Ana', trabajador_apellido: 'Ruiz', tarifa_dia: '120000' };
+
+  beforeEach(() => {
+    OfertasModel.obtenerPorId.mockResolvedValue(OFERTA);
+    AsignacionesModel.listarActivasConTarifa.mockResolvedValue([enCurso]);
+    OfertasModel.marcarFallida.mockResolvedValue([100]);
+  });
+
+  test('un monto por debajo de la mitad se rechaza con 422 y no toca nada', async () => {
+    await expect(
+      OfertasService.marcarFallida(7, 999, 1, { compensaciones: [{ asignacion_id: 100, monto: 59999 }] })
+    ).rejects.toMatchObject({ statusCode: 422, message: expect.stringContaining('$60.000') });
+    expect(OfertasModel.marcarFallida).not.toHaveBeenCalled();
+    expect(NotificacionesService.notificar).not.toHaveBeenCalled();
+  });
+
+  test('exactamente la mitad se acepta', async () => {
+    await OfertasService.marcarFallida(7, 999, 1, { compensaciones: [{ asignacion_id: 100, monto: 60000 }] });
+    expect(OfertasModel.marcarFallida).toHaveBeenCalledWith(
+      7, 1, [{ asignacionId: 100, monto: 60000 }], 'Fuerza mayor', 999
+    );
+  });
+
+  test('un monto que no es número se rechaza', async () => {
+    await expect(
+      OfertasService.marcarFallida(7, 999, 1, { compensaciones: [{ asignacion_id: 100, monto: 'abc' }] })
+    ).rejects.toMatchObject({ statusCode: 422 });
+    expect(OfertasModel.marcarFallida).not.toHaveBeenCalled();
+  });
+
+  test('sin monto digitado se usa la tarifa completa (siempre sobre el mínimo)', async () => {
+    await OfertasService.marcarFallida(7, 999, 1);
     expect(OfertasModel.marcarFallida).toHaveBeenCalledWith(
       7, 1, [{ asignacionId: 100, monto: 120000 }], 'Fuerza mayor', 999
     );

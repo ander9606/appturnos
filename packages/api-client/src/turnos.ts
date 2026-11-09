@@ -32,6 +32,13 @@ export const ESTADOS_ASIGNACION = [
   'fallido',
 ] as const satisfies EstadoAsignacion[];
 
+/**
+ * Compensación mínima de un turno fallido (fuerza mayor): la mitad de la tarifa_dia del puesto,
+ * por trabajador. El backend la exige (backend/config/constants.js → COMPENSACION_FALLIDO_MINIMA):
+ * mantener iguales.
+ */
+export const COMPENSACION_FALLIDO_MINIMA = 0.5;
+
 export type EstadoOferta =
   | 'borrador'
   | 'abierta'
@@ -365,6 +372,8 @@ export interface AsignacionResumen {
   puesto_id: number;
   cargo_codigo: string;
   cargo_nombre: string;
+  /** Lo que ya tiene a pagar este turno (DECIMAL: puede llegar como string). */
+  pago_total?: number | string | null;
 }
 
 export interface PaginatedResponse<T> {
