@@ -52,10 +52,10 @@ export function CostosGrupo({ grupoId }: { grupoId: number }) {
   ].filter(Boolean).join(' · ');
 
   return (
-    <section className="bg-card border border-border rounded-2xl p-5" aria-label="Costos del evento">
+    <section className="bg-card border border-border rounded-2xl p-5" aria-label="Costos">
       <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Costos</h2>
       <p className="text-3xl font-bold text-foreground mt-1 tabular-nums">{fmtCOP(c.proyectado)}</p>
-      <p className="text-xs text-muted-foreground">Costo proyectado del evento</p>
+      <p className="text-xs text-muted-foreground">Costo proyectado</p>
 
       <div className="mt-3 border-t border-border divide-y divide-border">
         <Fila etiqueta="Para pagar" detalle={[turnos(c.real.turnos_pagados), desglose].filter(Boolean).join(' · ')} valor={fmtCOP(c.real.total)} />

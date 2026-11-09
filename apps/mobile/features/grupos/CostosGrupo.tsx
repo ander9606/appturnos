@@ -59,7 +59,7 @@ export function CostosGrupo({ grupoId }: { grupoId: number }) {
     <View className="bg-card border border-border rounded-2xl p-4" accessibilityLabel={`Costo proyectado ${formatCOP(c.proyectado)}`}>
       <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Costos</Text>
       <Text className="text-2xl font-bold text-foreground mt-1">{formatCOP(c.proyectado)}</Text>
-      <Text className="text-xs text-muted-foreground">Costo proyectado del evento</Text>
+      <Text className="text-xs text-muted-foreground">Costo proyectado</Text>
 
       <View className="mt-3 border-t border-border">
         <Fila etiqueta="Para pagar" detalle={[turnos(c.real.turnos_pagados), desglose].filter(Boolean).join(' · ')} valor={formatCOP(c.real.total)} />

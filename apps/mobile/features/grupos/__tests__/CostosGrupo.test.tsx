@@ -27,6 +27,7 @@ const montar = () => render(<CostosGrupo grupoId={3} />);
 test('muestra el costo proyectado y «Para pagar» con su desglose de bonos y descuentos', () => {
   mockQuery = ok(C());
   montar();
+  expect(screen.getByText('Costo proyectado')).toBeTruthy();
   expect(screen.getByLabelText(`Costo proyectado ${formatCOP(140000)}`)).toBeTruthy();
   expect(screen.getByText('Para pagar')).toBeTruthy();
   expect(screen.getByText(`2 turnos · bonos ${formatCOP(15000)} · descuentos −${formatCOP(5000)}`)).toBeTruthy();
@@ -79,4 +80,10 @@ test('carga con esqueleto y, si falla, ofrece reintentar', () => {
   montar();
   fireEvent.press(screen.getByText('Reintentar'));
   expect(refetch).toHaveBeenCalled();
+});
+
+test('no nombra al grupo con una palabra fija: cada empresa le pone la suya («Evento», «Obra»…)', () => {
+  mockQuery = ok(C({ sin_firmar: { cantidad: 1, monto: 60000 }, estimado: { total: 170000, turnos: 2 }, en_espera: { cantidad: 1 } }));
+  const { toJSON } = montar();
+  expect(JSON.stringify(toJSON())).not.toMatch(/evento|obra|proyecto/i);
 });
