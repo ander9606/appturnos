@@ -38,6 +38,11 @@ async function personas(req, res) {
   res.json({ success: true, data, message: 'Personas: horas y reparto de turnos' });
 }
 
+async function grupos(req, res) {
+  const data = await ReportesService.porGrupo(req.empresa_id, rango(req));
+  res.json({ success: true, data, message: 'Turnos del período por grupo' });
+}
+
 async function trabajador(req, res) {
   const data = await ReportesService.historialTrabajador(
     req.empresa_id,
@@ -48,4 +53,4 @@ async function trabajador(req, res) {
   res.json({ success: true, data, message: 'Historial del trabajador' });
 }
 
-module.exports = { asistencia, costos, resumen, personas, trabajador };
+module.exports = { asistencia, costos, resumen, personas, grupos, trabajador };
