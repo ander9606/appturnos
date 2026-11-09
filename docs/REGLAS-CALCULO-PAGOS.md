@@ -307,7 +307,7 @@ Un turno completado paga **la tarifa del día del puesto + el bono − los descu
 - No se genera contrato diario — no es un turno trabajado, es una compensación — pero sí entra a la liquidación y a la cuenta de cobro igual que un turno completado (no necesita la firma del contrato porque no existe).
 - El trabajador recibe un aviso explicando el motivo y el monto de la compensación. Al abrirlo puede tocar **Aceptar** para dejar constancia de que se enteró; el gestor ve si ya lo hizo. Es solo un enterado: **el pago no espera** esa aceptación.
 - También se puede dar por fallido un turno cuyos trabajadores **ya marcaron salida** (incluso con la oferta ya completada). Su compensación **reemplaza** el pago que tenían: el valor anterior y el pago extra dejan de contar; el bono ya otorgado se conserva.
-- Si ese turno ya tenía contrato firmado, la firma del contrato se **anula** (el valor pactado ya no rige). El turno fallido igual cuenta en la liquidación sin necesitar firma.
+- Si ese turno ya tenía contrato firmado, la firma del contrato se **anula** (el valor pactado ya no rige): el contrato queda guardado solo como registro, pero ya no se muestra, no se descarga ni se firma, y no sale en la lista de contratos del trabajador. El turno fallido igual cuenta en la liquidación sin necesitar firma.
 - Si el turno ya estaba **cobrado en una cuenta de cobro firmada**: si la compensación es mayor, se genera una cuenta complementaria por la diferencia; si es **menor**, se genera una **cuenta de ajuste** con valor negativo por lo cobrado de más, que el trabajador revisa y firma. Con el período aún abierto no hace falta: la cuenta se genera al cierre con el valor nuevo.
 
 ### Contratos diarios
