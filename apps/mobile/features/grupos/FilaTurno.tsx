@@ -11,6 +11,8 @@ import { fmtDate } from '@/features/turnos/oferta/fechasOferta';
  */
 export function FilaTurno({ turno, onPress, compacta = false }: { turno: TurnoDeGrupo; onPress: () => void; compacta?: boolean }) {
   const cancelado = turno.estado === 'cancelada';
+  // Cancelado por fuerza mayor con compensación: no es un cancelado a secas, tiene un costo.
+  const fallidos = cancelado ? (turno.fallidos ?? 0) : 0;
   const horario = turno.hora_fin_estimada ? formatTimeRange(turno.hora_inicio, turno.hora_fin_estimada) : turno.hora_inicio.slice(0, 5);
   return (
     <Pressable
@@ -19,12 +21,15 @@ export function FilaTurno({ turno, onPress, compacta = false }: { turno: TurnoDe
       className={compacta ? 'px-4 py-3 gap-0.5 border-t border-border active:opacity-70' : 'bg-card border border-border rounded-2xl p-4 gap-1 active:opacity-70'}
     >
       <Text className="text-xs font-semibold text-muted-foreground uppercase">{fmtDate(turno.fecha)}</Text>
-      <Text className={`${compacta ? 'text-sm' : 'text-base'} font-bold ${cancelado ? 'text-muted-foreground line-through' : 'text-foreground'}`} numberOfLines={2}>
+      <Text className={`${compacta ? 'text-sm' : 'text-base'} font-bold ${cancelado && fallidos === 0 ? 'text-muted-foreground line-through' : 'text-foreground'}`} numberOfLines={2}>
         {turno.titulo}
       </Text>
       <Text className={`${compacta ? 'text-xs' : 'text-sm'} text-muted-foreground`}>
         {horario}{turno.fin_dia_siguiente ? ' (día sig.)' : ''}
-        {cancelado ? ' · Cancelado' : ` · ${turno.plazas_cubiertas} de ${turno.plazas} plazas cubiertas`}
+        {fallidos > 0 ? ' · ' : cancelado ? ' · Cancelado' : ` · ${turno.plazas_cubiertas} de ${turno.plazas} plazas cubiertas`}
+        {fallidos > 0 && (
+          <Text className="font-semibold text-warning">Turno fallido · {fallidos} {fallidos === 1 ? 'compensado' : 'compensados'}</Text>
+        )}
       </Text>
     </Pressable>
   );

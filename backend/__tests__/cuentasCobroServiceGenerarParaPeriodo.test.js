@@ -172,6 +172,32 @@ describe('CuentasCobroService.generarParaPeriodo', () => {
     }));
   });
 
+  test('un turno fallido que se cobra por primera vez lleva la marca en su línea; uno normal no', async () => {
+    AsignacionesModel.liquidacion.mockResolvedValue([
+      trabajador([
+        turno({ estado: 'fallido', pago_total: 60000, oferta_titulo: 'Montaje Gala' }),
+        turno({ asignacion_id: 2, oferta_titulo: 'Desmontaje' }),
+      ]),
+    ]);
+
+    await CuentasCobroService.generarParaPeriodo(7, 10);
+
+    const { items } = CuentasCobroModel.crear.mock.calls[0][1];
+    expect(items[0].descripcion).toBe('Montaje Gala (turno fallido: compensación por fuerza mayor)');
+    expect(items[1].descripcion).toBe('Desmontaje');
+  });
+
+  test('fallido con compensación mayor a lo ya cobrado: la diferencia se rotula como ajuste por turno fallido', async () => {
+    CuentasCobroModel.listarPorPeriodoYTrabajador.mockResolvedValue([
+      { id: 500, secuencia: 1, firmado_trabajador: 1, items: [{ asignacion_id: 1, valor: 40000 }] },
+    ]);
+    AsignacionesModel.liquidacion.mockResolvedValue([trabajador([turno({ estado: 'fallido', pago_total: 60000 })])]);
+
+    await CuentasCobroService.generarParaPeriodo(7, 10);
+
+    expect(CuentasCobroModel.crear.mock.calls[0][1].items[0]).toMatchObject({ valor: 20000, descripcion: 'Turno A (ajuste por turno fallido)' });
+  });
+
   test('ya ajustado (cuenta de ajuste firmada) no vuelve a generar nada', async () => {
     CuentasCobroModel.listarPorPeriodoYTrabajador.mockResolvedValue([
       { id: 500, secuencia: 1, firmado_trabajador: 1, items: [{ asignacion_id: 1, valor: 60000 }] },
