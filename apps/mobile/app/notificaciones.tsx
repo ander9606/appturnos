@@ -33,6 +33,7 @@ import type { Notificacion } from '@api-client';
 const TIPO_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
   'postulacion.confirmada':      'checkmark-circle-outline',
   'asignacion.cancelada':        'close-circle-outline',
+  'asignacion.fallido':          'alert-circle-outline',
   'postulacion.rechazada':       'close-circle-outline',
   'turno.ingreso':               'log-in-outline',
   'turno.egreso':                'log-out-outline',

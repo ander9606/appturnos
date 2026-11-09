@@ -125,6 +125,8 @@ export interface Asignacion {
   compensacion_motivo?: string | null;
   fallido_por?: number | null;
   fallido_at?: string | null;
+  /** Cuándo el trabajador dio por enterado el turno fallido; null = aún no (el pago no depende de esto). */
+  fallido_aceptado_at?: string | null;
   // Joined from calificaciones_turno (LEFT JOIN — null if not yet rated)
   calificacion: number | null;
   calificacion_comentario: string | null;
@@ -635,6 +637,11 @@ export const turnosApi = {
    */
   reconfirmarAsignacion(id: number, acepta: boolean): Promise<Asignacion> {
     return api.post<Asignacion>(`/api/turnos/asignaciones/${id}/reconfirmar`, { acepta });
+  },
+
+  /** El trabajador da por enterado su turno fallido (fuerza mayor) y la compensación. Idempotente. */
+  aceptarFallido(id: number): Promise<Asignacion> {
+    return api.post<Asignacion>(`/api/turnos/asignaciones/${id}/aceptar-fallido`);
   },
 
   /**
