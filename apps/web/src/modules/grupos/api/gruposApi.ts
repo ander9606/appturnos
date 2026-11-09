@@ -1,5 +1,5 @@
 import { api } from '@/shared/api/axios';
-import type { ActualizarGrupoPayload, CrearGrupoPayload, EstadoGrupo, GrupoTurno, GrupoTurnoDetalle } from '../types';
+import type { ActualizarGrupoPayload, CostosGrupo, CrearGrupoPayload, EstadoGrupo, GrupoTurno, GrupoTurnoDetalle } from '../types';
 
 export const gruposApi = {
   /** Por defecto solo los activos; los cerrados no reciben turnos nuevos. */
@@ -10,6 +10,8 @@ export const gruposApi = {
     api.patch<{ data: GrupoTurno }>(`/grupos-turno/${id}`, data).then(r => r.data),
   /** Resumen del grupo y sus turnos ordenados por fecha. */
   obtener: (id: number) => api.get<{ data: GrupoTurnoDetalle }>(`/grupos-turno/${id}`).then(r => r.data),
+  /** Lo pagado, lo comprometido y lo frenado del grupo (mismas reglas que la liquidación). */
+  costos: (id: number) => api.get<{ data: CostosGrupo }>(`/grupos-turno/${id}/costos`).then(r => r.data),
   /** 409 si tiene turnos sin terminar o con alguien trabajando: el mensaje del servidor dice cuál. */
   /** Con turnos terminados sin contrato firmado responde 409 (aviso): se repite con `confirmar` tras preguntar. */
   cerrar: (id: number, confirmar = false) =>

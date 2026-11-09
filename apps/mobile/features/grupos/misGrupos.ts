@@ -64,7 +64,11 @@ export function agruparMisTurnos(asignaciones: Asignacion[]): GrupoDeMisTurnos[]
     g.fechaFin = a.oferta_fecha;
     if (TERMINADOS.has(a.estado)) {
       g.terminados++;
-      if (a.estado === 'completado' && a.contrato_firmado === 0) {
+      // Con una compensación propuesta que el trabajador aún no responde, el turno está «en espera»: no suma ni resta
+      // (como en la liquidación y la cuenta de cobro), porque lo que le pagan puede cambiar.
+      if (a.estado === 'completado' && a.compensacion_decision === 'pendiente') {
+        // sin dinero ni aviso de firma hasta que decida
+      } else if (a.estado === 'completado' && a.contrato_firmado === 0) {
         g.sinFirmar++;
         g.porFirmar += cobroDelTurno(a);
       } else {

@@ -16,6 +16,7 @@ import { confirm } from '@/lib/confirmDialog';
 import { COLORS } from '@/lib/designTokens';
 import { DuplicarOfertaModal } from '@/features/turnos/oferta/DuplicarOfertaModal';
 import { FaseChip } from '@/features/grupos/FaseGrupo';
+import { CostosGrupo } from '@/features/grupos/CostosGrupo';
 import { FilaTurno } from '@/features/grupos/FilaTurno';
 import { EditarGrupoModal } from '@/features/grupos/EditarGrupoModal';
 import { useOpcionesGrupos } from '@/features/empresas/useOpcionesGrupos';
@@ -137,6 +138,8 @@ export default function GrupoDetalleScreen() {
                 </View>
               ) : null}
             </View>
+
+            <CostosGrupo grupoId={g.id} />
 
             <View className="gap-3">
               <View className="flex-row items-center justify-between">

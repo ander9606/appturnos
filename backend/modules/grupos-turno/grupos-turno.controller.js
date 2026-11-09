@@ -7,6 +7,11 @@ async function listar(req, res) {
   res.json({ success: true, data, message: 'Grupos de turnos' });
 }
 
+async function costos(req, res) {
+  const data = await GruposTurnoService.costos(req.empresa_id, req.params.id);
+  res.json({ success: true, data });
+}
+
 async function obtener(req, res) {
   const data = await GruposTurnoService.obtener(req.empresa_id, req.params.id);
   res.json({ success: true, data, message: 'Detalle del grupo' });
@@ -38,4 +43,4 @@ async function reabrir(req, res) {
   res.json({ success: true, data, message: 'Grupo reabierto' });
 }
 
-module.exports = { listar, obtener, crear, actualizar, cerrar, reabrir };
+module.exports = { listar, obtener, costos, crear, actualizar, cerrar, reabrir };
