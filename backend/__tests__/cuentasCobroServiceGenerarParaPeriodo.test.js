@@ -172,6 +172,48 @@ describe('CuentasCobroService.generarParaPeriodo', () => {
     }));
   });
 
+  test('un turno fallido que se cobra por primera vez lleva la marca en su línea; uno normal no', async () => {
+    AsignacionesModel.liquidacion.mockResolvedValue([
+      trabajador([
+        turno({ estado: 'fallido', pago_total: 60000, oferta_titulo: 'Montaje Gala' }),
+        turno({ asignacion_id: 2, oferta_titulo: 'Desmontaje' }),
+      ]),
+    ]);
+
+    await CuentasCobroService.generarParaPeriodo(7, 10);
+
+    const { items } = CuentasCobroModel.crear.mock.calls[0][1];
+    expect(items[0].descripcion).toBe('Montaje Gala (turno fallido: compensación por fuerza mayor)');
+    expect(items[1].descripcion).toBe('Desmontaje');
+  });
+
+  test('fallido con compensación mayor a lo ya cobrado: la diferencia se rotula como ajuste por turno fallido', async () => {
+    CuentasCobroModel.listarPorPeriodoYTrabajador.mockResolvedValue([
+      { id: 500, secuencia: 1, firmado_trabajador: 1, items: [{ asignacion_id: 1, valor: 40000 }] },
+    ]);
+    AsignacionesModel.liquidacion.mockResolvedValue([trabajador([turno({ estado: 'fallido', pago_total: 60000 })])]);
+
+    await CuentasCobroService.generarParaPeriodo(7, 10);
+
+    expect(CuentasCobroModel.crear.mock.calls[0][1].items[0]).toMatchObject({ valor: 20000, descripcion: 'Turno A (ajuste por turno fallido)' });
+  });
+
+  test('un turno en espera de autorización no bloquea la cuenta ni entra en ella todavía', async () => {
+    AsignacionesModel.liquidacion.mockResolvedValue([
+      trabajador([
+        turno({ asignacion_id: 1 }),
+        turno({ asignacion_id: 2, pago_total: 135000, firmado_trabajador: false, pendiente_autorizacion: true }),
+      ]),
+    ]);
+
+    const resultado = await CuentasCobroService.generarParaPeriodo(7, 10);
+
+    expect(resultado.bloqueados).toBe(0);
+    const { items, valorTotal } = CuentasCobroModel.crear.mock.calls[0][1];
+    expect(items.map((i) => i.asignacion_id)).toEqual([1]);
+    expect(valorTotal).toBe(60000);
+  });
+
   test('ya ajustado (cuenta de ajuste firmada) no vuelve a generar nada', async () => {
     CuentasCobroModel.listarPorPeriodoYTrabajador.mockResolvedValue([
       { id: 500, secuencia: 1, firmado_trabajador: 1, items: [{ asignacion_id: 1, valor: 60000 }] },

@@ -65,18 +65,23 @@ const GruposTurnoModel = {
     return fila?.id ?? null;
   },
 
-  /** Turnos del grupo por fecha (los cancelados también, para que el gestor los vea). */
+  /**
+   * Turnos del grupo por fecha (los cancelados también, para que el gestor los vea). `fallidos`: cuántos trabajadores
+   * quedaron con compensación por fuerza mayor — un turno cancelado con fallidos > 0 es un «turno fallido», no uno
+   * cancelado a secas (tiene un costo).
+   */
   async turnos(empresaId, id) {
     const [filas] = await pool.query(
       `SELECT id, titulo, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, lugar_alias, estado,
               (SELECT COALESCE(SUM(p.plazas), 0) FROM oferta_puestos p WHERE p.oferta_id = ofertas_turno.id) AS plazas,
-              (SELECT COALESCE(SUM(p.plazas_cubiertas), 0) FROM oferta_puestos p WHERE p.oferta_id = ofertas_turno.id) AS plazas_cubiertas
+              (SELECT COALESCE(SUM(p.plazas_cubiertas), 0) FROM oferta_puestos p WHERE p.oferta_id = ofertas_turno.id) AS plazas_cubiertas,
+              (SELECT COUNT(*) FROM asignaciones_turno a WHERE a.oferta_id = ofertas_turno.id AND a.estado = 'fallido') AS fallidos
        FROM ofertas_turno
        WHERE grupo_id = ? AND empresa_id = ?
        ORDER BY fecha, hora_inicio, id`,
       [id, empresaId]
     );
-    return filas.map((f) => ({ ...f, plazas: Number(f.plazas), plazas_cubiertas: Number(f.plazas_cubiertas) }));
+    return filas.map((f) => ({ ...f, plazas: Number(f.plazas), plazas_cubiertas: Number(f.plazas_cubiertas), fallidos: Number(f.fallidos) }));
   },
 
   async crear(empresaId, datos, creadoPor) {

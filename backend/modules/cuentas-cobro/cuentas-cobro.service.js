@@ -58,7 +58,8 @@ function itemCompleto(t) {
   return {
     asignacion_id: t.asignacion_id,
     fecha: t.oferta_fecha,
-    descripcion: t.oferta_titulo,
+    // Un turno fallido (fuerza mayor) se cobra como compensación, no como labor realizada: se marca en la línea.
+    descripcion: t.estado === 'fallido' ? `${t.oferta_titulo} (turno fallido: compensación por fuerza mayor)` : t.oferta_titulo,
     cargo: t.cargo_nombre,
     lugar: lugarCorto(t.lugar, t.lugar_alias),
     ...datosGrupo(t),
@@ -81,7 +82,7 @@ function itemDiferencia(t, diferencia) {
   return {
     asignacion_id: t.asignacion_id,
     fecha: t.oferta_fecha,
-    descripcion: `${t.oferta_titulo} (ajuste por diferencia)`,
+    descripcion: `${t.oferta_titulo} (${t.estado === 'fallido' ? 'ajuste por turno fallido' : 'ajuste por diferencia'})`,
     cargo: t.cargo_nombre,
     lugar: lugarCorto(t.lugar, t.lugar_alias),
     ...datosGrupo(t),
@@ -96,14 +97,6 @@ function itemDiferencia(t, diferencia) {
     descuento_motivo: null,
     valor: diferencia,
   };
-}
-
-/**
- * Ajuste a la baja de un turno que ya se cobró en una cuenta firmada y después se dio por fallido con una compensación
- * menor: valor negativo por lo cobrado de más. El trabajador firma esta cuenta de ajuste igual que una complementaria.
- */
-function itemAjusteFallido(t, diferencia) {
-  return { ...itemDiferencia(t, diferencia), descripcion: `${t.oferta_titulo} (ajuste por turno fallido)` };
 }
 
 const CuentasCobroService = {
@@ -147,7 +140,8 @@ const CuentasCobroService = {
       const firmadas = cuentas.filter((c) => c.firmado_trabajador);
       const abierta = cuentas.find((c) => !c.firmado_trabajador) ?? null;
 
-      const sinFirmar = w.turnos.filter((t) => !t.firmado_trabajador).length;
+      // Un turno en espera de que el trabajador autorice una compensación no bloquea la cuenta ni entra en ella todavía.
+      const sinFirmar = w.turnos.filter((t) => !t.firmado_trabajador && !t.pendiente_autorizacion).length;
       if (cuentas.length === 0 && sinFirmar > 0) {
         bloqueados.push({ w, sinFirmar });
         continue;
@@ -162,7 +156,7 @@ const CuentasCobroService = {
       }
       const items = [];
       for (const t of w.turnos) {
-        if (!t.firmado_trabajador) continue;
+        if (!t.firmado_trabajador || t.pendiente_autorizacion) continue;
         const previo = cobrado.get(t.asignacion_id);
         if (previo === undefined) {
           items.push(itemCompleto(t));
@@ -170,7 +164,7 @@ const CuentasCobroService = {
           const diferencia = redondear(t.pago_total - previo);
           if (diferencia > 0) items.push(itemDiferencia(t, diferencia));
           // Solo el fallido se ajusta a la baja: ya estaba cobrado y su compensación es menor.
-          else if (diferencia < 0 && t.estado === 'fallido') items.push(itemAjusteFallido(t, diferencia));
+          else if (diferencia < 0 && t.estado === 'fallido') items.push(itemDiferencia(t, diferencia));
         }
       }
       if (items.length === 0) {

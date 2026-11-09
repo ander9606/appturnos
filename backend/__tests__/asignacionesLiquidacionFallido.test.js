@@ -48,4 +48,34 @@ describe('AsignacionesLiquidacionModel.liquidacion — turnos fallidos', () => {
     expect(trabajador.turnos_pendientes_firma).toBe(1);
     expect(trabajador.pago_total).toBe(0);
   });
+
+  // Propuesta de compensación sin respuesta del trabajador: el turno queda en el aire (ver
+  // OfertasService.marcarFallida): no suma ni resta, y vuelve a contar según lo que decida.
+  describe('propuesta de compensación sin responder', () => {
+    const enEspera = (extra = {}) => filaBase({
+      asignacion_id: 2, estado: 'completado', compensacion_motivo: 'Corte de luz', compensacion_decision: 'pendiente',
+      firmado_trabajador: 1, pago_total: 135000, ...extra,
+    });
+
+    test('queda en espera: no suma ni resta en los totales y se cuenta aparte', async () => {
+      pool.query.mockResolvedValue([[filaBase(), enEspera()]]); // un fallido normal ($120.000) y uno en espera ($135.000)
+
+      const [trabajador] = await AsignacionesLiquidacionModel.liquidacion(1, {});
+
+      expect(trabajador.pago_total).toBe(120000); // solo el fallido; el turno en espera no entra
+      expect(trabajador.turnos_pendientes_autorizacion).toBe(1);
+      expect(trabajador.turnos_pendientes_firma).toBe(0);
+      expect(trabajador.turnos.find((t) => t.asignacion_id === 2)).toMatchObject({ pendiente_autorizacion: true, estado: 'completado' });
+      expect(trabajador.turnos.find((t) => t.asignacion_id === 1).pendiente_autorizacion).toBe(false);
+    });
+
+    test('si el trabajador la rechazó, vuelve a contar según su contrato', async () => {
+      pool.query.mockResolvedValue([[enEspera({ compensacion_decision: 'rechazada' })]]);
+
+      const [trabajador] = await AsignacionesLiquidacionModel.liquidacion(1, {});
+
+      expect(trabajador.pago_total).toBe(135000);
+      expect(trabajador.turnos_pendientes_autorizacion).toBe(0);
+    });
+  });
 });

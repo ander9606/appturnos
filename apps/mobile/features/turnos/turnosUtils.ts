@@ -130,3 +130,20 @@ export function fmtFaltan(min: number): string {
   if (h > 0) return `${h}h`;
   return `${rem} min`;
 }
+
+/** Lo mínimo que se mira de un turno del trabajador para decidir si cuenta en sus totales. */
+interface TurnoParaTotales { estado: EstadoAsignacion; compensacion_decision?: 'pendiente' | 'autorizada' | 'rechazada' | null }
+
+/**
+ * Propuesta de compensación (fuerza mayor) que el trabajador aún no responde: el turno queda en el aire, no suma
+ * ni resta en sus totales hasta que decida. Misma regla que el backend (asignaciones.liquidacion.model.js).
+ */
+export function turnoEnEspera(a: TurnoParaTotales): boolean {
+  return a.estado === 'completado' && a.compensacion_decision === 'pendiente';
+}
+
+/** Cuenta como ganancia del trabajador: turno completado o fallido, salvo el que está en espera de su autorización. */
+export function cuentaComoGanancia(a: TurnoParaTotales): boolean {
+  return (a.estado === 'completado' || a.estado === 'fallido') && !turnoEnEspera(a);
+}
+

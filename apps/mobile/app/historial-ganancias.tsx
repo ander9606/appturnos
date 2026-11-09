@@ -24,6 +24,7 @@ import { formatCOP, formatDate, toISODate } from '@/lib/formatters';
 import { PeriodoBadge } from '@/features/nomina/PeriodoBadge';
 import { TipoPeriodoBadge } from '@/features/nomina/TipoPeriodoBadge';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
+import { cuentaComoGanancia } from '@/features/turnos/turnosUtils';
 import { usePeriodos, useNominaPerfil, useRegistrosHistorial } from '@/features/nomina/useNomina';
 import { calcularResumenPeriodo, getValorHora, fmtPeriodo, fmtFechaCorta, TIPO_PERIODO_LABEL_SALARIO, type ResumenPeriodoNomina } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import type { PeriodoNomina, RegistroDiario, Asignacion } from '@api-client';
@@ -41,7 +42,7 @@ interface TotalesPeriodo { count: number; horas: number; pago: number }
 
 function turnosDePeriodo(turnos: Asignacion[], periodo: PeriodoNomina): Asignacion[] {
   return turnos.filter(
-    (a) => (a.estado === 'completado' || a.estado === 'fallido')
+    (a) => cuentaComoGanancia(a)
       && a.oferta_fecha >= periodo.fecha_inicio
       && a.oferta_fecha <= periodo.fecha_fin,
   );
@@ -181,12 +182,12 @@ function HistorialTurnos() {
   const turnosEnRango = useMemo(() => {
     if (!rangoActivo) return [];
     return (turnos ?? []).filter(
-      (a) => (a.estado === 'completado' || a.estado === 'fallido') && a.oferta_fecha >= desdeISO && a.oferta_fecha <= hastaISO,
+      (a) => cuentaComoGanancia(a) && a.oferta_fecha >= desdeISO && a.oferta_fecha <= hastaISO,
     );
   }, [turnos, rangoActivo, desdeISO, hastaISO]);
 
   const filas = useMemo(() => {
-    const completados = (turnos ?? []).filter((a) => a.estado === 'completado' || a.estado === 'fallido');
+    const completados = (turnos ?? []).filter(cuentaComoGanancia);
     if (completados.length === 0) return [];
     const fechaMin = completados.reduce(
       (min, a) => (a.oferta_fecha < min ? a.oferta_fecha : min),

@@ -73,7 +73,10 @@ function agruparPorTurno(trabajadores: LiquidacionTurnosTrabajador[]): TurnoGrup
       g.lineas.push({ ...t, trabajador_id: w.trabajador_id, nombre: w.nombre, apellido: w.apellido });
       // Mismo criterio que el total por trabajador: un turno sin firmar no
       // cuenta en el total a pagar todavía (ver asignaciones.liquidacion.model.js).
-      if (t.firmado_trabajador) {
+      // Un turno en espera de que el trabajador autorice una compensación no suma ni resta, y tampoco está «sin firmar».
+      if (t.pendiente_autorizacion) {
+        // en espera
+      } else if (t.firmado_trabajador) {
         g.total_horas += t.horas_trabajadas;
         g.total_pago += t.pago_total;
       } else {
@@ -102,13 +105,14 @@ function TurnoLineaRow({ t, primary }: { t: LiquidacionTurnoLinea; primary: stri
   const router = useRouter();
   const hasExtra = t.pago_extra > 0;
   const hasBono = t.bono_monto > 0;
-  const sinFirmar = !t.firmado_trabajador;
+  const enEspera = !!t.pendiente_autorizacion;
+  const sinFirmar = !t.firmado_trabajador && !enEspera;
   return (
     <TouchableOpacity
       onPress={() => router.push(`/turno/${t.asignacion_id}`)}
       activeOpacity={0.7}
       className="py-3 border-b border-border last:border-b-0"
-      style={sinFirmar ? { opacity: 0.6 } : undefined}
+      style={sinFirmar || enEspera ? { opacity: 0.6 } : undefined}
     >
       {/* Fila 1: fecha + monto */}
       <View className="flex-row items-start justify-between gap-2">
@@ -128,6 +132,11 @@ function TurnoLineaRow({ t, primary }: { t: LiquidacionTurnoLinea; primary: stri
           {cop(t.pago_total)}
         </Text>
       </View>
+      {enEspera && (
+        <Text className="text-[11px] font-semibold text-warning mt-1">
+          En espera de que el trabajador autorice una compensación — no suma ni resta todavía
+        </Text>
+      )}
       {t.estado === 'fallido' && (
         <Text className="text-[11px] font-semibold text-warning mt-1">
           Turno fallido — compensación por {(t.compensacion_motivo || 'fuerza mayor').toLowerCase()}
@@ -201,7 +210,7 @@ function TrabajadorCard({
   const hasBono = item.bono_monto > 0;
   const pendientes = item.turnos_pendientes_firma;
   const turnosPagables = item.total_turnos - pendientes;
-  const montoPendiente = item.turnos.reduce((s, t) => (t.firmado_trabajador ? s : s + t.pago_total), 0);
+  const montoPendiente = item.turnos.reduce((s, t) => (t.firmado_trabajador || t.pendiente_autorizacion ? s : s + t.pago_total), 0);
 
   return (
     <View
@@ -378,7 +387,10 @@ function TurnoGroupCard({ item, primary }: { item: TurnoGrupo; primary: string }
                   {l.estado === 'fallido' && (
                     <Text className="text-[10px] font-semibold text-warning">Turno fallido</Text>
                   )}
-                  {!l.firmado_trabajador && (
+                  {l.pendiente_autorizacion && (
+                    <Text className="text-[10px] font-semibold text-warning">En espera de autorización</Text>
+                  )}
+                  {!l.firmado_trabajador && !l.pendiente_autorizacion && (
                     <View className="flex-row items-center gap-0.5">
                       <Ionicons name="alert-circle-outline" size={11} color={COLORS.warningDark} />
                       <Text className="text-[10px] font-semibold text-warning">Sin firmar</Text>

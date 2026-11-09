@@ -78,6 +78,20 @@ const HORAS_CORTE_EDICION_OFERTA = 2;
  */
 const COMPENSACION_FALLIDO_MINIMA = 0.5;
 
+/**
+ * Interruptor de la cláusula UNDÉCIMA — FUERZA MAYOR del contrato diario. APAGADO por defecto: la cláusula está lista
+ * pero oculta hasta que se revise en lo legal. Con CLAUSULA_FUERZA_MAYOR=1 en el entorno, los contratos que se CREEN
+ * desde entonces la llevan (contratos_diarios.clausula_fuerza_mayor = 1); los creados antes no cambian, estén o no
+ * firmados, y el PDF de uno que ya la lleva sigue mostrándola aunque después se apague (un contrato no se altera).
+ */
+const CLAUSULA_FUERZA_MAYOR_ACTIVA = process.env.CLAUSULA_FUERZA_MAYOR === '1';
+
+/**
+ * Horas que una propuesta de compensación puede quedar sin respuesta del trabajador antes de avisarle al gestor
+ * (una sola vez). Mientras tanto el turno está en espera: no suma ni resta (ver asignaciones.liquidacion.model.js).
+ */
+const HORAS_ALERTA_COMPENSACION_SIN_RESPUESTA = 48;
+
 // Fuente de verdad en TS: packages/api-client/src/turnos.ts → ESTADOS_ASIGNACION
 // Si añades un estado aquí, actualiza también ese array, el ESTADO_CONFIG en
 // apps/mobile/features/turnos/turnosUtils.ts, y todos los demás mapas listados
@@ -259,6 +273,8 @@ module.exports = {
   DIAS_GRACIA_SUSCRIPCION,
   HORAS_CORTE_EDICION_OFERTA,
   COMPENSACION_FALLIDO_MINIMA,
+  HORAS_ALERTA_COMPENSACION_SIN_RESPUESTA,
+  CLAUSULA_FUERZA_MAYOR_ACTIVA,
   ESTADOS_ASIGNACION,
   ESTADOS_PERIODO,
   RECARGOS,

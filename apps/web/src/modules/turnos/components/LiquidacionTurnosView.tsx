@@ -89,7 +89,10 @@ function agruparPorTurno(trabajadores: LiquidacionTurnosTrabajador[]): TurnoGrup
       g.lineas.push({ ...t, trabajador_id: w.trabajador_id, nombre: w.nombre, apellido: w.apellido });
       // Mismo criterio que el total por trabajador: un turno sin firmar no
       // cuenta en el total a pagar todavía (ver asignaciones.liquidacion.model.js).
-      if (t.firmado_trabajador) {
+      // Un turno en espera de que el trabajador autorice una compensación no suma ni resta, y tampoco está «sin firmar».
+      if (t.pendiente_autorizacion) {
+        // en espera
+      } else if (t.firmado_trabajador) {
         g.total_horas += t.horas_trabajadas;
         g.total_pago += t.pago_total;
       } else {
@@ -332,7 +335,10 @@ export function LiquidacionTurnosView() {
                                       {t.estado === 'fallido' && (
                                         <span className="text-[10px] font-semibold text-warning bg-warning-light rounded-full px-1.5 py-0.5">Turno fallido</span>
                                       )}
-                                      {!t.firmado_trabajador && (
+                                      {t.pendiente_autorizacion && (
+                                        <span className="text-[10px] font-semibold text-warning bg-warning-light rounded-full px-1.5 py-0.5" title="Se propuso una compensación por fuerza mayor y el trabajador aún no responde: no suma ni resta todavía">En espera de autorización</span>
+                                      )}
+                                      {!t.firmado_trabajador && !t.pendiente_autorizacion && (
                                         <span title="Contrato sin firmar — no incluido en el total a pagar">
                                           <AlertTriangle size={12} className="text-warning" />
                                         </span>
@@ -349,7 +355,12 @@ export function LiquidacionTurnosView() {
                                 </button>
                                 {turnoAbierto && (
                                   <div className="px-4 py-2.5 bg-muted/40 text-xs text-muted-foreground">
-                                    {!t.firmado_trabajador && (
+                                    {t.pendiente_autorizacion && (
+                                      <p className="text-warning font-medium mb-2">
+                                        En espera de que el trabajador autorice una compensación por fuerza mayor — este turno no suma ni resta en el total todavía.
+                                      </p>
+                                    )}
+                                    {!t.firmado_trabajador && !t.pendiente_autorizacion && (
                                       <p className="flex items-center gap-1.5 text-warning font-medium mb-2">
                                         <AlertTriangle size={12} />
                                         Contrato sin firmar — este pago no cuenta en el total del período
@@ -439,7 +450,7 @@ export function LiquidacionTurnosView() {
                                   {l.estado === 'fallido' && (
                                     <span className="text-[10px] font-semibold text-warning bg-warning-light rounded-full px-1.5 py-0.5">Turno fallido</span>
                                   )}
-                                  {!l.firmado_trabajador && (
+                                  {!l.firmado_trabajador && !l.pendiente_autorizacion && (
                                     <span title="Contrato sin firmar — no incluido en el total a pagar">
                                       <AlertTriangle size={12} className="text-warning" />
                                     </span>

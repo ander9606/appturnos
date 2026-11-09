@@ -12,8 +12,7 @@ const NotificacionesService = require('../../notificaciones/notificaciones.servi
 const NotificacionesModel = require('../../notificaciones/notificaciones.model');
 const CostoLaborService = require('../../integracion/costo-labor.service');
 const PeriodosTurnosService = require('../periodos/periodos-turnos.service');
-const ContratosModel = require('../../contratos/contratos.model');
-const CuentasCobroService = require('../../cuentas-cobro/cuentas-cobro.service');
+const { ajustarContratoYCuenta } = require('../asignaciones/fallido.postproceso');
 const GeocodingService = require('../../geocoding/geocoding.service');
 const AppError = require('../../../utils/AppError');
 const {
@@ -507,12 +506,19 @@ module.exports = {
         );
       }
     }
-    const montos = enProgreso.map((a) => ({
-      asignacionId: a.id,
-      monto: overrides.has(a.id) ? overrides.get(a.id) : Number(a.tarifa_dia),
-    }));
+    const montoDe = (a) => (overrides.has(a.id) ? overrides.get(a.id) : Number(a.tarifa_dia));
+    const pagoActual = (a) => Number(a.pago_total || 0);
+    const pagoNuevo = (a) => montoDe(a) + Number(a.bono_monto || 0);
+    // Quien ya trabajó (completado) y quedaría con MENOS pago NO se cambia solo: se le baja el pago por trabajo
+    // hecho, y eso necesita su autorización. Queda una propuesta que el trabajador autoriza o no
+    // (AsignacionesService.autorizarCompensacion); mientras tanto sigue completado y se le paga según su contrato.
+    const bajaElPago = (a) => a.estado === 'completado' && pagoNuevo(a) < pagoActual(a);
+    const montos = enProgreso.filter((a) => !bajaElPago(a)).map((a) => ({ asignacionId: a.id, monto: montoDe(a) }));
+    const propuestas = enProgreso.filter(bajaElPago).map((a) => ({ asignacionId: a.id, monto: montoDe(a) }));
 
-    const actualizados = await OfertasModel.marcarFallida(empresaId, id, montos, motivoFinal, usuarioId);
+    const actualizados = await OfertasModel.marcarFallida(
+      empresaId, id, montos, motivoFinal, usuarioId, ...(propuestas.length ? [propuestas] : [])
+    );
     const idsActualizados = new Set(actualizados);
 
     // Mismo detalle que verá luego en el turno: la frase pedida se mantiene
@@ -540,6 +546,19 @@ module.exports = {
       });
     }));
 
+    // Propuestas: se le avisa al trabajador que debe autorizar el cambio (nada se aplicó todavía).
+    await Promise.all(enProgreso.filter(bajaElPago).map((a) => {
+      if (!a.usuario_id) return null;
+      return NotificacionesService.notificar({
+        empresaId,
+        usuarioId: a.usuario_id,
+        tipo: 'asignacion.compensacion_propuesta',
+        titulo: 'Necesitamos tu autorización',
+        mensaje: `El turno "${oferta.titulo}" se canceló por ${detalleMotivo}. Se propone cambiar tu pago de $${pagoActual(a).toLocaleString('es-CO')} a $${pagoNuevo(a).toLocaleString('es-CO')} (compensación). Mientras no respondas, este turno queda en espera: no se suma a tu pago hasta que decidas. Si no lo autorizas, se te paga según tu contrato.`,
+        data: { oferta_id: id, asignacion_id: a.id },
+      });
+    }));
+
     const otros = activas.filter((a) => a.estado !== 'en_progreso' && a.estado !== 'completado');
     const destinatariosOtros = otros.map((a) => a.usuario_id).filter(Boolean);
     if (destinatariosOtros.length) {
@@ -558,13 +577,7 @@ module.exports = {
     // Best-effort: un fallo aquí no debe deshacer el turno fallido ya guardado.
     const veniaCompletado = activas.filter((a) => a.estado === 'completado' && idsActualizados.has(a.id));
     for (const a of veniaCompletado) {
-      try {
-        const contrato = await ContratosModel.obtenerPorAsignacion(empresaId, a.id);
-        if (contrato?.firmado_trabajador) await ContratosModel.resetearFirma(empresaId, contrato.id);
-        await CuentasCobroService.actualizarPorTurnoFirmado(empresaId, a.id, a.trabajador_id);
-      } catch (err) {
-        logger.warn(`[ofertas] no se pudo ajustar contrato/cuenta de cobro de la asignación ${a.id} tras marcar fallida: ${err.message}`);
-      }
+      await ajustarContratoYCuenta(empresaId, a.id, a.trabajador_id);
     }
 
     // Igual que al cerrar un turno normal: la compensación es un costo de

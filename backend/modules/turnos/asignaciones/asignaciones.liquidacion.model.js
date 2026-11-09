@@ -60,6 +60,7 @@ module.exports = {
          a.id          AS asignacion_id,
          a.estado,
          a.compensacion_motivo,
+         a.compensacion_decision,
          a.horas_trabajadas,
          a.pago_total,
          COALESCE(a.pago_extra, 0)   AS pago_extra,
@@ -134,6 +135,10 @@ module.exports = {
           // Turnos completados cuyo contrato aún no firma el trabajador — su pago
           // no se suma a los totales de arriba hasta que exista la firma.
           turnos_pendientes_firma: 0,
+          // Turnos completados con una propuesta de compensación que el trabajador aún no responde: quedan en
+          // espera, no suman ni restan en los totales hasta que decida (autoriza → fallido con la compensación;
+          // no autoriza → se paga según contrato y vuelve a contar).
+          turnos_pendientes_autorizacion: 0,
           turnos:             [],
         });
       }
@@ -152,7 +157,10 @@ module.exports = {
       const neto   = total - descuento;
       const horas  = Number(row.horas_trabajadas ?? 0);
       w.total_turnos++;
-      if (firmado) {
+      const enEspera = row.estado === 'completado' && row.compensacion_decision === 'pendiente';
+      if (enEspera) {
+        w.turnos_pendientes_autorizacion++;
+      } else if (firmado) {
         w.total_horas  = parseFloat((w.total_horas + horas).toFixed(4));
         w.pago_extra   += extra;
         w.bono_monto   += bono;
@@ -191,6 +199,8 @@ module.exports = {
         pago_total:      neto,
         calificacion:    row.calificacion,
         firmado_trabajador: firmado,
+        // En espera de que el trabajador autorice una propuesta de compensación: no suma ni resta todavía.
+        pendiente_autorizacion: enEspera,
       });
     }
     return Array.from(workers.values());

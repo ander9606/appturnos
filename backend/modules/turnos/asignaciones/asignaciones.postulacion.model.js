@@ -398,6 +398,69 @@ module.exports = {
   },
 
   /**
+   * El trabajador AUTORIZA la propuesta de compensación: recién ahora el turno pasa a 'fallido' y su pago
+   * pasa a ser la compensación propuesta + el bono ya otorgado (el pago extra deja de contar). Conserva las
+   * horas y la salida reales. Atómico: solo actúa si sigue 'completado' con la propuesta pendiente.
+   * @returns {Promise<boolean>} true si esta llamada la aplicó.
+   */
+  async autorizarCompensacion(empresaId, id) {
+    const ahora = ahoraColombiaSQL();
+    const [res] = await pool.query(
+      `UPDATE asignaciones_turno
+       SET estado = 'fallido', pago_extra = 0, pago_total = compensacion_propuesta + bono_monto,
+           fallido_por = compensacion_propuesta_por, fallido_at = ?,
+           compensacion_decision = 'autorizada', compensacion_decision_at = ?
+       WHERE id = ? AND empresa_id = ? AND estado = 'completado' AND compensacion_decision = 'pendiente'`,
+      [ahora, ahora, id, empresaId]
+    );
+    return res.affectedRows > 0;
+  },
+
+  /**
+   * Propuestas de compensación que siguen sin respuesta del trabajador desde antes de `limiteSQL` y de las que aún
+   * no se le avisó al gestor (compensacion_alerta_at IS NULL).
+   */
+  async listarCompensacionesSinResponder(limiteSQL) {
+    const [filas] = await pool.query(
+      `SELECT a.id, a.empresa_id, a.oferta_id, a.compensacion_propuesta_at,
+              t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido, o.titulo AS oferta_titulo
+       FROM asignaciones_turno a
+       JOIN trabajadores t ON t.id = a.trabajador_id
+       JOIN ofertas_turno o ON o.id = a.oferta_id
+       WHERE a.estado = 'completado' AND a.compensacion_decision = 'pendiente'
+         AND a.compensacion_alerta_at IS NULL AND a.compensacion_propuesta_at <= ?`,
+      [limiteSQL]
+    );
+    return filas;
+  },
+
+  /**
+   * Reclama el aviso de una propuesta sin respuesta: atómico (solo una de dos instancias del worker lo gana) y solo
+   * si sigue pendiente. @returns {Promise<boolean>} true si esta llamada es la que debe avisar.
+   */
+  async reclamarAlertaCompensacion(id) {
+    const [res] = await pool.query(
+      `UPDATE asignaciones_turno SET compensacion_alerta_at = ?
+       WHERE id = ? AND compensacion_alerta_at IS NULL AND compensacion_decision = 'pendiente'`,
+      [ahoraColombiaSQL(), id]
+    );
+    return res.affectedRows > 0;
+  },
+
+  /**
+   * El trabajador NO autoriza: el turno sigue 'completado' y se le paga según su contrato.
+   * @returns {Promise<boolean>} true si esta llamada la registró.
+   */
+  async rechazarCompensacion(empresaId, id) {
+    const [res] = await pool.query(
+      `UPDATE asignaciones_turno SET compensacion_decision = 'rechazada', compensacion_decision_at = ?
+       WHERE id = ? AND empresa_id = ? AND estado = 'completado' AND compensacion_decision = 'pendiente'`,
+      [ahoraColombiaSQL(), id, empresaId]
+    );
+    return res.affectedRows > 0;
+  },
+
+  /**
    * El trabajador da por enterado un turno fallido. Idempotente: si ya lo aceptó conserva
    * la primera fecha (WHERE fallido_aceptado_at IS NULL). Solo sobre asignaciones 'fallido'.
    * @returns {Promise<boolean>} true si esta llamada fue la que lo aceptó.

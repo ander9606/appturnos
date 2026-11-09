@@ -134,6 +134,14 @@ export interface Asignacion {
   fallido_at?: string | null;
   /** Cuándo el trabajador dio por enterado el turno fallido; null = aún no (el pago no depende de esto). */
   fallido_aceptado_at?: string | null;
+  /**
+   * Propuesta de compensación sobre un turno que el trabajador YA completó y que bajaría su pago (fuerza mayor).
+   * 'pendiente': espera su autorización y mientras tanto se le paga según su contrato; 'rechazada': no la autorizó;
+   * 'autorizada': el turno ya pasó a 'fallido'. null/ausente: nunca hubo propuesta.
+   */
+  compensacion_propuesta?: number | string | null;
+  compensacion_decision?: 'pendiente' | 'autorizada' | 'rechazada' | null;
+  compensacion_decision_at?: string | null;
   // Joined from calificaciones_turno (LEFT JOIN — null if not yet rated)
   calificacion: number | null;
   calificacion_comentario: string | null;
@@ -374,6 +382,8 @@ export interface AsignacionResumen {
   cargo_nombre: string;
   /** Lo que ya tiene a pagar este turno (DECIMAL: puede llegar como string). */
   pago_total?: number | string | null;
+  /** Bono ya otorgado: el pago tras la compensación es compensación + bono. */
+  bono_monto?: number | string | null;
 }
 
 export interface PaginatedResponse<T> {
@@ -415,6 +425,8 @@ export interface LiquidacionTurnoLinea {
   /** Si es `false`, el contrato del turno aún no lo firma el trabajador —
    *  su pago no está incluido en los totales de `LiquidacionTurnosTrabajador`. */
   firmado_trabajador: boolean;
+  /** Propuesta de compensación sin respuesta del trabajador: el turno está en espera y no suma ni resta todavía. */
+  pendiente_autorizacion?: boolean;
 }
 
 export interface LiquidacionTurnosTrabajador {
@@ -433,6 +445,8 @@ export interface LiquidacionTurnosTrabajador {
   pago_total: number;
   /** Turnos completados sin firma del trabajador, excluidos de los totales de pago. */
   turnos_pendientes_firma: number;
+  /** Turnos en espera de que el trabajador autorice una compensación: no suman ni restan en los totales. */
+  turnos_pendientes_autorizacion?: number;
   turnos: LiquidacionTurnoLinea[];
 }
 
@@ -646,6 +660,16 @@ export const turnosApi = {
    */
   reconfirmarAsignacion(id: number, acepta: boolean): Promise<Asignacion> {
     return api.post<Asignacion>(`/api/turnos/asignaciones/${id}/reconfirmar`, { acepta });
+  },
+
+  /** El trabajador AUTORIZA bajarle el pago de un turno ya trabajado (propuesta de compensación por fuerza mayor). */
+  autorizarCompensacion(id: number): Promise<Asignacion> {
+    return api.post<Asignacion>(`/api/turnos/asignaciones/${id}/autorizar-compensacion`);
+  },
+
+  /** El trabajador NO la autoriza: su turno sigue completado y se le paga según su contrato. */
+  rechazarCompensacion(id: number): Promise<Asignacion> {
+    return api.post<Asignacion>(`/api/turnos/asignaciones/${id}/rechazar-compensacion`);
   },
 
   /** El trabajador da por enterado su turno fallido (fuerza mayor) y la compensación. Idempotente. */

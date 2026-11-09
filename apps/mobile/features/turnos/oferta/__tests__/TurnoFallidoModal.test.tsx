@@ -48,6 +48,13 @@ beforeEach(() => {
 });
 
 describe('TurnoFallidoModal', () => {
+  test('advierte que solo se use si la tarea no se realizó (si se realizó, se paga según contrato)', async () => {
+    montar();
+    expect(screen.getByText(/Úsalo solo si la tarea no se realizó/)).toBeTruthy();
+    await confirmar();
+    expect(mockConfirm.mock.calls[0][0].message).toContain('la tarea NO se realizó');
+  });
+
   test('muestra el mínimo (la mitad de la tarifa) bajo cada compensación', () => {
     montar();
     expect(screen.getAllByText(/Mínimo .*60\.000.*mitad de la tarifa/)).toHaveLength(2);
@@ -63,16 +70,27 @@ describe('TurnoFallidoModal', () => {
     expect(mutateAsync).not.toHaveBeenCalled();
   });
 
-  test('antes de enviar pide confirmar y muestra el antes/después de quien ya había terminado', async () => {
+  test('antes de enviar pide confirmar; a quien ya trabajó y baja de pago lo muestra como PROPUESTA que debe autorizar', async () => {
     montar();
     await confirmar();
     expect(mockConfirm).toHaveBeenCalledTimes(1);
     const { message, destructive } = mockConfirm.mock.calls[0][0];
     expect(destructive).toBe(true);
-    expect(message).toContain('Ana Ruiz: de');
-    expect(message).toMatch(/135\.000.*a.*120\.000/);
+    expect(message).toMatch(/Ana Ruiz: propuesta de .*135\.000.* a .*120\.000.*necesita su autorización/);
+    expect(message).toContain('mientras no responda, ese turno queda en espera y no suma ni resta');
+    expect(message).toContain('el trabajador debe autorizarlo');
     expect(message).toContain('Luis Paz:');
-    expect(message).not.toContain('Luis Paz: de');
+    expect(message).not.toContain('Luis Paz: propuesta');
+  });
+
+  test('si la compensación NO le baja el pago a quien ya trabajó, se aplica directo: «de X a Y», sin autorización', async () => {
+    montar();
+    const campos = screen.getAllByDisplayValue('120000');
+    fireEvent.changeText(campos[0], '135000'); // igual a lo que ya tenía
+    await confirmar();
+    const { message } = mockConfirm.mock.calls[0][0];
+    expect(message).toMatch(/Ana Ruiz: de .*135\.000.* a .*135\.000/);
+    expect(message).not.toContain('necesita su autorización');
   });
 
   test('si el gestor no confirma, no se envía nada', async () => {

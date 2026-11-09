@@ -400,6 +400,16 @@ export function OfertaDetailPage() {
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_ASIG_BADGE[a.estado]}`}>
                           {ESTADO_ASIG_LABEL[a.estado]}
                         </span>
+                        {a.estado === 'completado' && a.compensacion_decision === 'pendiente' && (
+                          <span className="block text-[11px] font-medium text-warning mt-1" title="Se propuso cambiar su pago por fuerza mayor; solo se aplica si el trabajador lo autoriza. Mientras no responda, el turno queda en espera: no suma ni resta.">
+                            Pendiente de autorización del trabajador
+                          </span>
+                        )}
+                        {a.estado === 'completado' && a.compensacion_decision === 'rechazada' && (
+                          <span className="block text-[11px] font-medium text-muted-foreground mt-1" title="El trabajador no autorizó el cambio de pago: se le paga según su contrato.">
+                            No autorizó el cambio de pago
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         <span className="inline-flex items-center gap-1.5">
@@ -1073,6 +1083,10 @@ function TurnoFallidoModal({
   const minimoDe = (a: Asignacion) =>
     Number(puestos.find(p => p.id === a.puesto_id)?.tarifa_dia ?? 0) * COMPENSACION_FALLIDO_MINIMA;
   const nombreDe = (a: Asignacion) => `${a.trabajador_nombre} ${a.trabajador_apellido}`;
+  // Quien ya trabajó y quedaría con MENOS pago no se cambia solo: es una propuesta que el trabajador debe autorizar.
+  const bajaElPago = (a: Asignacion) =>
+    a.estado === 'completado' && a.pago_total != null
+    && (Number(montos[a.id]) || 0) + (Number(a.bono_monto) || 0) < Number(a.pago_total);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1105,6 +1119,9 @@ function TurnoFallidoModal({
         El turno se cancelará por fuerza mayor. Quienes ya marcaron ingreso recibirán la compensación
         que definas abajo; el resto queda cancelado sin pago, como siempre.
       </p>
+      <p className="text-sm font-medium text-warning bg-warning-light rounded-lg px-3 py-2 mb-4">
+        Úsalo solo si la tarea no se realizó. Si la labor sí se realizó, se paga según el contrato: no la des por fallida.
+      </p>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {confirmando && (
           <div className="rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm flex flex-col gap-2">
@@ -1115,14 +1132,19 @@ function TurnoFallidoModal({
               {enProgreso.map(a => (
                 <li key={a.id}>
                   {nombreDe(a)}:{' '}
-                  {a.estado === 'completado' && a.pago_total != null
-                    ? <>de {fmtCOP(Number(a.pago_total))} a <strong className="text-foreground">{fmtCOP(Number(montos[a.id]) || 0)}</strong></>
-                    : <strong className="text-foreground">{fmtCOP(Number(montos[a.id]) || 0)}</strong>}
+                  {bajaElPago(a)
+                    ? <>propuesta de {fmtCOP(Number(a.pago_total))} a <strong className="text-foreground">{fmtCOP(Number(montos[a.id]) || 0)}</strong> (necesita su autorización; mientras no responda, ese turno queda en espera y no suma ni resta)</>
+                    : a.estado === 'completado' && a.pago_total != null
+                      ? <>de {fmtCOP(Number(a.pago_total))} a <strong className="text-foreground">{fmtCOP(Number(montos[a.id]) || 0)}</strong></>
+                      : <strong className="text-foreground">{fmtCOP(Number(montos[a.id]) || 0)}</strong>}
                 </li>
               ))}
             </ul>
             <p className="text-xs text-muted-foreground">
-              Quien ya había terminado su turno pasa de su pago a esa compensación.
+              {enProgreso.some(bajaElPago)
+                ? 'A quien ya trabajó y quedaría con menos pago no se le cambia solo: el trabajador debe autorizarlo. '
+                : 'Quien ya había terminado su turno pasa de su pago a esa compensación. '}
+              Confirma que la tarea NO se realizó: si se realizó, debe pagarse según el contrato.
             </p>
           </div>
         )}

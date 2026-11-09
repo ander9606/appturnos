@@ -45,6 +45,8 @@ export interface TurnoDeGrupo {
   estado: EstadoOferta;
   plazas: number;
   plazas_cubiertas: number;
+  /** Trabajadores con compensación por turno fallido (fuerza mayor). Con el turno cancelado y > 0, es un «turno fallido». */
+  fallidos?: number;
 }
 
 export interface GrupoTurnoDetalle extends GrupoTurno {
