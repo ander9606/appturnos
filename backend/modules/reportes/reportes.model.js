@@ -107,6 +107,46 @@ const ReportesModel = {
     return fila;
   },
 
+  /**
+   * Asistencia y costo de los turnos del rango por grupo (grupo_id NULL = turnos sin grupo). Mismo criterio que
+   * resumenTurnos: solo trabajadores de turnos y el costo cuenta los completados.
+   */
+  async asistenciaPorGrupo(empresaId, desde, hasta) {
+    const [filas] = await pool.query(
+      `SELECT o.grupo_id, g.nombre, g.estado,
+              COUNT(*) AS convocados,
+              COALESCE(SUM(a.estado = 'completado'), 0) AS completados,
+              COALESCE(SUM(a.estado = 'no_presentado'), 0) AS no_presentados,
+              COALESCE(SUM(CASE WHEN a.estado = 'completado' THEN a.pago_total END), 0) AS costo
+       FROM asignaciones_turno a
+       JOIN ofertas_turno o ON o.id = a.oferta_id
+       JOIN trabajadores t ON t.id = a.trabajador_id
+       LEFT JOIN grupos_turno g ON g.id = o.grupo_id AND g.empresa_id = o.empresa_id
+       WHERE a.empresa_id = ? AND o.fecha BETWEEN ? AND ? AND t.tipo = 'turnos'
+         AND a.estado IN ('completado', 'no_presentado', 'confirmado', 'en_progreso')
+       GROUP BY o.grupo_id, g.nombre, g.estado`,
+      [empresaId, desde, hasta]
+    );
+    return filas;
+  },
+
+  /** Turnos y plazas (pedidas y cubiertas) de cada grupo en el rango, sin canceladas ni borradores. */
+  async coberturaPorGrupo(empresaId, desde, hasta) {
+    const [filas] = await pool.query(
+      `SELECT o.grupo_id, g.nombre, g.estado,
+              COUNT(DISTINCT o.id) AS turnos,
+              COALESCE(SUM(p.plazas), 0) AS plazas, COALESCE(SUM(p.plazas_cubiertas), 0) AS cubiertas
+       FROM ofertas_turno o
+       JOIN grupos_turno g ON g.id = o.grupo_id AND g.empresa_id = o.empresa_id
+       LEFT JOIN oferta_puestos p ON p.oferta_id = o.id
+       WHERE o.empresa_id = ? AND o.fecha BETWEEN ? AND ?
+         AND o.estado NOT IN ('borrador', 'cancelada')
+       GROUP BY o.grupo_id, g.nombre, g.estado`,
+      [empresaId, desde, hasta]
+    );
+    return filas;
+  },
+
   /** Horas totales (todos los baldes, que son disjuntos) y días con horas por trabajador de nómina. */
   async horasTotalesPorTrabajador(empresaId, desde, hasta) {
     const total = 'r.horas_ordinarias + r.horas_extra_diurnas + r.horas_extra_nocturnas + r.horas_nocturnas + r.horas_festivo';

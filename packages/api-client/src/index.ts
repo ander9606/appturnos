@@ -175,6 +175,8 @@ export type {
   ResumenInsight,
   NivelInsight,
   HistorialTrabajadorResponse,
+  GrupoReporte,
+  GruposReporteResponse,
 } from './reportes';
 export type {
   EmpresaAdmin,
