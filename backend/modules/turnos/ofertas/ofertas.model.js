@@ -841,6 +841,7 @@ const OfertasModel = {
                a.horas_trabajadas = IF(a.estado = 'completado', a.horas_trabajadas,
                    TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, o.fin_ts)) / 60),
                a.estado = 'fallido',
+               a.pago_extra = 0,
                a.pago_total = ? + a.bono_monto,
                a.compensacion_motivo = ?,
                a.fallido_por = ?,

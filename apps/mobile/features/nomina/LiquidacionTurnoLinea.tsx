@@ -84,6 +84,12 @@ export function LiquidacionTurnoLinea({ linea, primaryColor }: Props) {
         </View>
       </View>
 
+      {linea.estado === 'fallido' && (
+        <Text className="text-[10px] text-warning font-semibold">
+          Turno fallido — compensación por {(linea.compensacion_motivo || 'fuerza mayor').toLowerCase()}
+        </Text>
+      )}
+
       {!linea.firmado_trabajador && (
         <Text className="text-[10px] text-warning font-medium">
           Contrato sin firmar — no cuenta en el total a pagar

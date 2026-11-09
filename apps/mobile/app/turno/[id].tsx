@@ -29,7 +29,7 @@ import { useTheme }            from '@/lib/theme';
 import { useAuthStore }        from '@/features/auth/useAuthStore';
 import { useNovedades }        from '@/features/novedades/useNovedades';
 import { ReportarNovedadModal } from '@/features/novedades/ReportarNovedadModal';
-import { useAsignacion, useMarcarIngreso, useMarcarEgreso, useCalificar, useReconfirmarAsignacion, useCancelarPropiaAsignacion } from '@/features/turnos/useTurnos';
+import { useAsignacion, useMarcarIngreso, useMarcarEgreso, useCalificar, useReconfirmarAsignacion, useCancelarPropiaAsignacion, useAceptarFallido } from '@/features/turnos/useTurnos';
 import { confirm } from '@/lib/confirmDialog';
 import { useGeofence, type GeofenceTarget } from '@/features/turnos/useGeofence';
 import { useUbicacionLibre }   from '@/features/turnos/useUbicacionLibre';
@@ -86,6 +86,7 @@ export default function TurnoDetailScreen() {
   const calificarMutation  = useCalificar();
   const reconfirmarMutation = useReconfirmarAsignacion();
   const cancelarPropiaMutation = useCancelarPropiaAsignacion();
+  const aceptarFallidoMutation = useAceptarFallido();
 
   // ── Live timer: elapsed (en_progreso) + countdown (confirmado) ───────
   useEffect(() => {
@@ -359,7 +360,7 @@ export default function TurnoDetailScreen() {
   }
 
   const { estado, oferta_titulo, oferta_descripcion, oferta_notas_adicionales, oferta_externo_notas,
-          hora_ingreso_real, hora_egreso_real, pago_total, compensacion_motivo,
+          hora_ingreso_real, hora_egreso_real, pago_total, compensacion_motivo, fallido_aceptado_at,
           calificacion, calificacion_comentario,
           trabajador_telefono, trabajador_ranking, trabajador_total_calificaciones } = asignacion;
 
@@ -449,6 +450,29 @@ export default function TurnoDetailScreen() {
                   {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(pago_total)}.
                 </Text>
               )}
+              {/* "Aceptar" = enterado; el pago no depende de esto. El gestor solo ve el estado. */}
+              {!isGestor && !soloLectura && !fallido_aceptado_at && (
+                <Button
+                  label={aceptarFallidoMutation.isPending ? 'Aceptando…' : 'Aceptar'}
+                  fullWidth
+                  loading={aceptarFallidoMutation.isPending}
+                  onPress={async () => {
+                    try {
+                      await aceptarFallidoMutation.mutateAsync(asignacion.id);
+                      showToast('Listo, quedó registrado que te enteraste.');
+                    } catch (err) {
+                      showAlert('Error', err instanceof ApiError ? err.message : 'No se pudo registrar tu aceptación.');
+                    }
+                  }}
+                />
+              )}
+              {fallido_aceptado_at ? (
+                <Text className="text-xs text-muted-foreground">
+                  {isGestor ? 'El trabajador aceptó este aviso.' : 'Aceptaste este aviso.'}
+                </Text>
+              ) : isGestor ? (
+                <Text className="text-xs text-warning">El trabajador aún no ha aceptado este aviso.</Text>
+              ) : null}
             </View>
           )}
 

@@ -94,6 +94,7 @@ const ContratosModel = {
        JOIN trabajador_empresa te ON te.trabajador_id = a.trabajador_id
        JOIN ofertas_turno o       ON o.id = a.oferta_id
        WHERE te.usuario_id = ? AND te.estado = 'activo'
+         AND a.estado <> 'fallido'
        ORDER BY c.fecha DESC`,
       [usuarioId]
     );

@@ -144,6 +144,24 @@ module.exports = {
    * declina y libera el cupo para siempre. A diferencia de cancelar(), acá
    * quien actúa es el trabajador dueño de la asignación, no un gestor.
    */
+  /**
+   * El trabajador da por enterado su turno fallido (fuerza mayor) y la compensación. Solo es un
+   * "enterado": el pago no depende de esto. Idempotente. Solo el dueño de la asignación.
+   */
+  async aceptarFallido(empresaId, id, usuarioId) {
+    const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, id);
+    if (!asignacion) throw new AppError('Asignación no encontrada', 404);
+    if (asignacion.usuario_id !== usuarioId) {
+      throw new AppError('Esta asignación no te pertenece', 403);
+    }
+    if (asignacion.estado !== 'fallido') {
+      throw new AppError('Este turno no fue dado por fallido', 409);
+    }
+    // JWT empresa_id es null/desactualizado para marketplace — usar el de la fila.
+    await AsignacionesModel.aceptarFallido(asignacion.empresa_id, id);
+    return AsignacionesModel.obtenerConDetalles(asignacion.empresa_id, id);
+  },
+
   async reconfirmar(empresaId, id, usuarioId, acepta) {
     // obtenerConDetalles maneja empresaId null (trabajador_turnos multi-empresa);
     // obtenerPorId no. Trae usuario_id ya resuelto para el chequeo de pertenencia.

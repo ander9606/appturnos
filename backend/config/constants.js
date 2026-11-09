@@ -70,6 +70,14 @@ const DIAS_GRACIA_SUSCRIPCION = 2;
  */
 const HORAS_CORTE_EDICION_OFERTA = 2;
 
+/**
+ * Compensación mínima de un turno fallido (fuerza mayor): la mitad de la tarifa_dia del
+ * puesto, por trabajador. El gestor puede subirla, no bajarla de ahí. Se valida en
+ * OfertasService.marcarFallida; se refleja en api-client (COMPENSACION_FALLIDO_MINIMA) y en
+ * el modal web — mantenerlos iguales.
+ */
+const COMPENSACION_FALLIDO_MINIMA = 0.5;
+
 // Fuente de verdad en TS: packages/api-client/src/turnos.ts → ESTADOS_ASIGNACION
 // Si añades un estado aquí, actualiza también ese array, el ESTADO_CONFIG en
 // apps/mobile/features/turnos/turnosUtils.ts, y todos los demás mapas listados
@@ -250,6 +258,7 @@ module.exports = {
   DIAS_GRACIA_ASIGNACIONES_COLGADAS,
   DIAS_GRACIA_SUSCRIPCION,
   HORAS_CORTE_EDICION_OFERTA,
+  COMPENSACION_FALLIDO_MINIMA,
   ESTADOS_ASIGNACION,
   ESTADOS_PERIODO,
   RECARGOS,

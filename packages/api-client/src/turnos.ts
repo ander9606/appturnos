@@ -32,6 +32,13 @@ export const ESTADOS_ASIGNACION = [
   'fallido',
 ] as const satisfies EstadoAsignacion[];
 
+/**
+ * Compensación mínima de un turno fallido (fuerza mayor): la mitad de la tarifa_dia del puesto,
+ * por trabajador. El backend la exige (backend/config/constants.js → COMPENSACION_FALLIDO_MINIMA):
+ * mantener iguales.
+ */
+export const COMPENSACION_FALLIDO_MINIMA = 0.5;
+
 export type EstadoOferta =
   | 'borrador'
   | 'abierta'
@@ -125,6 +132,8 @@ export interface Asignacion {
   compensacion_motivo?: string | null;
   fallido_por?: number | null;
   fallido_at?: string | null;
+  /** Cuándo el trabajador dio por enterado el turno fallido; null = aún no (el pago no depende de esto). */
+  fallido_aceptado_at?: string | null;
   // Joined from calificaciones_turno (LEFT JOIN — null if not yet rated)
   calificacion: number | null;
   calificacion_comentario: string | null;
@@ -363,6 +372,8 @@ export interface AsignacionResumen {
   puesto_id: number;
   cargo_codigo: string;
   cargo_nombre: string;
+  /** Lo que ya tiene a pagar este turno (DECIMAL: puede llegar como string). */
+  pago_total?: number | string | null;
 }
 
 export interface PaginatedResponse<T> {
@@ -635,6 +646,11 @@ export const turnosApi = {
    */
   reconfirmarAsignacion(id: number, acepta: boolean): Promise<Asignacion> {
     return api.post<Asignacion>(`/api/turnos/asignaciones/${id}/reconfirmar`, { acepta });
+  },
+
+  /** El trabajador da por enterado su turno fallido (fuerza mayor) y la compensación. Idempotente. */
+  aceptarFallido(id: number): Promise<Asignacion> {
+    return api.post<Asignacion>(`/api/turnos/asignaciones/${id}/aceptar-fallido`);
   },
 
   /**

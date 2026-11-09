@@ -53,7 +53,7 @@ export type {
   TipoDescuento,
   EstadoDescuento,
 } from './nomina';
-export { turnosApi, ESTADOS_ASIGNACION } from './turnos';
+export { turnosApi, ESTADOS_ASIGNACION, COMPENSACION_FALLIDO_MINIMA } from './turnos';
 export type {
   Asignacion,
   CalificacionResponse,

@@ -152,6 +152,41 @@ describe('CuentasCobroService.generarParaPeriodo', () => {
     expect(resultado.generadas).toBe(1);
   });
 
+  test('turno ya cobrado que se dio por fallido con compensación menor → cuenta de ajuste con valor negativo', async () => {
+    CuentasCobroModel.listarPorPeriodoYTrabajador.mockResolvedValue([
+      { id: 500, secuencia: 1, firmado_trabajador: 1, items: [{ asignacion_id: 1, valor: 60000 }] },
+    ]);
+    AsignacionesModel.liquidacion.mockResolvedValue([
+      trabajador([turno({ estado: 'fallido', pago_total: 40000 })]),
+    ]);
+
+    const resultado = await CuentasCobroService.generarParaPeriodo(7, 10);
+
+    expect(resultado.generadas).toBe(1);
+    expect(CuentasCobroModel.crear).toHaveBeenCalledWith(7, expect.objectContaining({
+      secuencia: 2, valorTotal: -20000,
+      items: [expect.objectContaining({ asignacion_id: 1, valor: -20000, descripcion: 'Turno A (ajuste por turno fallido)' })],
+    }));
+    expect(NotificacionesService.notificar).toHaveBeenCalledWith(expect.objectContaining({
+      mensaje: expect.stringContaining('cuenta de ajuste por -$20.000'),
+    }));
+  });
+
+  test('ya ajustado (cuenta de ajuste firmada) no vuelve a generar nada', async () => {
+    CuentasCobroModel.listarPorPeriodoYTrabajador.mockResolvedValue([
+      { id: 500, secuencia: 1, firmado_trabajador: 1, items: [{ asignacion_id: 1, valor: 60000 }] },
+      { id: 501, secuencia: 2, firmado_trabajador: 1, items: [{ asignacion_id: 1, valor: -20000 }] },
+    ]);
+    AsignacionesModel.liquidacion.mockResolvedValue([
+      trabajador([turno({ estado: 'fallido', pago_total: 40000 })]),
+    ]);
+
+    const resultado = await CuentasCobroService.generarParaPeriodo(7, 10);
+
+    expect(resultado.generadas).toBe(0);
+    expect(CuentasCobroModel.crear).not.toHaveBeenCalled();
+  });
+
   test('cuenta ya firmada + bono posterior → cuenta complementaria solo por la diferencia', async () => {
     CuentasCobroModel.listarPorPeriodoYTrabajador.mockResolvedValue([
       { id: 500, secuencia: 1, firmado_trabajador: 1, items: [{ asignacion_id: 1, valor: 60000 }] },

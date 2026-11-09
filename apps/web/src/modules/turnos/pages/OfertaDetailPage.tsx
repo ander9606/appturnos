@@ -1050,6 +1050,10 @@ function CorregirAsignacionModal({ asignacion, onClose }: { asignacion: Asignaci
 /* ── Turno fallido: fuerza mayor — quien ya marcó ingreso recibe una
    compensación en vez de perder el turno sin nada; el resto queda cancelado
    sin pago, como con "Marcar completada" / cancelar normal. ── */
+// Compensación mínima de un turno fallido: la mitad de la tarifa del puesto. Igual que
+// backend/config/constants.js (COMPENSACION_FALLIDO_MINIMA) y packages/api-client — mantener iguales.
+const COMPENSACION_FALLIDO_MINIMA = 0.5;
+
 function TurnoFallidoModal({
   oferta, enProgreso, puestos, marcarFallida, onClose, onDone,
 }: {
@@ -1065,6 +1069,11 @@ function TurnoFallidoModal({
     Object.fromEntries(enProgreso.map(a => [a.id, String(puestos.find(p => p.id === a.puesto_id)?.tarifa_dia ?? 0)]))
   );
 
+  const [confirmando, setConfirmando] = useState(false);
+  const minimoDe = (a: Asignacion) =>
+    Number(puestos.find(p => p.id === a.puesto_id)?.tarifa_dia ?? 0) * COMPENSACION_FALLIDO_MINIMA;
+  const nombreDe = (a: Asignacion) => `${a.trabajador_nombre} ${a.trabajador_apellido}`;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!motivo.trim()) {
@@ -1075,6 +1084,16 @@ function TurnoFallidoModal({
       asignacion_id: a.id,
       monto: Number(montos[a.id]) || 0,
     }));
+    const bajos = enProgreso.filter((a, i) => compensaciones[i].monto < minimoDe(a));
+    if (bajos.length > 0) {
+      toast.error(`Compensación mínima (la mitad de la tarifa): ${bajos.map(a => `${nombreDe(a)} ${fmtCOP(minimoDe(a))}`).join(', ')}.`);
+      return;
+    }
+    // Acción definitiva: primero se muestra qué cambia para cada persona y se pide confirmar.
+    if (!confirmando) {
+      setConfirmando(true);
+      return;
+    }
     await marcarFallida.mutateAsync({ id: oferta.id, motivo: motivo.trim(), compensaciones });
     onDone();
   };
@@ -1087,7 +1106,27 @@ function TurnoFallidoModal({
         que definas abajo; el resto queda cancelado sin pago, como siempre.
       </p>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div>
+        {confirmando && (
+          <div className="rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm flex flex-col gap-2">
+            <p className="font-medium text-foreground">
+              Se cancelará «{oferta.titulo}» y esto no se puede deshacer.
+            </p>
+            <ul className="flex flex-col gap-1 text-muted-foreground">
+              {enProgreso.map(a => (
+                <li key={a.id}>
+                  {nombreDe(a)}:{' '}
+                  {a.estado === 'completado' && a.pago_total != null
+                    ? <>de {fmtCOP(Number(a.pago_total))} a <strong className="text-foreground">{fmtCOP(Number(montos[a.id]) || 0)}</strong></>
+                    : <strong className="text-foreground">{fmtCOP(Number(montos[a.id]) || 0)}</strong>}
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-muted-foreground">
+              Quien ya había terminado su turno pasa de su pago a esa compensación.
+            </p>
+          </div>
+        )}
+        <div className={confirmando ? 'hidden' : ''}>
           <label className="block text-sm font-medium text-foreground mb-1">Motivo</label>
           <input
             type="text"
@@ -1099,7 +1138,7 @@ function TurnoFallidoModal({
           />
         </div>
 
-        <div className="flex flex-col gap-3">
+        <div className={`flex flex-col gap-3 ${confirmando ? 'hidden' : ''}`}>
           <label className="block text-sm font-medium text-foreground">
             Compensación ({enProgreso.length} ya en turno)
           </label>
@@ -1116,16 +1155,17 @@ function TurnoFallidoModal({
                 onChange={e => setMontos(m => ({ ...m, [a.id]: e.target.value }))}
                 className="w-32 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
+              <span className="w-28 text-[11px] text-muted-foreground leading-tight">Mín. {fmtCOP(minimoDe(a))}</span>
             </div>
           ))}
         </div>
 
         <div className="flex gap-2 pt-2">
-          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
+          <button type="button" onClick={confirmando ? () => setConfirmando(false) : onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
             Volver
           </button>
           <button type="submit" disabled={marcarFallida.isPending} className="flex-1 bg-danger hover:opacity-90 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
-            {marcarFallida.isPending ? 'Confirmando...' : 'Confirmar turno fallido'}
+            {marcarFallida.isPending ? 'Confirmando...' : confirmando ? 'Sí, dar por fallido' : 'Confirmar turno fallido'}
           </button>
         </div>
       </form>

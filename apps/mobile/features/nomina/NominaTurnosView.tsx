@@ -34,6 +34,9 @@ import type { Asignacion } from '@api-client';
 const SHORT_MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const SHORT_DAYS   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 
+// Un turno fallido (compensación por fuerza mayor) no tiene contrato que firmar: siempre cuenta.
+const sinFirma = (a: Asignacion) => a.estado !== 'fallido' && a.contrato_firmado === 0;
+
 function isExtendido(a: Asignacion): { extendido: boolean; extraMin: number } {
   if (!a.hora_egreso_real || !a.hora_fin_estimada || !a.oferta_fecha) {
     return { extendido: false, extraMin: 0 };
@@ -109,7 +112,7 @@ export function NominaTurnosView() {
   const turnosPeriodo = useMemo(() => {
     if (!turnos) return [];
     return turnos.filter((a) => {
-      if (a.estado !== 'completado') return false;
+      if (a.estado !== 'completado' && a.estado !== 'fallido') return false;
 
       // Si hay filtro de fechas personalizado, usarlo
       if (filtroFechaInicio && filtroFechaFin) {
@@ -129,7 +132,7 @@ export function NominaTurnosView() {
   const totales = useMemo(() =>
     turnosPeriodo.reduce(
       (acc, a) => {
-        const firmado = a.contrato_firmado !== 0;
+        const firmado = !sinFirma(a);
         return {
           count: acc.count + 1,
           horas: acc.horas + (firmado ? Number(a.horas_trabajadas) || 0 : 0),
@@ -147,7 +150,7 @@ export function NominaTurnosView() {
   const porEmpresa = useMemo(() => {
     const map = new Map<string, number>();
     for (const a of turnosPeriodo) {
-      if (a.contrato_firmado === 0) continue;
+      if (sinFirma(a)) continue;
       const nombre = a.empresa_nombre ?? 'Otra empresa';
       map.set(nombre, (map.get(nombre) ?? 0) + (Number(a.pago_total) || 0));
     }
@@ -301,7 +304,13 @@ export function NominaTurnosView() {
           )}
         </View>
 
-        {item.contrato_firmado === 0 && (
+        {item.estado === 'fallido' && (
+          <Text className="text-xs text-warning font-medium mt-0.5">
+            Turno fallido — compensación por fuerza mayor
+          </Text>
+        )}
+
+        {sinFirma(item) && (
           <View className="flex-row items-center gap-1 mt-0.5">
             <Ionicons name="warning" size={11} color={COLORS.warningDark} />
             <Text className="text-xs text-warning font-medium">

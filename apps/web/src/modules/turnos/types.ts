@@ -120,6 +120,9 @@ export interface LiquidacionTurno {
   /** Si es `false`, el contrato del turno aún no lo firma el trabajador —
    *  su pago no está incluido en los totales de `LiquidacionTurnosTrabajador`. */
   firmado_trabajador: boolean;
+  /** 'fallido' = compensación por fuerza mayor: su pago_total reemplaza al del turno trabajado. */
+  estado?: string;
+  compensacion_motivo?: string | null;
 }
 
 export interface LiquidacionTurnosTrabajador {

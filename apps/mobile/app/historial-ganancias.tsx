@@ -41,7 +41,7 @@ interface TotalesPeriodo { count: number; horas: number; pago: number }
 
 function turnosDePeriodo(turnos: Asignacion[], periodo: PeriodoNomina): Asignacion[] {
   return turnos.filter(
-    (a) => a.estado === 'completado'
+    (a) => (a.estado === 'completado' || a.estado === 'fallido')
       && a.oferta_fecha >= periodo.fecha_inicio
       && a.oferta_fecha <= periodo.fecha_fin,
   );
@@ -181,12 +181,12 @@ function HistorialTurnos() {
   const turnosEnRango = useMemo(() => {
     if (!rangoActivo) return [];
     return (turnos ?? []).filter(
-      (a) => a.estado === 'completado' && a.oferta_fecha >= desdeISO && a.oferta_fecha <= hastaISO,
+      (a) => (a.estado === 'completado' || a.estado === 'fallido') && a.oferta_fecha >= desdeISO && a.oferta_fecha <= hastaISO,
     );
   }, [turnos, rangoActivo, desdeISO, hastaISO]);
 
   const filas = useMemo(() => {
-    const completados = (turnos ?? []).filter((a) => a.estado === 'completado');
+    const completados = (turnos ?? []).filter((a) => a.estado === 'completado' || a.estado === 'fallido');
     if (completados.length === 0) return [];
     const fechaMin = completados.reduce(
       (min, a) => (a.oferta_fecha < min ? a.oferta_fecha : min),

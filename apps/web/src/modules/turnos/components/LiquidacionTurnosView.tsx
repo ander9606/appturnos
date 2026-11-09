@@ -329,6 +329,9 @@ export function LiquidacionTurnosView() {
                                     <p className="text-foreground flex items-center gap-1.5">
                                       {t.oferta_titulo}
                                       <GrupoBadge nombre={t.grupo_nombre} />
+                                      {t.estado === 'fallido' && (
+                                        <span className="text-[10px] font-semibold text-warning bg-warning-light rounded-full px-1.5 py-0.5">Turno fallido</span>
+                                      )}
                                       {!t.firmado_trabajador && (
                                         <span title="Contrato sin firmar — no incluido en el total a pagar">
                                           <AlertTriangle size={12} className="text-warning" />
@@ -350,6 +353,11 @@ export function LiquidacionTurnosView() {
                                       <p className="flex items-center gap-1.5 text-warning font-medium mb-2">
                                         <AlertTriangle size={12} />
                                         Contrato sin firmar — este pago no cuenta en el total del período
+                                      </p>
+                                    )}
+                                    {t.estado === 'fallido' && (
+                                      <p className="text-warning font-medium mb-2">
+                                        Turno fallido por {(t.compensacion_motivo || 'fuerza mayor').toLowerCase()} — este valor es la compensación y reemplaza el pago del turno.
                                       </p>
                                     )}
                                     <div className="grid grid-cols-2 gap-1.5">
@@ -428,6 +436,9 @@ export function LiquidacionTurnosView() {
                               <div>
                                 <p className="text-foreground flex items-center gap-1.5">
                                   {l.nombre} {l.apellido}
+                                  {l.estado === 'fallido' && (
+                                    <span className="text-[10px] font-semibold text-warning bg-warning-light rounded-full px-1.5 py-0.5">Turno fallido</span>
+                                  )}
                                   {!l.firmado_trabajador && (
                                     <span title="Contrato sin firmar — no incluido en el total a pagar">
                                       <AlertTriangle size={12} className="text-warning" />
@@ -440,7 +451,7 @@ export function LiquidacionTurnosView() {
                               </div>
                               <span className="flex items-center gap-2 text-xs text-muted-foreground flex-shrink-0">
                                 {fmtCOP(l.pago_total)}
-                                <button
+                                {l.estado !== 'fallido' && <button
                                   onClick={() => handleDescargarContrato(l.asignacion_id)}
                                   disabled={descargando === l.asignacion_id}
                                   title="Descargar contrato"
@@ -449,7 +460,7 @@ export function LiquidacionTurnosView() {
                                   {descargando === l.asignacion_id
                                     ? <Spinner size={13} />
                                     : <Download size={13} />}
-                                </button>
+                                </button>}
                               </span>
                             </div>
                           </div>

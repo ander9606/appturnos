@@ -398,6 +398,19 @@ module.exports = {
   },
 
   /**
+   * El trabajador da por enterado un turno fallido. Idempotente: si ya lo aceptó conserva
+   * la primera fecha (WHERE fallido_aceptado_at IS NULL). Solo sobre asignaciones 'fallido'.
+   * @returns {Promise<boolean>} true si esta llamada fue la que lo aceptó.
+   */
+  async aceptarFallido(empresaId, id) {
+    const [res] = await pool.query(
+      "UPDATE asignaciones_turno SET fallido_aceptado_at = ? WHERE id = ? AND empresa_id = ? AND estado = 'fallido' AND fallido_aceptado_at IS NULL",
+      [ahoraColombiaSQL(), id, empresaId]
+    );
+    return res.affectedRows > 0;
+  },
+
+  /**
    * Asignación directa: crea la asignación en estado 'confirmado' sin postulación previa.
    * Hace las mismas validaciones atómicas que `confirmar` (plazas, traslape, duplicados).
    * @returns {Promise<{ok:boolean, asignacionId?:number, motivo?:string}>}

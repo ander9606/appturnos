@@ -12,10 +12,13 @@ const NotificacionesService = require('../../notificaciones/notificaciones.servi
 const NotificacionesModel = require('../../notificaciones/notificaciones.model');
 const CostoLaborService = require('../../integracion/costo-labor.service');
 const PeriodosTurnosService = require('../periodos/periodos-turnos.service');
+const ContratosModel = require('../../contratos/contratos.model');
+const CuentasCobroService = require('../../cuentas-cobro/cuentas-cobro.service');
 const GeocodingService = require('../../geocoding/geocoding.service');
 const AppError = require('../../../utils/AppError');
 const {
   ROLES, MAX_OFERTAS_ACTIVAS_POR_EMPRESA, DIAS_GRACIA_ASIGNACIONES_COLGADAS, HORAS_CORTE_EDICION_OFERTA,
+  COMPENSACION_FALLIDO_MINIMA,
 } = require('../../../config/constants');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 const logger = require('../../../utils/logger');
@@ -492,6 +495,18 @@ module.exports = {
     const motivoFinal = (motivo || '').trim() || 'Fuerza mayor';
 
     const overrides = new Map((compensaciones || []).map((c) => [Number(c.asignacion_id), Number(c.monto)]));
+    // Piso: la compensación no puede bajar de la mitad de la tarifa del puesto (!(x >= min) también
+    // rechaza NaN). Se valida antes de tocar nada para que un monto bajo no deje el turno a medias.
+    for (const a of enProgreso) {
+      if (!overrides.has(a.id)) continue;
+      const minimo = Number(a.tarifa_dia) * COMPENSACION_FALLIDO_MINIMA;
+      if (!(overrides.get(a.id) >= minimo)) {
+        throw new AppError(
+          `La compensación de ${a.trabajador_nombre} ${a.trabajador_apellido} no puede ser menor a $${minimo.toLocaleString('es-CO')} (la mitad de la tarifa del turno).`,
+          422
+        );
+      }
+    }
     const montos = enProgreso.map((a) => ({
       asignacionId: a.id,
       monto: overrides.has(a.id) ? overrides.get(a.id) : Number(a.tarifa_dia),
@@ -537,9 +552,26 @@ module.exports = {
       });
     }
 
+    // Quien ya había cerrado su turno (completado) tenía contrato y quizá cuenta de cobro con el valor
+    // anterior: se anula la firma del contrato (ese valor ya no rige) y, si el período está cerrado,
+    // se genera la cuenta complementaria o de ajuste con la compensación (ver CuentasCobroService).
+    // Best-effort: un fallo aquí no debe deshacer el turno fallido ya guardado.
+    const veniaCompletado = activas.filter((a) => a.estado === 'completado' && idsActualizados.has(a.id));
+    for (const a of veniaCompletado) {
+      try {
+        const contrato = await ContratosModel.obtenerPorAsignacion(empresaId, a.id);
+        if (contrato?.firmado_trabajador) await ContratosModel.resetearFirma(empresaId, contrato.id);
+        await CuentasCobroService.actualizarPorTurnoFirmado(empresaId, a.id, a.trabajador_id);
+      } catch (err) {
+        logger.warn(`[ofertas] no se pudo ajustar contrato/cuenta de cobro de la asignación ${a.id} tras marcar fallida: ${err.message}`);
+      }
+    }
+
     // Igual que al cerrar un turno normal: la compensación es un costo de
     // mano de obra (logiq360) y debe caer dentro de un período de turnos.
-    await CostoLaborService.verificarYEmitir(empresaId, id).catch(() => {});
+    // Si la oferta ya estaba 'completada' su costo ya se había reportado a logiq360: este envío es una
+    // corrección con el total vigente (la compensación reemplaza al pago anterior), no un segundo costo.
+    await CostoLaborService.verificarYEmitir(empresaId, id, { correccion: oferta.estado === 'completada' }).catch(() => {});
     await PeriodosTurnosService.autoCrear(empresaId).catch(() => {});
   },
 
