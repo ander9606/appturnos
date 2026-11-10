@@ -2,7 +2,7 @@ import { SkeletonDetail, SkeletonTable } from '@/shared/components/Skeleton';
 import { Spinner } from '@/shared/components/Spinner';
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Plus, Pencil, Trash2, Star, Send, Zap, CheckCircle2, Clock, Gift, MinusCircle, AlertTriangle, X, Download } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Star, Send, Zap, CheckCircle2, Clock, Gift, MinusCircle, AlertTriangle, X, Download, MoreVertical } from 'lucide-react';
 import {
   useOferta,
   useAsignaciones,
@@ -103,6 +103,7 @@ export function OfertaDetailPage() {
   const [bonoAsig, setBonoAsig] = useState<Asignacion | null>(null);
   const [descuentoAsig, setDescuentoAsig] = useState<Asignacion | null>(null);
   const [descargandoContratoId, setDescargandoContratoId] = useState<number | null>(null);
+  const [menuAbiertoId, setMenuAbiertoId] = useState<number | null>(null);
 
   async function handleDescargarContrato(asignacionId: number) {
     setDescargandoContratoId(asignacionId);
@@ -377,39 +378,45 @@ export function OfertaDetailPage() {
             <EmptyState title="Sin asignaciones" />
           ) : (
             <div className="bg-card rounded-xl overflow-x-auto overflow-y-auto max-h-[calc(100vh-400px)] min-h-[400px]" style={{ boxShadow: '0 0 0 1px var(--border)' }}>
-              <table className="text-sm min-w-[1100px] w-full">
+              <table className="text-sm min-w-[900px] w-full">
                 <colgroup>
-                  <col style={{ width: '200px' }} /> {/* Trabajador */}
-                  <col style={{ width: '180px' }} /> {/* Puesto */}
-                  <col style={{ width: '200px' }} /> {/* Estado */}
-                  <col style={{ width: '140px' }} /> {/* Ingreso */}
-                  <col style={{ width: '140px' }} /> {/* Egreso */}
-                  <col style={{ width: '60px' }} /> {/* Cal. */}
-                  <col style={{ minWidth: '180px' }} /> {/* Acciones */}
+                  <col style={{ width: '280px' }} /> {/* Trabajador + Puesto */}
+                  <col style={{ width: '220px' }} /> {/* Estado + Calificación */}
+                  <col style={{ width: '200px' }} /> {/* Horario */}
+                  <col style={{ minWidth: '200px' }} /> {/* Acciones */}
                 </colgroup>
                 <thead className="sticky top-0 bg-card z-10">
                   <tr className="bg-muted text-muted-foreground text-xs uppercase border-b border-border">
                     <th className="text-left px-4 py-3 font-medium">Trabajador</th>
-                    <th className="text-left px-4 py-3 font-medium">Puesto</th>
                     <th className="text-left px-4 py-3 font-medium">Estado</th>
-                    <th className="text-left px-4 py-3 font-medium">Ingreso</th>
-                    <th className="text-left px-4 py-3 font-medium">Egreso</th>
-                    <th className="text-center px-4 py-3 font-medium">Cal.</th>
+                    <th className="text-left px-4 py-3 font-medium">Horario</th>
                     <th className="px-4 py-3" />
                   </tr>
                 </thead>
                 <tbody>
                   {asignaciones.map(a => (
                     <tr key={a.id} className="border-t border-border/60 hover:bg-muted transition-colors">
-                      <td className="px-4 py-3 font-medium text-foreground">
-                        {a.trabajador_nombre} {a.trabajador_apellido}
+                      {/* Columna: Trabajador + Puesto */}
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-foreground">
+                            {a.trabajador_nombre} {a.trabajador_apellido}
+                          </span>
+                          <span className="text-xs text-muted-foreground">{a.cargo_nombre}</span>
+                        </div>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{a.cargo_nombre}</td>
+
+                      {/* Columna: Estado + Calificación */}
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-1">
-                          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap w-fit ${ESTADO_ASIG_BADGE[a.estado]}`}>
-                            {ESTADO_ASIG_LABEL[a.estado]}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${ESTADO_ASIG_BADGE[a.estado]}`}>
+                              {ESTADO_ASIG_LABEL[a.estado]}
+                            </span>
+                            {a.calificacion != null && (
+                              <span className="text-warning font-medium text-xs">{a.calificacion}★</span>
+                            )}
+                          </div>
                           {a.estado === 'completado' && a.compensacion_decision === 'pendiente' && (
                             <span className="text-[11px] font-medium text-warning leading-tight" title="Se propuso cambiar su pago por fuerza mayor; solo se aplica si el trabajador lo autoriza. Mientras no responda, el turno queda en espera: no suma ni resta.">
                               Pend. autorización
@@ -422,29 +429,33 @@ export function OfertaDetailPage() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5">
-                          {a.hora_ingreso_real ?? '—'}
-                          {a.sospechoso === 1 && (
-                            <AlertTriangle size={13} className="text-warning shrink-0">
-                              <title>Marcaje sospechoso: mismo dispositivo y ubicación que otro trabajador</title>
-                            </AlertTriangle>
-                          )}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{a.hora_egreso_real ?? '—'}</td>
-                      <td className="px-4 py-3 text-center text-muted-foreground whitespace-nowrap">
-                        {a.calificacion != null ? (
-                          <span className="text-warning font-medium">{a.calificacion}★</span>
-                        ) : '—'}
-                      </td>
+
+                      {/* Columna: Horario (Ingreso - Egreso) */}
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1 justify-end">
+                        <div className="flex flex-col gap-0.5 text-muted-foreground text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-muted-foreground/60">Entrada:</span>
+                            <span className="font-medium">{a.hora_ingreso_real ?? '—'}</span>
+                            {a.sospechoso === 1 && (
+                              <AlertTriangle size={13} className="text-warning shrink-0" title="Marcaje sospechoso: mismo dispositivo y ubicación que otro trabajador" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-muted-foreground/60">Salida:</span>
+                            <span className="font-medium">{a.hora_egreso_real ?? '—'}</span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Columna: Menú de Acciones */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2 justify-end">
+                          {/* Acciones rápidas para estado pendiente */}
                           {puedeGestionar && a.estado === 'pendiente' && (
                             <>
                               <button
                                 onClick={() => confirmar.mutate(a.id)}
-                                className="text-xs text-success hover:bg-success-light px-2 py-1 rounded transition-colors font-medium"
+                                className="text-xs text-success hover:bg-success-light px-3 py-1.5 rounded-lg transition-colors font-medium"
                               >
                                 Confirmar
                               </button>
@@ -455,100 +466,150 @@ export function OfertaDetailPage() {
                                   confirmLabel: 'Rechazar',
                                   onConfirm: () => { rechazar.mutate(a.id); close(); },
                                 })}
-                                className="text-xs text-danger hover:bg-danger-light px-2 py-1 rounded transition-colors"
+                                className="text-xs text-danger hover:bg-danger-light px-3 py-1.5 rounded-lg transition-colors font-medium"
                               >
                                 Rechazar
                               </button>
                             </>
                           )}
-                          {puedeGestionar && a.estado === 'confirmado' && (
+
+                          {/* Menú dropdown de acciones */}
+                          <div className="relative">
                             <button
-                              onClick={() => confirm({
-                                title: 'Cancelar asignación',
-                                detail: `¿Cancelar la asignación confirmada de ${a.trabajador_nombre} ${a.trabajador_apellido}?`,
-                                confirmLabel: 'Cancelar asignación',
-                                onConfirm: () => { cancelarAsig.mutate(a.id); close(); },
-                              })}
-                              className="text-xs text-muted-foreground hover:bg-muted px-2 py-1 rounded transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMenuAbiertoId(menuAbiertoId === a.id ? null : a.id);
+                              }}
+                              className="p-1.5 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                              aria-label="Más acciones"
                             >
-                              Cancelar
+                              <MoreVertical size={16} />
                             </button>
-                          )}
-                          {puedeGestionar && (a.estado === 'confirmado' || a.estado === 'en_progreso') && (
-                            <button
-                              onClick={() => confirm({
-                                title: 'Marcar como no presentado',
-                                detail: `¿Marcar a ${a.trabajador_nombre} ${a.trabajador_apellido} como no presentado? Esto puede afectar su ranking.`,
-                                confirmLabel: 'Marcar no presentado',
-                                onConfirm: () => { noPresentado.mutate(a.id); close(); },
-                              })}
-                              className="text-xs text-danger hover:bg-danger-light px-2 py-1 rounded transition-colors"
-                            >
-                              NP
-                            </button>
-                          )}
-                          {puedeGestionar && a.estado === 'completado' && a.calificacion == null && (
-                            <button
-                              onClick={() => setCalificandoId(a.id)}
-                              className="flex items-center gap-1 text-xs text-warning hover:bg-warning-light px-2 py-1 rounded transition-colors"
-                            >
-                              <Star size={11} /> Calificar
-                            </button>
-                          )}
-                          {puedeVerContratos && a.estado === 'completado' && (
-                            <button
-                              onClick={() => handleDescargarContrato(a.id)}
-                              disabled={descargandoContratoId === a.id}
-                              className="text-muted-foreground/60 hover:text-info transition-colors p-1 disabled:opacity-50"
-                              title="Descargar contrato"
-                              aria-label="Descargar contrato"
-                            >
-                              {descargandoContratoId === a.id
-                                ? <Spinner size={13} />
-                                : <Download size={13} />}
-                            </button>
-                          )}
-                          {puedeGestionar && (a.estado === 'confirmado' || a.estado === 'en_progreso' || a.estado === 'completado') && (
-                            <button
-                              onClick={() => setCorrigiendoAsig(a)}
-                              className="text-muted-foreground/60 hover:text-info transition-colors p-1"
-                              title="Corregir ingreso/egreso"
-                              aria-label="Corregir ingreso/egreso"
-                            >
-                              <Clock size={13} />
-                            </button>
-                          )}
-                          {puedeGestionar && (a.estado === 'confirmado' || a.estado === 'en_progreso' || a.estado === 'completado') && (
-                            <button
-                              onClick={() => setBonoAsig(a)}
-                              className={`transition-colors p-1 ${(a.bono_monto ?? 0) > 0 ? 'text-warning' : 'text-muted-foreground/60 hover:text-warning'}`}
-                              title={(a.bono_monto ?? 0) > 0 ? `Bono: ${fmtCOP(a.bono_monto ?? 0)}` : 'Agregar bono extra'}
-                              aria-label="Agregar o editar bono extra"
-                            >
-                              <Gift size={13} />
-                            </button>
-                          )}
-                          {puedeGestionar && a.estado === 'completado' && (
-                            <button
-                              onClick={() => setDescuentoAsig(a)}
-                              className="text-muted-foreground/60 hover:text-danger transition-colors p-1"
-                              title="Registrar descuento"
-                              aria-label="Registrar descuento"
-                            >
-                              <MinusCircle size={13} />
-                            </button>
-                          )}
-                          {puedeGestionar && a.sospechoso === 1 && (
-                            <button
-                              onClick={() => descartarSospechoso.mutate(a.id)}
-                              disabled={descartarSospechoso.isPending}
-                              className="text-warning/70 hover:text-warning transition-colors p-1 disabled:opacity-50"
-                              title="Descartar: ya lo revisé, no es fraude"
-                              aria-label="Descartar marcaje sospechoso"
-                            >
-                              <X size={13} />
-                            </button>
-                          )}
+
+                            {/* Menú desplegable */}
+                            {menuAbiertoId === a.id && (
+                              <>
+                                {/* Overlay para cerrar al hacer click fuera */}
+                                <div
+                                  className="fixed inset-0 z-10"
+                                  onClick={() => setMenuAbiertoId(null)}
+                                />
+
+                                {/* Menú */}
+                                <div className="absolute right-0 top-full mt-1 bg-card border border-border rounded-lg shadow-lg py-1 min-w-[180px] z-20">
+                                  {puedeGestionar && a.estado === 'confirmado' && (
+                                    <button
+                                      onClick={() => {
+                                        setMenuAbiertoId(null);
+                                        confirm({
+                                          title: 'Cancelar asignación',
+                                          detail: `¿Cancelar la asignación confirmada de ${a.trabajador_nombre} ${a.trabajador_apellido}?`,
+                                          confirmLabel: 'Cancelar asignación',
+                                          onConfirm: () => { cancelarAsig.mutate(a.id); close(); },
+                                        });
+                                      }}
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors text-foreground"
+                                    >
+                                      Cancelar asignación
+                                    </button>
+                                  )}
+
+                                  {puedeGestionar && (a.estado === 'confirmado' || a.estado === 'en_progreso') && (
+                                    <button
+                                      onClick={() => {
+                                        setMenuAbiertoId(null);
+                                        confirm({
+                                          title: 'Marcar como no presentado',
+                                          detail: `¿Marcar a ${a.trabajador_nombre} ${a.trabajador_apellido} como no presentado? Esto puede afectar su ranking.`,
+                                          confirmLabel: 'Marcar no presentado',
+                                          onConfirm: () => { noPresentado.mutate(a.id); close(); },
+                                        });
+                                      }}
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors text-danger"
+                                    >
+                                      No presentado
+                                    </button>
+                                  )}
+
+                                  {puedeGestionar && a.estado === 'completado' && a.calificacion == null && (
+                                    <button
+                                      onClick={() => {
+                                        setMenuAbiertoId(null);
+                                        setCalificandoId(a.id);
+                                      }}
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center gap-2"
+                                    >
+                                      <Star size={14} /> Calificar
+                                    </button>
+                                  )}
+
+                                  {puedeVerContratos && a.estado === 'completado' && (
+                                    <button
+                                      onClick={() => {
+                                        setMenuAbiertoId(null);
+                                        handleDescargarContrato(a.id);
+                                      }}
+                                      disabled={descargandoContratoId === a.id}
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center gap-2 disabled:opacity-50"
+                                    >
+                                      {descargandoContratoId === a.id ? <Spinner size={14} /> : <Download size={14} />}
+                                      Descargar contrato
+                                    </button>
+                                  )}
+
+                                  {puedeGestionar && (a.estado === 'confirmado' || a.estado === 'en_progreso' || a.estado === 'completado') && (
+                                    <>
+                                      <button
+                                        onClick={() => {
+                                          setMenuAbiertoId(null);
+                                          setCorrigiendoAsig(a);
+                                        }}
+                                        className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center gap-2"
+                                      >
+                                        <Clock size={14} /> Corregir horario
+                                      </button>
+
+                                      <button
+                                        onClick={() => {
+                                          setMenuAbiertoId(null);
+                                          setBonoAsig(a);
+                                        }}
+                                        className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center gap-2"
+                                      >
+                                        <Gift size={14} className={(a.bono_monto ?? 0) > 0 ? 'text-warning' : ''} />
+                                        {(a.bono_monto ?? 0) > 0 ? `Bono ${fmtCOP(a.bono_monto)}` : 'Agregar bono'}
+                                      </button>
+                                    </>
+                                  )}
+
+                                  {puedeGestionar && a.estado === 'completado' && (
+                                    <button
+                                      onClick={() => {
+                                        setMenuAbiertoId(null);
+                                        setDescuentoAsig(a);
+                                      }}
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center gap-2 text-danger"
+                                    >
+                                      <MinusCircle size={14} /> Descuento
+                                    </button>
+                                  )}
+
+                                  {puedeGestionar && a.sospechoso === 1 && (
+                                    <button
+                                      onClick={() => {
+                                        setMenuAbiertoId(null);
+                                        descartarSospechoso.mutate(a.id);
+                                      }}
+                                      disabled={descartarSospechoso.isPending}
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center gap-2 disabled:opacity-50 text-warning"
+                                    >
+                                      <X size={14} /> Descartar sospecha
+                                    </button>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </td>
                     </tr>
