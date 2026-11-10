@@ -437,7 +437,9 @@ export function OfertaDetailPage() {
                             <span className="text-muted-foreground/60">Entrada:</span>
                             <span className="font-medium">{a.hora_ingreso_real ?? '—'}</span>
                             {a.sospechoso === 1 && (
-                              <AlertTriangle size={13} className="text-warning shrink-0" title="Marcaje sospechoso: mismo dispositivo y ubicación que otro trabajador" />
+                              <span title="Marcaje sospechoso: mismo dispositivo y ubicación que otro trabajador">
+                                <AlertTriangle size={13} className="text-warning shrink-0" />
+                              </span>
                             )}
                           </div>
                           <div className="flex items-center gap-1.5">
@@ -577,7 +579,7 @@ export function OfertaDetailPage() {
                                         className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center gap-2"
                                       >
                                         <Gift size={14} className={(a.bono_monto ?? 0) > 0 ? 'text-warning' : ''} />
-                                        {(a.bono_monto ?? 0) > 0 ? `Bono ${fmtCOP(a.bono_monto)}` : 'Agregar bono'}
+                                        {(a.bono_monto ?? 0) > 0 ? `Bono ${fmtCOP(a.bono_monto ?? 0)}` : 'Agregar bono'}
                                       </button>
                                     </>
                                   )}
