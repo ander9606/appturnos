@@ -401,10 +401,10 @@ export function OfertaDetailPage() {
                 <tbody>
                   {asignaciones.map(a => (
                     <tr key={a.id} className="border-t border-border/60 hover:bg-muted transition-colors">
-                      <td className="px-4 py-3 font-medium text-foreground truncate" title={`${a.trabajador_nombre} ${a.trabajador_apellido}`}>
+                      <td className="px-4 py-3 font-medium text-foreground">
                         {a.trabajador_nombre} {a.trabajador_apellido}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground truncate" title={a.cargo_nombre}>{a.cargo_nombre}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{a.cargo_nombre}</td>
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-1">
                           <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap w-fit ${ESTADO_ASIG_BADGE[a.estado]}`}>
