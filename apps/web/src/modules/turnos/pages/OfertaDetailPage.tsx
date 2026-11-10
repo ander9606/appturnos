@@ -627,7 +627,7 @@ export function OfertaDetailPage() {
           header para que no compita visualmente con el resto de la info. ── */}
       {puedeGestionar && (oferta.estado === 'borrador'
         || (turnoIniciado && !['borrador', 'completada', 'cancelada'].includes(oferta.estado))) && (
-        <div className="sticky bottom-0 -mx-6 px-6 py-3 mt-4 border-t border-border bg-background flex items-center gap-3 flex-wrap">
+        <div className="sticky bottom-0 -mx-6 px-6 py-3 mt-4 border-t border-border bg-background flex items-center gap-3 flex-wrap z-10 shadow-lg">
           {oferta.estado === 'borrador' && (
             <button
               onClick={() => {
@@ -697,7 +697,7 @@ export function OfertaDetailPage() {
       {/* La oferta se completa sola al marcar salida el último trabajador: aun así
           se puede dar por fallida (fuerza mayor) y fijar la compensación. */}
       {puedeGestionar && oferta.estado === 'completada' && compensables.length > 0 && (
-        <div className="sticky bottom-0 -mx-6 px-6 py-3 mt-4 border-t border-border bg-background flex items-center gap-3">
+        <div className="sticky bottom-0 -mx-6 px-6 py-3 mt-4 border-t border-border bg-background flex items-center gap-3 z-10 shadow-lg">
           <button
             onClick={() => setShowFallidoModal(true)}
             className="flex items-center gap-1.5 border border-border hover:bg-muted text-sm font-medium px-3 py-1.5 rounded-lg transition-colors text-foreground"
