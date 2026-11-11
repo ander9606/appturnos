@@ -104,6 +104,7 @@ export function OfertaDetailPage() {
   const [descuentoAsig, setDescuentoAsig] = useState<Asignacion | null>(null);
   const [descargandoContratoId, setDescargandoContratoId] = useState<number | null>(null);
   const [menuAbiertoId, setMenuAbiertoId] = useState<number | null>(null);
+  const [mostrarPuestos, setMostrarPuestos] = useState(true);
 
   async function handleDescargarContrato(asignacionId: number) {
     setDescargandoContratoId(asignacionId);
@@ -256,13 +257,22 @@ export function OfertaDetailPage() {
         </div>
       </div>
 
-      {/* Two-column layout */}
-      <div className="flex gap-5 flex-1 min-h-0">
+      {/* Two-column layout - responsive: stack en pantallas pequeñas */}
+      <div className="flex flex-col lg:flex-row gap-5 flex-1 min-h-0">
 
-        {/* LEFT — Puestos */}
-        <div className="w-80 flex-shrink-0 flex flex-col gap-3">
+        {/* LEFT — Puestos - colapsable en pantallas pequeñas */}
+        <div className="w-full lg:w-80 flex-shrink-0 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-foreground">Puestos</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-foreground">Puestos</h2>
+              <button
+                onClick={() => setMostrarPuestos(!mostrarPuestos)}
+                className="lg:hidden text-muted-foreground hover:text-foreground p-1 transition-colors"
+                aria-label={mostrarPuestos ? 'Ocultar puestos' : 'Mostrar puestos'}
+              >
+                {mostrarPuestos ? '▼' : '▶'}
+              </button>
+            </div>
             {canEditPuestos && (
               <button
                 onClick={() => { setPuestoEditando(null); setShowPuestoForm(true); }}
@@ -273,7 +283,7 @@ export function OfertaDetailPage() {
             )}
           </div>
 
-          {puestos.length === 0 ? (
+          {mostrarPuestos && puestos.length === 0 ? (
             <div className="bg-card border border-dashed border-border rounded-2xl p-6 text-center">
               <p className="text-sm text-muted-foreground">Sin puestos</p>
               {canEditPuestos && (
@@ -285,7 +295,7 @@ export function OfertaDetailPage() {
                 </button>
               )}
             </div>
-          ) : (
+          ) : mostrarPuestos ? (
             <div className="flex flex-col gap-2">
               {puestos.map(p => (
                 <div key={p.id} className="bg-card border border-border rounded-xl p-3.5">
@@ -332,7 +342,7 @@ export function OfertaDetailPage() {
                 </div>
               ))}
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* RIGHT — Asignaciones */}
@@ -377,37 +387,37 @@ export function OfertaDetailPage() {
           ) : asignaciones.length === 0 ? (
             <EmptyState title="Sin asignaciones" />
           ) : (
-            <div className="bg-card rounded-xl overflow-x-auto overflow-y-auto max-h-[calc(100vh-400px)] min-h-[400px]" style={{ boxShadow: '0 0 0 1px var(--border)' }}>
-              <table className="text-sm min-w-[900px] w-full">
+            <div className="bg-card rounded-xl overflow-x-auto overflow-y-auto max-h-[calc(100vh-400px)] min-h-[300px]" style={{ boxShadow: '0 0 0 1px var(--border)' }}>
+              <table className="text-sm w-full min-w-[700px]">
                 <colgroup>
-                  <col style={{ width: '280px' }} /> {/* Trabajador + Puesto */}
-                  <col style={{ width: '220px' }} /> {/* Estado + Calificación */}
-                  <col style={{ width: '200px' }} /> {/* Horario */}
-                  <col style={{ minWidth: '200px' }} /> {/* Acciones */}
+                  <col className="w-[35%] min-w-[200px]" /> {/* Trabajador + Puesto */}
+                  <col className="w-[25%] min-w-[160px]" /> {/* Estado + Calificación */}
+                  <col className="w-[25%] min-w-[140px]" /> {/* Horario */}
+                  <col className="w-[15%] min-w-[100px]" /> {/* Acciones */}
                 </colgroup>
                 <thead className="sticky top-0 bg-card z-10">
                   <tr className="bg-muted text-muted-foreground text-xs uppercase border-b border-border">
-                    <th className="text-left px-4 py-3 font-medium">Trabajador</th>
-                    <th className="text-left px-4 py-3 font-medium">Estado</th>
-                    <th className="text-left px-4 py-3 font-medium">Horario</th>
-                    <th className="px-4 py-3" />
+                    <th className="text-left px-2 md:px-4 py-2 md:py-3 font-medium">Trabajador</th>
+                    <th className="text-left px-2 md:px-4 py-2 md:py-3 font-medium">Estado</th>
+                    <th className="text-left px-2 md:px-4 py-2 md:py-3 font-medium">Horario</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3" />
                   </tr>
                 </thead>
                 <tbody>
                   {asignaciones.map(a => (
                     <tr key={a.id} className="border-t border-border/60 hover:bg-muted transition-colors">
                       {/* Columna: Trabajador + Puesto */}
-                      <td className="px-4 py-3">
+                      <td className="px-2 md:px-4 py-2 md:py-3">
                         <div className="flex flex-col">
-                          <span className="font-medium text-foreground">
+                          <span className="font-medium text-foreground text-xs md:text-sm">
                             {a.trabajador_nombre} {a.trabajador_apellido}
                           </span>
-                          <span className="text-xs text-muted-foreground">{a.cargo_nombre}</span>
+                          <span className="text-[11px] md:text-xs text-muted-foreground">{a.cargo_nombre}</span>
                         </div>
                       </td>
 
                       {/* Columna: Estado + Calificación */}
-                      <td className="px-4 py-3">
+                      <td className="px-2 md:px-4 py-2 md:py-3">
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-2">
                             <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${ESTADO_ASIG_BADGE[a.estado]}`}>
@@ -431,8 +441,8 @@ export function OfertaDetailPage() {
                       </td>
 
                       {/* Columna: Horario (Ingreso - Egreso) */}
-                      <td className="px-4 py-3">
-                        <div className="flex flex-col gap-0.5 text-muted-foreground text-xs">
+                      <td className="px-2 md:px-4 py-2 md:py-3">
+                        <div className="flex flex-col gap-0.5 text-muted-foreground text-[11px] md:text-xs">
                           <div className="flex items-center gap-1.5">
                             <span className="text-muted-foreground/60">Entrada:</span>
                             <span className="font-medium">{a.hora_ingreso_real ?? '—'}</span>
@@ -450,8 +460,8 @@ export function OfertaDetailPage() {
                       </td>
 
                       {/* Columna: Menú de Acciones */}
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2 justify-end">
+                      <td className="px-2 md:px-4 py-2 md:py-3">
+                        <div className="flex items-center gap-1 md:gap-2 justify-end">
                           {/* Acciones rápidas para estado pendiente */}
                           {puedeGestionar && a.estado === 'pendiente' && (
                             <>
