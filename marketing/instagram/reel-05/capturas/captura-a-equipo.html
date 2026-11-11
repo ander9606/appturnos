@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Equipo — Zaturno</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+      background: #F8FAFC;
+      width: 390px;
+      height: 844px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Status bar */
+    .status-bar {
+      height: 54px;
+      background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-top: 10px;
+      color: white;
+    }
+
+    .time {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+      padding: 16px 20px 24px;
+      color: white;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .header p {
+      font-size: 14px;
+      opacity: 0.85;
+    }
+
+    /* Search bar */
+    .search-bar {
+      margin: 16px 20px;
+      background: white;
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .search-icon {
+      width: 18px;
+      height: 18px;
+      opacity: 0.4;
+    }
+
+    .search-bar input {
+      border: none;
+      outline: none;
+      font-size: 15px;
+      flex: 1;
+      color: #64748B;
+    }
+
+    .search-bar input::placeholder {
+      color: #CBD5E1;
+    }
+
+    /* Worker list */
+    .worker-list {
+      padding: 0 20px;
+    }
+
+    .worker-card {
+      background: white;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      border: 1px solid #F1F5F9;
+    }
+
+    .worker-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .worker-info {
+      flex: 1;
+    }
+
+    .worker-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0F172A;
+      margin-bottom: 3px;
+    }
+
+    .worker-role {
+      font-size: 13px;
+      color: #64748B;
+    }
+
+    .worker-badge {
+      background: #10B981;
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      text-transform: uppercase;
+    }
+
+    /* FAB button */
+    .fab {
+      position: absolute;
+      bottom: 24px;
+      right: 24px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 32px;
+      font-weight: 300;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+      }
+      50% {
+        transform: scale(1.05);
+        box-shadow: 0 12px 32px rgba(99, 102, 241, 0.5);
+      }
+    }
+
+    /* Bottom navigation */
+    .bottom-nav {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 80px;
+      background: white;
+      border-top: 1px solid #F1F5F9;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding-bottom: 20px;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      opacity: 0.4;
+    }
+
+    .nav-item.active {
+      opacity: 1;
+      color: #6366F1;
+    }
+
+    .nav-icon {
+      font-size: 24px;
+    }
+
+    .nav-label {
+      font-size: 11px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <!-- Status bar -->
+  <div class="status-bar">
+    <div class="time">9:41</div>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <h1>Equipo</h1>
+    <p>2 trabajadores activos</p>
+  </div>
+
+  <!-- Search bar -->
+  <div class="search-bar">
+    <svg class="search-icon" fill="currentColor" viewBox="0 0 20 20">
+      <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+    </svg>
+    <input type="text" placeholder="Buscar trabajador...">
+  </div>
+
+  <!-- Worker list -->
+  <div class="worker-list">
+    <div class="worker-card">
+      <div class="worker-avatar">M</div>
+      <div class="worker-info">
+        <div class="worker-name">María González</div>
+        <div class="worker-role">Operario de producción</div>
+      </div>
+      <div class="worker-badge">Activo</div>
+    </div>
+
+    <div class="worker-card">
+      <div class="worker-avatar" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%);">J</div>
+      <div class="worker-info">
+        <div class="worker-name">Juan Pérez</div>
+        <div class="worker-role">Supervisor de turno</div>
+      </div>
+      <div class="worker-badge">Activo</div>
+    </div>
+  </div>
+
+  <!-- FAB button -->
+  <div class="fab">+</div>
+
+  <!-- Bottom navigation -->
+  <div class="bottom-nav">
+    <div class="nav-item">
+      <div class="nav-icon">🏠</div>
+      <div class="nav-label">Inicio</div>
+    </div>
+    <div class="nav-item">
+      <div class="nav-icon">📅</div>
+      <div class="nav-label">Turnos</div>
+    </div>
+    <div class="nav-item active">
+      <div class="nav-icon">👥</div>
+      <div class="nav-label">Equipo</div>
+    </div>
+    <div class="nav-item">
+      <div class="nav-icon">💰</div>
+      <div class="nav-label">Nómina</div>
+    </div>
+    <div class="nav-item">
+      <div class="nav-icon">👤</div>
+      <div class="nav-label">Perfil</div>
+    </div>
+  </div>
+</body>
+</html>

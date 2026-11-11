@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Trabajador creado — Zaturno</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+      background: #F8FAFC;
+      width: 390px;
+      height: 844px;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+
+    /* Checkmark animation */
+    .checkmark-container {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 20px 60px rgba(16, 185, 129, 0.4);
+      margin-bottom: 32px;
+      position: relative;
+    }
+
+    .checkmark {
+      width: 60px;
+      height: 60px;
+      stroke: white;
+      stroke-width: 4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
+
+    /* Confetti particles */
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: #6366F1;
+      opacity: 0;
+      animation: fall 1.5s ease-out forwards;
+    }
+
+    .confetti:nth-child(1) {
+      left: 20%;
+      background: #F59E0B;
+      animation-delay: 0s;
+    }
+
+    .confetti:nth-child(2) {
+      left: 40%;
+      background: #EF4444;
+      animation-delay: 0.1s;
+    }
+
+    .confetti:nth-child(3) {
+      left: 60%;
+      background: #10B981;
+      animation-delay: 0.2s;
+    }
+
+    .confetti:nth-child(4) {
+      left: 80%;
+      background: #6366F1;
+      animation-delay: 0.3s;
+    }
+
+    @keyframes fall {
+      0% {
+        top: -20px;
+        opacity: 1;
+        transform: rotate(0deg);
+      }
+      100% {
+        top: 300px;
+        opacity: 0;
+        transform: rotate(720deg);
+      }
+    }
+
+    /* Success title */
+    .success-title {
+      font-size: 32px;
+      font-weight: 800;
+      color: #0F172A;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .success-subtitle {
+      font-size: 16px;
+      color: #64748B;
+      text-align: center;
+      margin-bottom: 40px;
+      line-height: 1.5;
+    }
+
+    /* Worker card */
+    .worker-card {
+      background: white;
+      border-radius: 20px;
+      padding: 24px;
+      width: 100%;
+      max-width: 320px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      border: 1px solid #F1F5F9;
+      margin-bottom: 24px;
+    }
+
+    .worker-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .worker-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .worker-info {
+      flex: 1;
+    }
+
+    .worker-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0F172A;
+      margin-bottom: 4px;
+    }
+
+    .worker-id {
+      font-size: 13px;
+      color: #64748B;
+    }
+
+    .worker-details {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .detail-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      background: #F8FAFC;
+      border-radius: 10px;
+    }
+
+    .detail-icon {
+      font-size: 18px;
+    }
+
+    .detail-content {
+      flex: 1;
+    }
+
+    .detail-label {
+      font-size: 11px;
+      color: #64748B;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .detail-value {
+      font-size: 14px;
+      color: #0F172A;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    /* Action button */
+    .action-button {
+      width: 100%;
+      max-width: 320px;
+      padding: 16px;
+      background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+      color: white;
+      font-size: 16px;
+      font-weight: 700;
+      border: none;
+      border-radius: 14px;
+      box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <!-- Confetti -->
+  <div class="confetti"></div>
+  <div class="confetti"></div>
+  <div class="confetti"></div>
+  <div class="confetti"></div>
+
+  <!-- Checkmark -->
+  <div class="checkmark-container">
+    <svg class="checkmark" viewBox="0 0 52 52">
+      <path d="M14 27l7 7 16-16"/>
+    </svg>
+  </div>
+
+  <!-- Success message -->
+  <h1 class="success-title">¡Trabajador creado!</h1>
+  <p class="success-subtitle">Carlos Rodríguez ya forma parte de tu equipo</p>
+
+  <!-- Worker card -->
+  <div class="worker-card">
+    <div class="worker-header">
+      <div class="worker-avatar">C</div>
+      <div class="worker-info">
+        <div class="worker-name">Carlos Rodríguez</div>
+        <div class="worker-id">CC 1.098.765.432</div>
+      </div>
+    </div>
+
+    <div class="worker-details">
+      <div class="detail-row">
+        <div class="detail-icon">💼</div>
+        <div class="detail-content">
+          <div class="detail-label">Tipo</div>
+          <div class="detail-value">Trabajador de nómina</div>
+        </div>
+      </div>
+
+      <div class="detail-row">
+        <div class="detail-icon">💰</div>
+        <div class="detail-content">
+          <div class="detail-label">Salario</div>
+          <div class="detail-value">$1.750.905 / mes</div>
+        </div>
+      </div>
+
+      <div class="detail-row">
+        <div class="detail-icon">🏦</div>
+        <div class="detail-content">
+          <div class="detail-label">Banco</div>
+          <div class="detail-value">Bancolombia · Ahorros</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action button -->
+  <button class="action-button">Ver equipo completo</button>
+</body>
+</html>

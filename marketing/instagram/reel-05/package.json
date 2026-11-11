@@ -1,0 +1,20 @@
+{
+  "name": "reel-05-crear-empleados",
+  "version": "1.0.0",
+  "description": "Reel 5: Tu equipo listo en minutos — Tutorial práctico",
+  "type": "module",
+  "scripts": {
+    "build": "node build.js",
+    "capturas": "node capturas/generar-capturas.js",
+    "audio": "node generar-audio.js",
+    "preview": "node preview.js",
+    "listar-voces": "node ../audio/listar-voces.js"
+  },
+  "dependencies": {
+    "playwright": "^1.40.0",
+    "elevenlabs": "latest"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

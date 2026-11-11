@@ -215,3 +215,6 @@ const P = {
   tableta: (x, y, r = 0) => `<g transform="translate(${x} ${y}) rotate(${r})"><rect x="-22" y="-29" width="44" height="58" rx="7" fill="${C.PIZARRA}"/><rect x="-17" y="-23" width="34" height="46" rx="3" fill="#fff"/>
       <rect x="-13" y="-18" width="26" height="6" fill="${NARANJA}"/><rect x="-13" y="-7" width="18" height="4" fill="${C.GRIS_CLARO}"/><rect x="-13" y="1" width="22" height="4" fill="${C.GRIS_CLARO}"/></g>`,
 };
+
+// Exportar para uso en módulos ES
+export { perro, perfil, espalda, C, P };

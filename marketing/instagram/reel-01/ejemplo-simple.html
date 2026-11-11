@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="es"><head>
+  <meta charset="utf-8">
+  <title>Ejemplo Simple - Motor de Animación Zaturno</title>
+  <style>
+    body {
+      margin: 0;
+      background: #F8FAFC;
+      font-family: Inter, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    #canvas {
+      display: block;
+      border: 2px solid #CBD5E1;
+      border-radius: 8px;
+      background: #F8FAFC;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    #controls {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    input[type="range"] {
+      width: 400px;
+    }
+    button {
+      padding: 8px 16px;
+      background: #FF5A3C;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button:hover {
+      background: #E83E1F;
+    }
+    #time-display {
+      font-weight: 700;
+      color: #0F172A;
+      min-width: 80px;
+    }
+  </style>
+</head>
+<body>
+  <h1 style="color: #0F172A;">Ejemplo Simple - Motor de Animación</h1>
+  <svg id="canvas" width="1080" height="1920" viewBox="0 0 1080 1920"></svg>
+
+  <div id="controls">
+    <button id="play">▶ Play</button>
+    <input type="range" id="timeline" min="0" max="4" step="0.033" value="0">
+    <span id="time-display">0.00s</span>
+  </div>
+
+  <script type="module">
+    // Importar componentes del motor
+    import { Timeline } from '../motor/timeline.js';
+    import { textoAnimado } from '../motor/text-fx.js';
+
+    // Importar personaje
+    import('../personaje/perro.js').then(module => {
+      const { perro, C } = module;
+
+      // Crear timeline
+      const timeline = new Timeline(30);
+
+      // Escena 1: Perro pensando (0-2s)
+      timeline.addScene({
+        tInicio: 0,
+        tFin: 2,
+        poseInicio: {
+          boca: 'sonrisa',
+          ojos: { px: 0, py: 0 },
+          brazoI: [-66, 28, -17, 16],
+          brazoD: [66, 28, 17, 16]
+        },
+        poseFin: {
+          boca: 'pensativa',
+          ojos: { px: -6, py: -6 },
+          brazoI: [-60, 44, 16, 26],
+          brazoD: [80, 14, 24, -8]
+        },
+        textos: [
+          {
+            texto: '¿Cómo animar al perro?',
+            x: 540,
+            y: 300,
+            tInicio: 0.3,
+            tFin: 1.8,
+            duracionEntrada: 0.3,
+            duracionSalida: 0.2
+          }
+        ],
+        easing: 'easeOutBack'
+      });
+
+      // Escena 2: Perro feliz con idea (2-4s)
+      timeline.addScene({
+        tInicio: 2,
+        tFin: 4,
+        poseInicio: {
+          boca: 'pensativa',
+          ojos: { px: -6, py: -6 },
+          brazoI: [-60, 44, 16, 26],
+          brazoD: [80, 14, 24, -8]
+        },
+        poseFin: {
+          boca: 'risa',
+          ojos: { sx: 1.15, px: 0, py: -2 },
+          brazoI: [-92, 22, -48, 62],
+          brazoD: [98, 0, 72, -84]
+        },
+        textos: [
+          {
+            texto: '¡Con el motor de animación!',
+            x: 540,
+            y: 300,
+            tInicio: 2.3,
+            tFin: 3.9,
+            duracionEntrada: 0.4,
+            duracionSalida: 0.2
+          }
+        ],
+        easing: 'easeOutBack'
+      });
+
+      // Función para renderizar un frame
+      window.renderFrame = function(tiempo) {
+        const estado = timeline.getFrameAt(tiempo);
+        const canvas = document.getElementById('canvas');
+
+        // Fondo
+        let svg = `<rect width="1080" height="1920" fill="${C.BLANCO}"/>`;
+
+        // Perro centrado
+        if (estado.pose) {
+          const perroSVG = perro(estado.pose);
+          svg += `<g transform="translate(540 960)">${perroSVG}</g>`;
+        }
+
+        // Textos
+        if (estado.textos) {
+          for (const texto of estado.textos) {
+            svg += textoAnimado(texto.texto, texto.x, texto.y, {
+              fontSize: 52,
+              fontWeight: 800,
+              entrando: texto.entrando,
+              saliendo: texto.saliendo
+            });
+          }
+        }
+
+        canvas.innerHTML = svg;
+      };
+
+      // Controles de reproducción
+      const playBtn = document.getElementById('play');
+      const timelineInput = document.getElementById('timeline');
+      const timeDisplay = document.getElementById('time-display');
+
+      let isPlaying = false;
+      let animationId = null;
+      let startTime = null;
+      let pausedAt = 0;
+
+      function updateDisplay(t) {
+        timeDisplay.textContent = t.toFixed(2) + 's';
+        timelineInput.value = t;
+        window.renderFrame(t);
+      }
+
+      function animate(timestamp) {
+        if (!startTime) startTime = timestamp;
+        const elapsed = (timestamp - startTime) / 1000;
+        const currentTime = pausedAt + elapsed;
+
+        if (currentTime >= 4) {
+          // Fin de la animación
+          isPlaying = false;
+          playBtn.textContent = '▶ Play';
+          pausedAt = 0;
+          updateDisplay(0);
+          return;
+        }
+
+        updateDisplay(currentTime);
+
+        if (isPlaying) {
+          animationId = requestAnimationFrame(animate);
+        }
+      }
+
+      playBtn.addEventListener('click', () => {
+        if (isPlaying) {
+          // Pausar
+          isPlaying = false;
+          playBtn.textContent = '▶ Play';
+          pausedAt = parseFloat(timelineInput.value);
+          cancelAnimationFrame(animationId);
+        } else {
+          // Reproducir
+          isPlaying = true;
+          playBtn.textContent = '⏸ Pause';
+          startTime = null;
+          animationId = requestAnimationFrame(animate);
+        }
+      });
+
+      timelineInput.addEventListener('input', (e) => {
+        if (!isPlaying) {
+          const t = parseFloat(e.target.value);
+          pausedAt = t;
+          updateDisplay(t);
+        }
+      });
+
+      // Renderizar frame inicial
+      window.renderFrame(0);
+    });
+  </script>
+</body>
+</html>

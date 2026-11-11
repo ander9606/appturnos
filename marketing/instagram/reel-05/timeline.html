@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reel 05 - Tu equipo listo en minutos</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: #0F172A;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    #canvas {
+      display: block;
+      max-width: 100%;
+      max-height: 100vh;
+      background: #F8FAFC;
+    }
+
+    /* Ocultar en captura de frames */
+    .debug-overlay {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 12px;
+      z-index: 1000;
+      display: none; /* Oculto por defecto para captura */
+    }
+  </style>
+</head>
+<body>
+  <svg id="canvas" width="1080" height="1920" viewBox="0 0 1080 1920"></svg>
+
+  <!-- Debug overlay (solo visible en modo desarrollo) -->
+  <div class="debug-overlay" id="debug">
+    Frame: <span id="frame-num">0</span> |
+    Time: <span id="time-display">0.00s</span>
+  </div>
+
+  <script type="module">
+    // Activar modo preview para pruebas
+    window.PREVIEW_MODE = true;
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Importar dependencias
+    // ══════════════════════════════════════════════════════════════════════
+    import { Timeline } from '../motor/timeline.js';
+    import { textoAnimado } from '../motor/text-fx.js';
+    import { marcoPhone } from '../motor/phone-frame.js';
+
+    // Importar personaje
+    const perroModule = await import('../personaje/perro.js');
+    const { perro, C, P } = perroModule;
+
+    // Importar escenas
+    const { escenas, metadata } = await import('./escenas.js');
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Configuración
+    // ══════════════════════════════════════════════════════════════════════
+    const FPS = metadata.fps || 30;
+    const DURACION = metadata.duracion || 30;
+
+    // Crear timeline
+    const timeline = new Timeline(FPS);
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Configurar escenas en el timeline
+    // ══════════════════════════════════════════════════════════════════════
+    escenas.forEach(escena => {
+      timeline.addScene({
+        tInicio: escena.tInicio,
+        tFin: escena.tFin,
+        poseInicio: escena.poseInicio,
+        poseFin: escena.poseFin,
+        textos: escena.textos,
+        propsEspeciales: escena.propsEspeciales,
+        perroAnimacion: escena.perroAnimacion,
+        easing: escena.easing || 'linear'
+      });
+    });
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Función para renderizar elementos especiales
+    // ══════════════════════════════════════════════════════════════════════
+    function renderPropsEspeciales(props, tiempo) {
+      if (!props) return '';
+
+      let svg = '';
+
+      for (const prop of props) {
+        // Verificar si el prop debe estar visible en este tiempo
+        const tInicio = prop.tInicio || 0;
+        const tFin = prop.tFin || DURACION;
+        if (tiempo < tInicio || tiempo > tFin) continue;
+
+        const t = (tiempo - tInicio) / (tFin - tInicio); // Progreso 0-1
+
+        switch (prop.tipo) {
+          case 'imagen':
+            // Imagen (como Excel)
+            const opacity = prop.animacion?.opacity ?
+              lerp(prop.animacion.opacity.inicio, prop.animacion.opacity.fin, t) : 1;
+            const scale = prop.animacion?.scale ?
+              lerp(prop.animacion.scale.inicio, prop.animacion.scale.fin, t) : 1;
+
+            svg += `<image href="${prop.src}"
+                     x="${prop.x - prop.width / 2}"
+                     y="${prop.y - prop.height / 2}"
+                     width="${prop.width}"
+                     height="${prop.height}"
+                     opacity="${opacity}"
+                     transform="translate(${prop.x} ${prop.y}) scale(${scale}) translate(${-prop.x} ${-prop.y})"/>`;
+            break;
+
+          case 'xRoja':
+            // X roja sobre Excel
+            const xScale = prop.animacion?.scale ?
+              easeOutBack((tiempo - tInicio) / prop.animacion.scale.duracion || 0.5) : 1;
+            const xOpacity = prop.animacion?.opacity ?
+              (tiempo - tInicio) / 0.5 : 1;
+
+            svg += `<g transform="translate(${prop.x} ${prop.y}) scale(${xScale})" opacity="${Math.min(xOpacity, 1)}">
+                     <path d="M-80 -80 L80 80 M80 -80 L-80 80"
+                           stroke="#EF4444"
+                           stroke-width="16"
+                           stroke-linecap="round"/>
+                   </g>`;
+            break;
+
+          case 'phone':
+            // Marco de celular con captura
+            svg += marcoPhone(prop.x, prop.y, prop.captura, {
+              ancho: 300,
+              alto: 650,
+              entrando: prop.animacion?.y ?
+                (tiempo - tInicio) / 0.5 : false
+            });
+            break;
+
+          case 'checkmark':
+            // Checkmark verde
+            const checkT = Math.min((tiempo - tInicio) / 0.3, 1);
+            const checkScale = easeOutBack(checkT);
+
+            if (checkScale > 0) {
+              svg += `<g transform="translate(${prop.x} ${prop.y}) scale(${checkScale})">
+                       <circle r="18" fill="#10B981"/>
+                       <path d="M-8 0 L-2 7 L10 -6"
+                             fill="none"
+                             stroke="#fff"
+                             stroke-width="4"
+                             stroke-linecap="round"
+                             stroke-linejoin="round"/>
+                     </g>`;
+            }
+            break;
+
+          case 'checkmarkGigante':
+            // Checkmark gigante de éxito
+            const gigT = Math.min((tiempo - tInicio) / prop.duracionDibujo, 1);
+            const gigScale = easeOutBack(gigT) * 3;
+
+            if (gigScale > 0) {
+              svg += `<g transform="translate(${prop.x} ${prop.y}) scale(${gigScale})" opacity="${gigT}">
+                       <circle r="50" fill="#10B981" opacity="0.2"/>
+                       <circle r="40" fill="#10B981"/>
+                       <path d="M-20 0 L-8 16 L24 -18"
+                             fill="none"
+                             stroke="#fff"
+                             stroke-width="8"
+                             stroke-linecap="round"
+                             stroke-linejoin="round"
+                             stroke-dasharray="100"
+                             stroke-dashoffset="${100 - gigT * 100}"/>
+                     </g>`;
+            }
+            break;
+
+          case 'confetti':
+            // Partículas de confetti
+            const confettiT = (tiempo - tInicio) / prop.duracion;
+            for (let i = 0; i < prop.cantidad; i++) {
+              const x = 540 + (Math.random() - 0.5) * 600;
+              const yStart = 400;
+              const yFall = confettiT * 800;
+              const rotation = confettiT * 720 * (i % 2 ? 1 : -1);
+              const color = prop.colores[i % prop.colores.length];
+              const opacity = Math.max(0, 1 - confettiT);
+
+              if (confettiT < 1) {
+                svg += `<rect x="${x}" y="${yStart + yFall}" width="8" height="8"
+                         fill="${color}" opacity="${opacity}"
+                         transform="rotate(${rotation} ${x} ${yStart + yFall})"/>`;
+              }
+            }
+            break;
+
+          case 'avatares':
+            // Avatares múltiples
+            prop.avatares.forEach((avatar, i) => {
+              if (tiempo >= avatar.tInicio) {
+                const avatarT = Math.min((tiempo - avatar.tInicio) / 0.3, 1);
+                const avatarScale = easeOutBack(avatarT);
+                const x = 540 + (i - 1.5) * 70;
+
+                svg += `<g transform="translate(${x} ${prop.y}) scale(${avatarScale})">
+                         <circle r="28" fill="${avatar.color}"/>
+                         ${avatar.brillo ? `<circle r="32" fill="none" stroke="${avatar.color}" stroke-width="3" opacity="0.5"/>` : ''}
+                         <text y="10" font-size="24" font-weight="700" fill="#fff" text-anchor="middle" font-family="Inter,Arial,sans-serif">
+                           ${avatar.inicial}
+                         </text>
+                       </g>`;
+              }
+            });
+            break;
+        }
+      }
+
+      return svg;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Funciones de easing
+    // ══════════════════════════════════════════════════════════════════════
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    function easeOutBack(t) {
+      const c1 = 1.70158;
+      const c3 = c1 + 1;
+      return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Función global de renderizado (llamada por Playwright)
+    // ══════════════════════════════════════════════════════════════════════
+    window.renderFrame = function(tiempo) {
+      const estado = timeline.getFrameAt(tiempo);
+      const canvas = document.getElementById('canvas');
+
+      // Fondo
+      let svg = `<rect width="1080" height="1920" fill="${C.BLANCO}"/>`;
+
+      // Props especiales (Excel, celulares, checkmarks, etc.)
+      svg += renderPropsEspeciales(estado.propsEspeciales, tiempo);
+
+      // Perro
+      if (estado.pose) {
+        // Calcular posición del perro (puede estar animada)
+        let perroX = estado.perroX !== undefined ? estado.perroX : 540;
+        let perroY = estado.perroY !== undefined ? estado.perroY : 960;
+
+        const perroSVG = perro(estado.pose);
+        svg += `<g transform="translate(${perroX} ${perroY})">${perroSVG}</g>`;
+      }
+
+      // Textos
+      if (estado.textos) {
+        for (const texto of estado.textos) {
+          svg += textoAnimado(texto.texto, texto.x, texto.y, {
+            fontSize: texto.fontSize || 48,
+            fontWeight: texto.fontWeight || 800,
+            color: texto.color || '#0F172A',
+            entrando: texto.entrando,
+            saliendo: texto.saliendo
+          });
+        }
+      }
+
+      canvas.innerHTML = svg;
+
+      // Debug info (solo si está visible)
+      const debug = document.getElementById('debug');
+      if (debug.style.display !== 'none') {
+        document.getElementById('frame-num').textContent = Math.floor(tiempo * FPS);
+        document.getElementById('time-display').textContent = tiempo.toFixed(2) + 's';
+      }
+    };
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Modo de desarrollo interactivo (solo si window.PREVIEW_MODE está activo)
+    // ══════════════════════════════════════════════════════════════════════
+    if (window.PREVIEW_MODE) {
+      document.getElementById('debug').style.display = 'block';
+
+      // Controles de reproducción
+      const controls = document.createElement('div');
+      controls.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.9);padding:15px;border-radius:12px;display:flex;gap:10px;align-items:center;z-index:1000;';
+      controls.innerHTML = `
+        <button id="play" style="padding:8px 16px;background:#6366F1;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;">▶ Play</button>
+        <input type="range" id="timeline-slider" min="0" max="${DURACION}" step="${1/FPS}" value="0" style="width:400px;">
+        <span style="color:white;font-family:monospace;min-width:60px;" id="time-ctrl">0.00s</span>
+      `;
+      document.body.appendChild(controls);
+
+      let isPlaying = false;
+      let animationId = null;
+      let startTime = null;
+      let pausedAt = 0;
+
+      const playBtn = document.getElementById('play');
+      const slider = document.getElementById('timeline-slider');
+      const timeCtrl = document.getElementById('time-ctrl');
+
+      function updateDisplay(t) {
+        timeCtrl.textContent = t.toFixed(2) + 's';
+        slider.value = t;
+        window.renderFrame(t);
+      }
+
+      function animate(timestamp) {
+        if (!startTime) startTime = timestamp;
+        const elapsed = (timestamp - startTime) / 1000;
+        const currentTime = pausedAt + elapsed;
+
+        if (currentTime >= DURACION) {
+          isPlaying = false;
+          playBtn.textContent = '▶ Play';
+          pausedAt = 0;
+          updateDisplay(0);
+          return;
+        }
+
+        updateDisplay(currentTime);
+
+        if (isPlaying) {
+          animationId = requestAnimationFrame(animate);
+        }
+      }
+
+      playBtn.addEventListener('click', () => {
+        if (isPlaying) {
+          isPlaying = false;
+          playBtn.textContent = '▶ Play';
+          pausedAt = parseFloat(slider.value);
+          cancelAnimationFrame(animationId);
+        } else {
+          isPlaying = true;
+          playBtn.textContent = '⏸ Pause';
+          startTime = null;
+          animationId = requestAnimationFrame(animate);
+        }
+      });
+
+      slider.addEventListener('input', (e) => {
+        if (!isPlaying) {
+          const t = parseFloat(e.target.value);
+          pausedAt = t;
+          updateDisplay(t);
+        }
+      });
+
+      // Renderizar frame inicial
+      window.renderFrame(0);
+    } else {
+      // Modo captura: renderizar frame 0 al cargar
+      window.renderFrame(0);
+    }
+  </script>
+</body>
+</html>

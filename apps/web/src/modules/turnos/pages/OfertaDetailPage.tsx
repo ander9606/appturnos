@@ -170,7 +170,7 @@ export function OfertaDetailPage() {
   if (!oferta) return <p className="text-muted-foreground text-sm py-12 text-center">Oferta no encontrada</p>;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full pb-24">
       {/* Back + Header */}
       <button
         onClick={() => navigate('/turnos')}
