@@ -170,7 +170,7 @@ export function OfertaDetailPage() {
   if (!oferta) return <p className="text-muted-foreground text-sm py-12 text-center">Oferta no encontrada</p>;
 
   return (
-    <div className="flex flex-col h-full pb-24">
+    <div className="flex flex-col h-full">
       {/* Back + Header */}
       <button
         onClick={() => navigate('/turnos')}
@@ -387,7 +387,7 @@ export function OfertaDetailPage() {
           ) : asignaciones.length === 0 ? (
             <EmptyState title="Sin asignaciones" />
           ) : (
-            <div className="bg-card rounded-xl overflow-x-auto overflow-y-auto max-h-[calc(100vh-400px)] min-h-[300px]" style={{ boxShadow: '0 0 0 1px var(--border)' }}>
+            <div className="bg-card rounded-xl overflow-x-auto overflow-y-auto max-h-[calc(100vh-400px)] min-h-[300px] pb-20" style={{ boxShadow: '0 0 0 1px var(--border)' }}>
               <table className="text-sm w-full min-w-[700px]">
                 <colgroup>
                   <col className="w-[35%] min-w-[200px]" /> {/* Trabajador + Puesto */}
