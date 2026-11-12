@@ -1,7 +1,10 @@
 'use strict';
 
 jest.mock('../modules/admin/admin.model');
-jest.mock('../utils/facturaPdf', () => ({ generarFacturaPdf: jest.fn().mockResolvedValue(Buffer.from('pdf')) }));
+jest.mock('../utils/facturaPdf', () => ({
+  generarFacturaPdf: jest.fn().mockResolvedValue(Buffer.from('pdf')),
+  emisorDesdeEnv: jest.fn().mockReturnValue({ nombre: 'Operador', documento: 'CC 1', email: 'op@ejemplo.co', firmaB64: null }),
+}));
 
 const AdminModel = require('../modules/admin/admin.model');
 const AdminService = require('../modules/admin/admin.service');

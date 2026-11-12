@@ -7,7 +7,7 @@ const { PlanesModel, montoSuscripcionCop, prorrateoCambioPlanCop, planParaTrabaj
 const NotificacionesService = require('../notificaciones/notificaciones.service');
 const { enviarEmail } = require('../../utils/mailer');
 const { plantillaCorreo, esc } = require('../../utils/plantillaCorreo');
-const { generarFacturaPdf } = require('../../utils/facturaPdf');
+const { generarFacturaPdf, emisorDesdeEnv } = require('../../utils/facturaPdf');
 
 const ESTADOS_RECHAZO = ['DECLINED', 'VOIDED', 'ERROR'];
 
@@ -76,14 +76,11 @@ async function enviarFactura(eventoId, { empresaId, plan, meses }, montoCop) {
     const pdf = await generarFacturaPdf({
       numero,
       fecha: new Date().toLocaleDateString('es-CO', { timeZone: 'America/Bogota' }),
-      emisor: {
-        nombre: process.env.FACTURA_EMISOR_NOMBRE,
-        documento: process.env.FACTURA_EMISOR_DOCUMENTO,
-        email: process.env.FACTURA_EMISOR_EMAIL,
-      },
+      emisor: emisorDesdeEnv(),
       cliente: { nombre: emp.nombre, nit: emp.nit, email: emp.email },
       concepto,
       montoCop,
+      medioPago: 'Wompi',
     });
     await enviarEmail({
       to: emp.email,

@@ -6,7 +6,10 @@
 jest.mock('../config/database', () => ({ pool: { query: jest.fn() } }));
 jest.mock('../utils/logger', () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn() }));
 jest.mock('../utils/mailer', () => ({ enviarEmail: jest.fn().mockResolvedValue(undefined) }));
-jest.mock('../utils/facturaPdf', () => ({ generarFacturaPdf: jest.fn().mockResolvedValue(Buffer.from('pdf')) }));
+jest.mock('../utils/facturaPdf', () => ({
+  generarFacturaPdf: jest.fn().mockResolvedValue(Buffer.from('pdf')),
+  emisorDesdeEnv: jest.fn().mockReturnValue({ nombre: 'Operador', documento: 'CC 1', email: 'op@ejemplo.co', firmaB64: null }),
+}));
 jest.mock('../modules/notificaciones/notificaciones.service', () => ({
   notificarVarios: jest.fn().mockResolvedValue(undefined),
   notificarSuperAdmins: jest.fn().mockResolvedValue(undefined),

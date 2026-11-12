@@ -493,7 +493,7 @@ const AdminModel = {
   /** Datos de la empresa para armar una cuenta de cobro del plan actual (no ligada a un evento Wompi puntual). */
   async obtenerEmpresaParaCuentaCobro(id) {
     const [[fila]] = await pool.query(
-      `SELECT e.id, e.nombre, e.nit, e.plan, e.suscripcion_vigente_hasta,
+      `SELECT e.id, e.nombre, e.nit, e.plan, e.suscripcion_vigente_hasta, e.suscripcion_origen,
               e.suscripcion_valor_mes_cop, e.suscripcion_meses,
               COALESCE(e.email_empresa, u.email) AS email
          FROM empresas e

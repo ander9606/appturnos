@@ -229,21 +229,18 @@ const AdminService = {
     if (!ev) throw new AppError('Evento no encontrado', 404);
     if (ev.estado !== 'procesado') throw new AppError('Este evento no tiene un pago procesado para cobrar', 409);
 
-    const { generarFacturaPdf } = require('../../utils/facturaPdf');
+    const { generarFacturaPdf, emisorDesdeEnv } = require('../../utils/facturaPdf');
     const numero = `ZT-${String(ev.id).padStart(6, '0')}`;
     const pdf = await generarFacturaPdf({
       numero,
       fecha: new Date(ev.procesado_at ?? ev.created_at).toLocaleDateString('es-CO', { timeZone: 'America/Bogota' }),
-      emisor: {
-        nombre: process.env.FACTURA_EMISOR_NOMBRE,
-        documento: process.env.FACTURA_EMISOR_DOCUMENTO,
-        email: process.env.FACTURA_EMISOR_EMAIL,
-      },
+      emisor: emisorDesdeEnv(),
       cliente: { nombre: ev.empresa_nombre, nit: ev.empresa_nit, email: ev.empresa_email },
       concepto: ev.meses === 0
         ? `Cambio a plan ${ev.plan} — diferencia por el resto de la vigencia`
         : `Suscripción Zaturno plan ${ev.plan} — ${ev.meses} mes${ev.meses !== 1 ? 'es' : ''}`,
       montoCop: ev.monto_cop,
+      medioPago: 'Wompi',
     });
     return { pdf, numero };
   },
@@ -292,20 +289,18 @@ const AdminService = {
 
     const fmtDia = (d) => d.toLocaleDateString('es-CO', { timeZone: 'UTC' });
     const numero = `ZT-E${empresaId}-${fmtDia(fin).replace(/\//g, '')}`;
-    const { generarFacturaPdf } = require('../../utils/facturaPdf');
+    const { generarFacturaPdf, emisorDesdeEnv } = require('../../utils/facturaPdf');
     const pdf = await generarFacturaPdf({
       numero,
       // "fecha" sí es un instante real (hoy, al generar el PDF) — a diferencia de fin/inicio,
       // aquí la zona horaria de Colombia es la correcta.
       fecha: new Date().toLocaleDateString('es-CO', { timeZone: 'America/Bogota' }),
-      emisor: {
-        nombre: process.env.FACTURA_EMISOR_NOMBRE,
-        documento: process.env.FACTURA_EMISOR_DOCUMENTO,
-        email: process.env.FACTURA_EMISOR_EMAIL,
-      },
+      emisor: emisorDesdeEnv(),
       cliente: { nombre: emp.nombre, nit: emp.nit, email: emp.email },
       concepto: `Suscripción Zaturno plan ${emp.plan} — del ${fmtDia(inicio)} al ${fmtDia(fin)}`,
       montoCop,
+      // Solo se afirma el canal real cuando se conoce — empresas activadas a mano no pasaron por Wompi.
+      medioPago: emp.suscripcion_origen === 'wompi' ? 'Wompi' : undefined,
     });
     return { pdf, numero };
   },
