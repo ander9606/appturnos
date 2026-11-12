@@ -220,6 +220,8 @@ module.exports = {
     if (fechaInicio) { where.push('o.fecha >= ?'); params.push(fechaInicio); }
     if (fechaFin)    { where.push('o.fecha <= ?'); params.push(fechaFin); }
 
+    // COALESCE(compensacion_decision, ''): la columna es NULL en casi todos los turnos (nunca hubo
+    // propuesta); sin él, NOT (… AND NULL) es NULL y el WHERE descarta justo los turnos normales.
     const [[fila]] = await pool.query(
       `SELECT COALESCE(SUM(
                 COALESCE(a.pago_total, 0) - COALESCE(
@@ -232,7 +234,7 @@ module.exports = {
        LEFT JOIN contratos_diarios cd ON cd.asignacion_id = a.id
        WHERE ${where.join(' AND ')}
          AND (a.estado = 'fallido' OR COALESCE(cd.firmado_trabajador, 0) = 1)
-         AND NOT (a.estado = 'completado' AND a.compensacion_decision = 'pendiente')`,
+         AND NOT (a.estado = 'completado' AND COALESCE(a.compensacion_decision, '') = 'pendiente')`,
       params
     );
     return Number(fila.total);
