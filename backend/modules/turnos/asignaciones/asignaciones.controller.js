@@ -145,6 +145,14 @@ async function liquidacion(req, res) {
   res.json({ success: true, data });
 }
 
+async function liquidacionTotal(req, res) {
+  const total = await AsignacionesService.totalLiquidacion(req.empresa_id, {
+    fecha_inicio: req.query.fecha_inicio || undefined,
+    fecha_fin:    req.query.fecha_fin    || undefined,
+  });
+  res.json({ success: true, data: { total } });
+}
+
 async function descartarSospechoso(req, res) {
   await AsignacionesService.descartarSospechoso(req.empresa_id, Number(req.params.id));
   res.json({ success: true, data: null, message: 'Marcaje ya no está marcado como sospechoso' });
@@ -152,5 +160,5 @@ async function descartarSospechoso(req, res) {
 
 module.exports = {
   listar, obtener, confirmar, rechazar, cancelar, cancelarPropia, ingreso, egreso, reconfirmar, aceptarFallido, autorizarCompensacion, rechazarCompensacion, misTurnos, corregir,
-  noPresentado, calificar, liquidacion, descartarSospechoso, agregarBono,
+  noPresentado, calificar, liquidacion, liquidacionTotal, descartarSospechoso, agregarBono,
 };

@@ -93,7 +93,7 @@ let mockOfertasMes: Q;
 let mockOfertasCalls: { params: unknown; opts: { enabled?: boolean } }[];
 let mockPend: Q;
 let mockPendOpts: unknown;
-let mockLiq: { data?: { pago_total: number }[] };
+let mockLiq: { data?: number };
 let mockLiqCall: { params: unknown; opts: unknown };
 let mockAplicar: { mutateAsync: jest.Mock; isPending: boolean };
 let mockMisOpts: unknown;
@@ -105,7 +105,7 @@ jest.mock('@/features/turnos/useTurnos', () => ({
   },
   useAplicar: () => mockAplicar,
   usePostulacionesPendientes: (o: unknown) => { mockPendOpts = o; return mockPend; },
-  useLiquidacionTurnos: (params: unknown, opts: unknown) => { mockLiqCall = { params, opts }; return mockLiq; },
+  useLiquidacionTurnosTotal: (params: unknown, opts: unknown) => { mockLiqCall = { params, opts }; return mockLiq; },
 }));
 let mockEventual: { data?: { nomina?: { estado: string; fecha_fin: string } } };
 let mockEventualArg: unknown;
@@ -149,7 +149,7 @@ beforeEach(() => {
   mockOfertasMes = q({ data: [] });
   mockOfertasCalls = [];
   mockPend = q({ data: [] });
-  mockLiq = { data: [] };
+  mockLiq = { data: 0 };
   mockAplicar = { mutateAsync: jest.fn().mockResolvedValue({}), isPending: false };
   mockEventual = { data: undefined };
   mockPeriodos = { data: { data: [] } };
@@ -240,8 +240,8 @@ describe('gestor (vista lista)', () => {
     fireEvent.press(screen.getByLabelText('Crear turno'));
     expect(mockRouter.push).toHaveBeenCalledWith('/turno/nuevo');
   });
-  it('total a pagar: suma de la liquidación, formato es-CO y navegación', () => {
-    mockLiq = { data: [{ pago_total: 1000000 }, { pago_total: 250500 }] };
+  it('total a pagar: total de la liquidación, formato es-CO y navegación', () => {
+    mockLiq = { data: 1250500 };
     montar('admin_empresa');
     expect(screen.getByText(`$${(1250500).toLocaleString('es-CO')}`)).toBeTruthy();
     fireEvent.press(screen.getByText('Total a pagar'));
