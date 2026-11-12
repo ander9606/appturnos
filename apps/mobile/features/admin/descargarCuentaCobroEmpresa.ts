@@ -6,10 +6,13 @@ import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
  * Abre la cuenta de cobro del período vigente actual de una empresa, sin
  * depender de que exista un evento Wompi puntual. Mismo patrón de ?token=
  * que descargarCuentaCobroWompi.ts (el navegador externo no manda headers).
+ * `meses` (1 o 12) corrige a mano la modalidad cuando la autodetectada está
+ * mal; omitido, el backend autodetecta.
  */
-export async function descargarCuentaCobroEmpresa(empresaId: number): Promise<void> {
+export async function descargarCuentaCobroEmpresa(empresaId: number, meses?: 1 | 12): Promise<void> {
   await adminApi.listarWompiEventos({ limit: 1 });
   const token = await SecureStore.getItemAsync('appturnos.access_token');
   const base = process.env.EXPO_PUBLIC_API_URL;
-  await WebBrowser.openBrowserAsync(`${base}/api/admin/empresas/${empresaId}/cuenta-cobro?token=${token}`);
+  const qsMeses = meses ? `&meses=${meses}` : '';
+  await WebBrowser.openBrowserAsync(`${base}/api/admin/empresas/${empresaId}/cuenta-cobro?token=${token}${qsMeses}`);
 }

@@ -18,7 +18,10 @@ const empresa = (overrides) => ({
   ...overrides,
 });
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  AdminModel.obtenerUltimoMesesPagado.mockResolvedValue(null);
+});
 
 describe('AdminService.generarCuentaCobroActual', () => {
   test('empresa inexistente → AppError 404', async () => {
@@ -62,5 +65,36 @@ describe('AdminService.generarCuentaCobroActual', () => {
     expect(Buffer.isBuffer(pdf)).toBe(true);
     expect(montoSuscripcionCop).toHaveBeenCalledWith({ codigo: 'profesional', max_trabajadores: 30 }, 12, 1);
     expect(generarFacturaPdf).toHaveBeenCalledWith(expect.objectContaining({ montoCop: 169000 }));
+  });
+
+  test('suscripcion_meses NULL pero el último pago Wompi fue anual: autodetecta 12 meses (no asume mensual)', async () => {
+    AdminModel.obtenerEmpresaParaCuentaCobro.mockResolvedValue(empresa());
+    AdminModel.obtenerUltimoMesesPagado.mockResolvedValue(12);
+    EmpresasModel.contarTrabajadoresActivos.mockResolvedValue(12);
+    PlanesModel.listar.mockResolvedValue([{ codigo: 'profesional', max_trabajadores: 30 }]);
+    montoSuscripcionCop.mockReturnValue(1700000);
+
+    await AdminService.generarCuentaCobroActual(8);
+
+    expect(montoSuscripcionCop).toHaveBeenCalledWith({ codigo: 'profesional', max_trabajadores: 30 }, 12, 12);
+    expect(generarFacturaPdf).toHaveBeenCalledWith(expect.objectContaining({
+      concepto: 'Suscripción Zaturno plan profesional — del 15/12/2025 al 15/12/2026',
+      montoCop: 1700000,
+    }));
+  });
+
+  test('meses forzado a mano (12): ignora suscripcion_valor_mes_cop (quedó calculado para otra modalidad) y recalcula', async () => {
+    AdminModel.obtenerEmpresaParaCuentaCobro.mockResolvedValue(
+      empresa({ suscripcion_valor_mes_cop: 169000, suscripcion_meses: 1 })
+    );
+    EmpresasModel.contarTrabajadoresActivos.mockResolvedValue(12);
+    PlanesModel.listar.mockResolvedValue([{ codigo: 'profesional', max_trabajadores: 30 }]);
+    montoSuscripcionCop.mockReturnValue(1700000);
+
+    await AdminService.generarCuentaCobroActual(8, { meses: 12 });
+
+    expect(AdminModel.obtenerUltimoMesesPagado).not.toHaveBeenCalled();
+    expect(montoSuscripcionCop).toHaveBeenCalledWith({ codigo: 'profesional', max_trabajadores: 30 }, 12, 12);
+    expect(generarFacturaPdf).toHaveBeenCalledWith(expect.objectContaining({ montoCop: 1700000 }));
   });
 });

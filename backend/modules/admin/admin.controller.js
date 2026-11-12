@@ -171,7 +171,10 @@ const AdminController = {
   // GET /api/admin/empresas/:id/cuenta-cobro
   async descargarCuentaCobroEmpresa(req, res, next) {
     try {
-      const { pdf, numero } = await AdminService.generarCuentaCobroActual(Number(req.params.id));
+      const { meses } = req.query;
+      const { pdf, numero } = await AdminService.generarCuentaCobroActual(Number(req.params.id), {
+        meses: meses ? Number(meses) : undefined,
+      });
       res.set({
         'Content-Type': 'application/pdf',
         'Content-Disposition': `inline; filename="${numero}.pdf"`,

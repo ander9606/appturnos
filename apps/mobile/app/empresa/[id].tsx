@@ -116,6 +116,7 @@ export default function EmpresaDetailScreen() {
   const [pickerFin, setPickerFin] = useState(false);
   const [descargandoPagoId, setDescargandoPagoId] = useState<number | null>(null);
   const [descargandoActual, setDescargandoActual] = useState(false);
+  const [modalidadActual, setModalidadActual] = useState<1 | 12 | null>(null);
 
   const handleDescargarCuentaCobro = async (pagoId: number) => {
     setDescargandoPagoId(pagoId);
@@ -131,7 +132,7 @@ export default function EmpresaDetailScreen() {
   const handleDescargarCuentaCobroActual = async () => {
     setDescargandoActual(true);
     try {
-      await descargarCuentaCobroEmpresa(empresaId);
+      await descargarCuentaCobroEmpresa(empresaId, modalidadActual ?? undefined);
     } catch {
       showAlert('No se pudo abrir la cuenta de cobro', 'Intenta de nuevo.');
     } finally {
@@ -415,16 +416,38 @@ export default function EmpresaDetailScreen() {
             )}
           </Pressable>
           {empresa.suscripcion_vigente_hasta && (
-            <Pressable
-              onPress={handleDescargarCuentaCobroActual}
-              disabled={descargandoActual}
-              accessibilityRole="button"
-              className="flex-row items-center justify-center gap-2 h-10 rounded-xl border border-border mb-2 active:opacity-70"
-            >
-              {descargandoActual ? <Spinner size="small" color={COLORS.mutedForeground} /> : (
-                <Text className="text-sm font-semibold text-muted-foreground">Cuenta de cobro del plan actual</Text>
-              )}
-            </Pressable>
+            <>
+              <View className="flex-row gap-2 mb-2">
+                {[null, 1, 12].map((m) => (
+                  <Pressable
+                    key={m ?? 'auto'}
+                    onPress={() => setModalidadActual(m as 1 | 12 | null)}
+                    className="flex-1 rounded-lg border py-1.5 items-center"
+                    style={{
+                      borderColor: modalidadActual === m ? COLORS.integracion : COLORS.border,
+                      backgroundColor: modalidadActual === m ? alpha(COLORS.integracion, 0.13) : 'transparent',
+                    }}
+                  >
+                    <Text
+                      className="text-xs font-bold"
+                      style={{ color: modalidadActual === m ? COLORS.integracion : COLORS.placeholder }}
+                    >
+                      {m === null ? 'Auto' : m === 12 ? 'Anual' : 'Mensual'}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Pressable
+                onPress={handleDescargarCuentaCobroActual}
+                disabled={descargandoActual}
+                accessibilityRole="button"
+                className="flex-row items-center justify-center gap-2 h-10 rounded-xl border border-border mb-2 active:opacity-70"
+              >
+                {descargandoActual ? <Spinner size="small" color={COLORS.mutedForeground} /> : (
+                  <Text className="text-sm font-semibold text-muted-foreground">Cuenta de cobro del plan actual</Text>
+                )}
+              </Pressable>
+            </>
           )}
           {pickerFin && (
             <DateTimePicker
