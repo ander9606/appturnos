@@ -49,8 +49,10 @@ async function activarSuscripcion(eventoId, { empresaId, plan, meses }, montoCop
 }
 
 /**
- * Envía el comprobante de pago (PDF) al correo de la empresa. Best-effort: si falla
- * (SMTP caído, sin correo) se loguea y la suscripción ya quedó activa.
+ * Envía la cuenta de cobro (PDF) al correo de la empresa. Best-effort: si falla
+ * (SMTP caído, sin correo) se loguea y la suscripción ya quedó activa — también
+ * se puede volver a descargar después desde el panel super_admin (admin.service.js
+ * → generarCuentaCobroWompi).
  * ponytail: número = id del evento, con huecos — upgrade path: tabla `facturas` con consecutivo propio.
  */
 async function enviarFactura(eventoId, { empresaId, plan, meses }, montoCop) {
@@ -74,10 +76,10 @@ async function enviarFactura(eventoId, { empresaId, plan, meses }, montoCop) {
     });
     await enviarEmail({
       to: emp.email,
-      subject: `Comprobante de pago ${numero} — Zaturno`,
+      subject: `Cuenta de cobro ${numero} — Zaturno`,
       html: plantillaCorreo({
         titulo: '¡Gracias por tu pago!',
-        cuerpo: `<p style="margin:0">Adjuntamos el comprobante de: <strong>${esc(concepto)}</strong>.</p>`,
+        cuerpo: `<p style="margin:0">Adjuntamos la cuenta de cobro de: <strong>${esc(concepto)}</strong>.</p>`,
       }),
       attachments: [{ filename: `${numero}.pdf`, content: pdf }],
     });

@@ -37,4 +37,8 @@ export const adminApi = {
 
   reintentarWompiEvento: (id: number) =>
     api.post(`/admin/wompi-eventos/${id}/reintentar`).then((r: any) => r.data),
+
+  /** PDF de la cuenta de cobro (persona natural) de un pago ya procesado. */
+  descargarCuentaCobroWompi: (id: number) =>
+    api.get(`/admin/wompi-eventos/${id}/cuenta-cobro`, { responseType: 'blob' }).then(r => r.data as Blob),
 };
