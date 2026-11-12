@@ -239,7 +239,9 @@ const AdminService = {
         email: process.env.FACTURA_EMISOR_EMAIL,
       },
       cliente: { nombre: ev.empresa_nombre, nit: ev.empresa_nit, email: ev.empresa_email },
-      concepto: `Suscripción Zaturno plan ${ev.plan} — ${ev.meses} mes${ev.meses !== 1 ? 'es' : ''}`,
+      concepto: ev.meses === 0
+        ? `Cambio a plan ${ev.plan} — diferencia por el resto de la vigencia`
+        : `Suscripción Zaturno plan ${ev.plan} — ${ev.meses} mes${ev.meses !== 1 ? 'es' : ''}`,
       montoCop: ev.monto_cop,
     });
     return { pdf, numero };

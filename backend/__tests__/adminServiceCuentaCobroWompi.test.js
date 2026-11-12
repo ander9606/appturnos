@@ -46,4 +46,14 @@ describe('AdminService.generarCuentaCobroWompi', () => {
       montoCop: 169000,
     }));
   });
+
+  test('cambio de plan a mitad de vigencia (meses=0) → el concepto dice "diferencia por el resto de la vigencia"', async () => {
+    AdminModel.obtenerWompiEvento.mockResolvedValue(evento({ meses: 0 }));
+
+    await AdminService.generarCuentaCobroWompi(7);
+
+    expect(generarFacturaPdf).toHaveBeenCalledWith(expect.objectContaining({
+      concepto: 'Cambio a plan profesional — diferencia por el resto de la vigencia',
+    }));
+  });
 });

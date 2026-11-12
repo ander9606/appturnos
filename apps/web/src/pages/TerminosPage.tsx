@@ -110,7 +110,7 @@ Puedes eliminar tu cuenta en cualquier momento desde la app (Perfil → Eliminar
 4. PLANES Y PAGOS
 Zaturno se paga por período (mensual, trimestral, semestral o anual) mediante un link de pago de Wompi que tú mismo generas desde Mi plan — no guardamos tarjetas ni cobramos de forma automática. Las empresas nuevas tienen 30 días gratis para probar la plataforma.
 
-Si tu período vence sin que lo renueves, tienes 3 días de gracia antes de que se bloqueen las acciones de escritura; tu historial no se borra.
+Si tu período vence sin que lo renueves, tienes 2 días de gracia antes de que se bloqueen las acciones de escritura; tu historial no se borra y el marcaje de ingreso/egreso nunca se bloquea.
 
 Puedes cancelar la renovación de tu plan en cualquier momento desde Mi plan, con un solo botón: dejas de recibir recordatorios y no se te cobra de nuevo, pero mantienes acceso hasta el final del período ya pagado. Puedes reactivarla antes de esa fecha si cambias de opinión.
 
