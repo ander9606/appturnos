@@ -108,6 +108,8 @@ export interface Suscripcion {
   dias_restantes: number | null;
   dias_gracia: number;
   origen: 'directo' | 'logiq360';
+  /** Canceló la renovación — sigue con acceso hasta vigente_hasta (ya pagado), pero no se le cobra ni avisa de nuevo. */
+  cancelada: boolean;
   trabajadores_activos: number;
   /** Tope del plan actual; null = sin tope. */
   max_trabajadores: number | null;

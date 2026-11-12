@@ -468,6 +468,24 @@ const AdminModel = {
     const data = rows.map((r) => ({ ...r, monto_cop: r.monto_cop == null ? null : Number(r.monto_cop) }));
     return { data, total: Number(total) };
   },
+
+  /** Un evento con los datos de la empresa que necesita la cuenta de cobro (nombre, nit, email). */
+  async obtenerWompiEvento(id) {
+    const [[fila]] = await pool.query(
+      `SELECT we.id, we.plan, we.meses, we.estado, we.procesado_at, we.created_at,
+              CAST(JSON_EXTRACT(we.payload, '$.data.transaction.amount_in_cents') AS UNSIGNED) / 100 AS monto_cop,
+              e.id AS empresa_id, e.nombre AS empresa_nombre, e.nit AS empresa_nit,
+              COALESCE(e.email_empresa, u.email) AS empresa_email
+         FROM wompi_eventos we
+         LEFT JOIN empresas e ON e.id = we.empresa_id
+         LEFT JOIN usuarios u ON u.empresa_id = e.id AND u.rol = 'admin_empresa' AND u.activo = 1
+        WHERE we.id = ?
+        ORDER BY u.id LIMIT 1`,
+      [id]
+    );
+    if (!fila) return null;
+    return { ...fila, monto_cop: fila.monto_cop == null ? null : Number(fila.monto_cop) };
+  },
 };
 
 module.exports = AdminModel;

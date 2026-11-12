@@ -155,6 +155,18 @@ const AdminController = {
     } catch (err) { next(err); }
   },
 
+  // GET /api/admin/wompi-eventos/:id/cuenta-cobro
+  async descargarCuentaCobroWompi(req, res, next) {
+    try {
+      const { pdf, numero } = await AdminService.generarCuentaCobroWompi(Number(req.params.id));
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="${numero}.pdf"`,
+      });
+      res.send(pdf);
+    } catch (err) { next(err); }
+  },
+
   // GET /api/admin/reportes/global
   async reportesGlobales(req, res, next) {
     try {

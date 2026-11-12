@@ -45,6 +45,7 @@ const EmpresasModel = {
         WHERE e.activo = 1
           AND e.suscripcion_origen != 'logiq360'
           AND e.suscripcion_vigente_hasta IS NOT NULL
+          AND e.suscripcion_cancelada_at IS NULL
           AND DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) IN (${DIAS_AVISO_SUSCRIPCION.join(', ')})
         LIMIT 100`
     );
@@ -339,10 +340,19 @@ const EmpresasModel = {
 
   async obtenerEstadoSuscripcion(empresaId) {
     const [filas] = await pool.query(
-      'SELECT plan, suscripcion_vigente_hasta FROM empresas WHERE id = ? AND activo = 1 LIMIT 1',
+      'SELECT plan, suscripcion_vigente_hasta, suscripcion_cancelada_at FROM empresas WHERE id = ? AND activo = 1 LIMIT 1',
       [empresaId]
     );
     return filas[0] || null;
+  },
+
+  /** No toca suscripcion_vigente_hasta — el acceso ya pagado sigue hasta esa fecha, solo deja de renovarse. */
+  async cancelarSuscripcion(empresaId) {
+    await pool.query('UPDATE empresas SET suscripcion_cancelada_at = NOW() WHERE id = ? AND activo = 1', [empresaId]);
+  },
+
+  async reactivarSuscripcion(empresaId) {
+    await pool.query('UPDATE empresas SET suscripcion_cancelada_at = NULL WHERE id = ? AND activo = 1', [empresaId]);
   },
 
   async obtenerPorSlug(slug) {

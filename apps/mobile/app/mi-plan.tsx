@@ -11,13 +11,15 @@
  */
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
+import { confirm } from '@/lib/confirmDialog';
+import { showToast } from '@/lib/toast';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import { View, ScrollView, Pressable, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 
 import { empresasApi, ApiError } from '@api-client';
@@ -52,6 +54,37 @@ export default function MiPlanScreen() {
     onError: (error: ApiError) =>
       showAlert('No se pudo generar el link de pago', error.message || 'Intenta de nuevo o contacta a soporte.'),
   });
+
+  const qc = useQueryClient();
+  const cancelar = useMutation({
+    mutationFn: () => empresasApi.cancelarSuscripcion(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['empresa', 'suscripcion'] });
+      showToast('Dejamos de renovar tu plan. Tu acceso sigue activo hasta que termine el período ya pagado.');
+    },
+    onError: (error: ApiError) => showAlert('No se pudo cancelar', error.message || 'Intenta de nuevo.'),
+  });
+  const reactivar = useMutation({
+    mutationFn: () => empresasApi.reactivarSuscripcion(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['empresa', 'suscripcion'] });
+      showToast('Tu plan volverá a renovarse normalmente');
+    },
+    onError: (error: ApiError) => showAlert('No se pudo reactivar', error.message || 'Intenta de nuevo.'),
+  });
+
+  const handleCancelar = async () => {
+    if (!s) return;
+    const ok = await confirm({
+      title: 'Cancelar mi plan',
+      message: s.vigente_hasta
+        ? `No se te cobrará de nuevo. Mantienes acceso hasta el ${formatDate(s.vigente_hasta)}, cuando vence tu período ya pagado.`
+        : 'No se te cobrará de nuevo.',
+      confirmLabel: 'Sí, cancelar',
+      destructive: true,
+    });
+    if (ok) cancelar.mutate();
+  };
 
   const denied = useRoleGuard(['admin_empresa']);
   if (denied) return denied;
@@ -102,6 +135,20 @@ export default function MiPlanScreen() {
             <Text className="text-xs text-muted-foreground">Vence el {formatDate(s.vigente_hasta)}</Text>
           )}
 
+          {s.cancelada && (
+            <View className="bg-warning-light border border-warning/30 rounded-xl px-3.5 py-2.5 flex-row items-center gap-2.5">
+              <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
+              <Text className="text-warning text-xs flex-1">
+                No se renovará — pierdes el acceso {s.vigente_hasta ? `el ${formatDate(s.vigente_hasta)}` : 'al vencer'}.
+              </Text>
+              <Pressable onPress={() => reactivar.mutate()} disabled={reactivar.isPending} hitSlop={8}>
+                <Text className="text-xs font-semibold text-primary">
+                  {reactivar.isPending ? 'Reactivando…' : 'Reactivar'}
+                </Text>
+              </Pressable>
+            </View>
+          )}
+
           <View className="gap-1.5">
             <View className="flex-row justify-between">
               <Text className="text-xs text-muted-foreground uppercase">Trabajadores activos</Text>
@@ -128,6 +175,14 @@ export default function MiPlanScreen() {
             )}
           </View>
         </View>
+
+        {s.origen !== 'logiq360' && s.vigente_hasta && !s.cancelada && (
+          <Pressable onPress={handleCancelar} disabled={cancelar.isPending} className="self-center">
+            <Text className="text-xs font-medium text-muted-foreground underline">
+              {cancelar.isPending ? 'Cancelando…' : 'Cancelar mi plan'}
+            </Text>
+          </Pressable>
+        )}
 
         {s.origen === 'logiq360' ? (
           <View className="bg-success-light border border-success/30 rounded-2xl px-4 py-3 flex-row gap-3 items-center">
