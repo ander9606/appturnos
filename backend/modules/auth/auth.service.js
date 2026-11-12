@@ -469,7 +469,7 @@ const AuthService = {
 
     return {
       ...tokens,
-      usuario: { id: usuarioId, empresa_id: empresaId, nombre, apellido: apellido || null, email, rol: ROLES.ADMIN_EMPRESA },
+      usuario: { id: usuarioId, empresa_id: empresaId, nombre, apellido: apellido || null, email, rol: ROLES.ADMIN_EMPRESA, terminos_aceptados_at: null },
     };
   },
 

@@ -29,7 +29,7 @@ interface LoginResponse {
   data: {
     access_token: string;
     refresh_token: string;
-    usuario: { id: number; nombre: string; email: string; rol: string; empresa_id: number };
+    usuario: { id: number; nombre: string; email: string; rol: string; empresa_id: number; terminos_aceptados_at: string | null };
   };
 }
 
