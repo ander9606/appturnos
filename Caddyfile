@@ -1,8 +1,10 @@
 api.zaturno.app {
+	encode zstd gzip
 	reverse_proxy api:3001
 }
 
 zaturno.app {
+	encode zstd gzip
 	root * /srv/web
 	try_files {path} /index.html
 	file_server
