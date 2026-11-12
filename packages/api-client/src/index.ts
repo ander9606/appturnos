@@ -13,7 +13,7 @@ export type { TokenStore } from './client';
 export { authApi } from './auth';
 export type { CrearGestorPayload, ActualizarGestorPayload, CrearGestorResult, Gestor } from './auth';
 export { empresasApi } from './empresas';
-export type { EmpresaDirectorio, Empresa, ActualizarMiEmpresaPayload, DirectorioResponse, TipoLiquidacion, TipoContrato, Suscripcion, PlanOpcion } from './empresas';
+export type { EmpresaDirectorio, Empresa, ActualizarMiEmpresaPayload, DirectorioResponse, TipoLiquidacion, TipoContrato, Suscripcion, PlanOpcion, OpcionesGrupos } from './empresas';
 export { trabajadorEmpresaApi } from './trabajador-empresa';
 export type {
   Vinculo,
@@ -53,7 +53,7 @@ export type {
   TipoDescuento,
   EstadoDescuento,
 } from './nomina';
-export { turnosApi, ESTADOS_ASIGNACION } from './turnos';
+export { turnosApi, ESTADOS_ASIGNACION, COMPENSACION_FALLIDO_MINIMA } from './turnos';
 export type {
   Asignacion,
   CalificacionResponse,
@@ -75,6 +75,17 @@ export type {
   LiquidacionTurnosTrabajador,
   ParaQuienOferta,
 } from './turnos';
+export { gruposTurnoApi, esAvisoCierre } from './grupos-turno';
+export type {
+  GrupoTurno,
+  GrupoTurnoDetalle,
+  CostosGrupo,
+  TurnoDeGrupo,
+  EstadoGrupo,
+  FaseGrupo,
+  CrearGrupoPayload,
+  ActualizarGrupoPayload,
+} from './grupos-turno';
 export { turnosEventualApi } from './turnosEventual';
 export type {
   PeriodoTurnoEventual,
@@ -165,6 +176,8 @@ export type {
   ResumenInsight,
   NivelInsight,
   HistorialTrabajadorResponse,
+  GrupoReporte,
+  GruposReporteResponse,
 } from './reportes';
 export type {
   EmpresaAdmin,

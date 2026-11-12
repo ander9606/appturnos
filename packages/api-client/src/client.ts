@@ -140,7 +140,7 @@ async function apiFetch<T>(
   }));
 
   if (!json.success) {
-    throw new ApiError(json.message, undefined, res.status);
+    throw new ApiError(json.message, undefined, res.status, json.detalles);
   }
 
   return json.data;

@@ -2,7 +2,7 @@ import { SkeletonDetail, SkeletonTable } from '@/shared/components/Skeleton';
 import { Spinner } from '@/shared/components/Spinner';
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Plus, Pencil, Trash2, Star, Send, Zap, CheckCircle2, Clock, Gift, MinusCircle, AlertTriangle, X, Download } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Star, Send, Zap, CheckCircle2, Clock, Gift, MinusCircle, AlertTriangle, X, Download, MoreVertical } from 'lucide-react';
 import {
   useOferta,
   useAsignaciones,
@@ -36,9 +36,11 @@ import { Modal } from '@/shared/components/Modal';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { LugarInput } from '../components/LugarInput';
+import { LugarAlias } from '../components/LugarAlias';
 import type { EstadoAsignacion, EstadoOferta, Asignacion, Puesto, Oferta, DescuentoTurno, DescuentosAsignacion } from '../types';
 import { fmtDate, fmtCOP, bogotaToday } from '@/shared/lib/format';
 import { EmptyState } from '@/shared/components/EmptyState';
+import { GrupoDeLaOferta } from '@/modules/grupos/components/GrupoDeLaOferta';
 
 const ESTADO_OFERTA_BADGE: Record<EstadoOferta, string> = {
   borrador: 'bg-muted text-muted-foreground',
@@ -101,6 +103,8 @@ export function OfertaDetailPage() {
   const [bonoAsig, setBonoAsig] = useState<Asignacion | null>(null);
   const [descuentoAsig, setDescuentoAsig] = useState<Asignacion | null>(null);
   const [descargandoContratoId, setDescargandoContratoId] = useState<number | null>(null);
+  const [menuAbiertoId, setMenuAbiertoId] = useState<number | null>(null);
+  const [mostrarPuestos, setMostrarPuestos] = useState(true);
 
   async function handleDescargarContrato(asignacionId: number) {
     setDescargandoContratoId(asignacionId);
@@ -138,6 +142,9 @@ export function OfertaDetailPage() {
   const { data: enProgresoData } = useAsignaciones({ oferta_id: ofertaId, estado: 'en_progreso' });
   const enProgreso: Asignacion[] = enProgresoData?.data?.data ?? [];
   const hayEnProgreso = enProgreso.length > 0;
+  // Quien ya marcó salida también se compensa si el gestor da el turno por fallido.
+  const { data: cerradasData } = useAsignaciones({ oferta_id: ofertaId, estado: 'completado' });
+  const compensables: Asignacion[] = [...enProgreso, ...(cerradasData?.data?.data ?? [])];
   const [showFallidoModal, setShowFallidoModal] = useState(false);
 
   const eliminarPuesto = useEliminarPuesto();
@@ -206,6 +213,7 @@ export function OfertaDetailPage() {
                 </span>
               )}
             </div>
+            <div className="mb-2 max-w-xs"><GrupoDeLaOferta oferta={oferta} puedeGestionar={puedeGestionar} /></div>
             <p className="text-sm text-muted-foreground">
               {fmtDate(oferta.fecha)} · {oferta.hora_inicio}
               {oferta.hora_fin_estimada ? ` – ${oferta.hora_fin_estimada}` : ''}
@@ -249,13 +257,22 @@ export function OfertaDetailPage() {
         </div>
       </div>
 
-      {/* Two-column layout */}
-      <div className="flex gap-5 flex-1 min-h-0">
+      {/* Two-column layout - responsive: stack en pantallas pequeñas */}
+      <div className="flex flex-col lg:flex-row gap-5 flex-1 min-h-0">
 
-        {/* LEFT — Puestos */}
-        <div className="w-80 flex-shrink-0 flex flex-col gap-3">
+        {/* LEFT — Puestos - colapsable en pantallas pequeñas */}
+        <div className="w-full lg:w-80 flex-shrink-0 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-foreground">Puestos</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-foreground">Puestos</h2>
+              <button
+                onClick={() => setMostrarPuestos(!mostrarPuestos)}
+                className="lg:hidden text-muted-foreground hover:text-foreground p-1 transition-colors"
+                aria-label={mostrarPuestos ? 'Ocultar puestos' : 'Mostrar puestos'}
+              >
+                {mostrarPuestos ? '▼' : '▶'}
+              </button>
+            </div>
             {canEditPuestos && (
               <button
                 onClick={() => { setPuestoEditando(null); setShowPuestoForm(true); }}
@@ -266,7 +283,7 @@ export function OfertaDetailPage() {
             )}
           </div>
 
-          {puestos.length === 0 ? (
+          {mostrarPuestos && puestos.length === 0 ? (
             <div className="bg-card border border-dashed border-border rounded-2xl p-6 text-center">
               <p className="text-sm text-muted-foreground">Sin puestos</p>
               {canEditPuestos && (
@@ -278,7 +295,7 @@ export function OfertaDetailPage() {
                 </button>
               )}
             </div>
-          ) : (
+          ) : mostrarPuestos ? (
             <div className="flex flex-col gap-2">
               {puestos.map(p => (
                 <div key={p.id} className="bg-card border border-border rounded-xl p-3.5">
@@ -325,7 +342,7 @@ export function OfertaDetailPage() {
                 </div>
               ))}
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* RIGHT — Asignaciones */}
@@ -370,54 +387,87 @@ export function OfertaDetailPage() {
           ) : asignaciones.length === 0 ? (
             <EmptyState title="Sin asignaciones" />
           ) : (
-            <div className="bg-card border border-border rounded-xl overflow-auto flex-1">
-              <table className="w-full text-sm">
+            <div className="bg-card rounded-xl overflow-x-auto overflow-y-auto max-h-[calc(100vh-400px)] min-h-[300px] pb-20" style={{ boxShadow: '0 0 0 1px var(--border)' }}>
+              <table className="text-sm w-full min-w-[700px]">
+                <colgroup>
+                  <col className="w-[35%] min-w-[200px]" /> {/* Trabajador + Puesto */}
+                  <col className="w-[25%] min-w-[160px]" /> {/* Estado + Calificación */}
+                  <col className="w-[25%] min-w-[140px]" /> {/* Horario */}
+                  <col className="w-[15%] min-w-[100px]" /> {/* Acciones */}
+                </colgroup>
                 <thead className="sticky top-0 bg-card z-10">
                   <tr className="bg-muted text-muted-foreground text-xs uppercase border-b border-border">
-                    <th className="text-left px-4 py-3 font-medium">Trabajador</th>
-                    <th className="text-left px-4 py-3 font-medium">Puesto</th>
-                    <th className="text-left px-4 py-3 font-medium">Estado</th>
-                    <th className="text-left px-4 py-3 font-medium">Ingreso</th>
-                    <th className="text-left px-4 py-3 font-medium">Egreso</th>
-                    <th className="text-center px-4 py-3 font-medium">Cal.</th>
-                    <th className="px-4 py-3" />
+                    <th className="text-left px-2 md:px-4 py-2 md:py-3 font-medium">Trabajador</th>
+                    <th className="text-left px-2 md:px-4 py-2 md:py-3 font-medium">Estado</th>
+                    <th className="text-left px-2 md:px-4 py-2 md:py-3 font-medium">Horario</th>
+                    <th className="px-2 md:px-4 py-2 md:py-3" />
                   </tr>
                 </thead>
                 <tbody>
                   {asignaciones.map(a => (
                     <tr key={a.id} className="border-t border-border/60 hover:bg-muted transition-colors">
-                      <td className="px-4 py-3 font-medium text-foreground">
-                        {a.trabajador_nombre} {a.trabajador_apellido}
+                      {/* Columna: Trabajador + Puesto */}
+                      <td className="px-2 md:px-4 py-2 md:py-3">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-foreground text-xs md:text-sm">
+                            {a.trabajador_nombre} {a.trabajador_apellido}
+                          </span>
+                          <span className="text-[11px] md:text-xs text-muted-foreground">{a.cargo_nombre}</span>
+                        </div>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{a.cargo_nombre}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_ASIG_BADGE[a.estado]}`}>
-                          {ESTADO_ASIG_LABEL[a.estado]}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        <span className="inline-flex items-center gap-1.5">
-                          {a.hora_ingreso_real ?? '—'}
-                          {a.sospechoso === 1 && (
-                            <AlertTriangle size={13} className="text-warning shrink-0">
-                              <title>Marcaje sospechoso: mismo dispositivo y ubicación que otro trabajador</title>
-                            </AlertTriangle>
+
+                      {/* Columna: Estado + Calificación */}
+                      <td className="px-2 md:px-4 py-2 md:py-3">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${ESTADO_ASIG_BADGE[a.estado]}`}>
+                              {ESTADO_ASIG_LABEL[a.estado]}
+                            </span>
+                            {a.calificacion != null && (
+                              <span className="text-warning font-medium text-xs">{a.calificacion}★</span>
+                            )}
+                          </div>
+                          {a.estado === 'completado' && a.compensacion_decision === 'pendiente' && (
+                            <span className="text-[11px] font-medium text-warning leading-tight" title="Se propuso cambiar su pago por fuerza mayor; solo se aplica si el trabajador lo autoriza. Mientras no responda, el turno queda en espera: no suma ni resta.">
+                              Pend. autorización
+                            </span>
                           )}
-                        </span>
+                          {a.estado === 'completado' && a.compensacion_decision === 'rechazada' && (
+                            <span className="text-[11px] font-medium text-muted-foreground leading-tight" title="El trabajador no autorizó el cambio de pago: se le paga según su contrato.">
+                              No autorizó cambio
+                            </span>
+                          )}
+                        </div>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{a.hora_egreso_real ?? '—'}</td>
-                      <td className="px-4 py-3 text-center text-muted-foreground">
-                        {a.calificacion != null ? (
-                          <span className="text-warning font-medium">{a.calificacion}★</span>
-                        ) : '—'}
+
+                      {/* Columna: Horario (Ingreso - Egreso) */}
+                      <td className="px-2 md:px-4 py-2 md:py-3">
+                        <div className="flex flex-col gap-0.5 text-muted-foreground text-[11px] md:text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-muted-foreground/60">Entrada:</span>
+                            <span className="font-medium">{a.hora_ingreso_real ?? '—'}</span>
+                            {a.sospechoso === 1 && (
+                              <span title="Marcaje sospechoso: mismo dispositivo y ubicación que otro trabajador">
+                                <AlertTriangle size={13} className="text-warning shrink-0" />
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-muted-foreground/60">Salida:</span>
+                            <span className="font-medium">{a.hora_egreso_real ?? '—'}</span>
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1 justify-end">
+
+                      {/* Columna: Menú de Acciones */}
+                      <td className="px-2 md:px-4 py-2 md:py-3">
+                        <div className="flex items-center gap-1 md:gap-2 justify-end">
+                          {/* Acciones rápidas para estado pendiente */}
                           {puedeGestionar && a.estado === 'pendiente' && (
                             <>
                               <button
                                 onClick={() => confirmar.mutate(a.id)}
-                                className="text-xs text-success hover:bg-success-light px-2 py-1 rounded transition-colors font-medium"
+                                className="text-xs text-success hover:bg-success-light px-3 py-1.5 rounded-lg transition-colors font-medium"
                               >
                                 Confirmar
                               </button>
@@ -428,100 +478,150 @@ export function OfertaDetailPage() {
                                   confirmLabel: 'Rechazar',
                                   onConfirm: () => { rechazar.mutate(a.id); close(); },
                                 })}
-                                className="text-xs text-danger hover:bg-danger-light px-2 py-1 rounded transition-colors"
+                                className="text-xs text-danger hover:bg-danger-light px-3 py-1.5 rounded-lg transition-colors font-medium"
                               >
                                 Rechazar
                               </button>
                             </>
                           )}
-                          {puedeGestionar && a.estado === 'confirmado' && (
+
+                          {/* Menú dropdown de acciones */}
+                          <div className="relative">
                             <button
-                              onClick={() => confirm({
-                                title: 'Cancelar asignación',
-                                detail: `¿Cancelar la asignación confirmada de ${a.trabajador_nombre} ${a.trabajador_apellido}?`,
-                                confirmLabel: 'Cancelar asignación',
-                                onConfirm: () => { cancelarAsig.mutate(a.id); close(); },
-                              })}
-                              className="text-xs text-muted-foreground hover:bg-muted px-2 py-1 rounded transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMenuAbiertoId(menuAbiertoId === a.id ? null : a.id);
+                              }}
+                              className="p-1.5 hover:bg-muted rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                              aria-label="Más acciones"
                             >
-                              Cancelar
+                              <MoreVertical size={16} />
                             </button>
-                          )}
-                          {puedeGestionar && (a.estado === 'confirmado' || a.estado === 'en_progreso') && (
-                            <button
-                              onClick={() => confirm({
-                                title: 'Marcar como no presentado',
-                                detail: `¿Marcar a ${a.trabajador_nombre} ${a.trabajador_apellido} como no presentado? Esto puede afectar su ranking.`,
-                                confirmLabel: 'Marcar no presentado',
-                                onConfirm: () => { noPresentado.mutate(a.id); close(); },
-                              })}
-                              className="text-xs text-danger hover:bg-danger-light px-2 py-1 rounded transition-colors"
-                            >
-                              NP
-                            </button>
-                          )}
-                          {puedeGestionar && a.estado === 'completado' && a.calificacion == null && (
-                            <button
-                              onClick={() => setCalificandoId(a.id)}
-                              className="flex items-center gap-1 text-xs text-warning hover:bg-warning-light px-2 py-1 rounded transition-colors"
-                            >
-                              <Star size={11} /> Calificar
-                            </button>
-                          )}
-                          {puedeVerContratos && a.estado === 'completado' && (
-                            <button
-                              onClick={() => handleDescargarContrato(a.id)}
-                              disabled={descargandoContratoId === a.id}
-                              className="text-muted-foreground/60 hover:text-info transition-colors p-1 disabled:opacity-50"
-                              title="Descargar contrato"
-                              aria-label="Descargar contrato"
-                            >
-                              {descargandoContratoId === a.id
-                                ? <Spinner size={13} />
-                                : <Download size={13} />}
-                            </button>
-                          )}
-                          {puedeGestionar && (a.estado === 'confirmado' || a.estado === 'en_progreso' || a.estado === 'completado') && (
-                            <button
-                              onClick={() => setCorrigiendoAsig(a)}
-                              className="text-muted-foreground/60 hover:text-info transition-colors p-1"
-                              title="Corregir ingreso/egreso"
-                              aria-label="Corregir ingreso/egreso"
-                            >
-                              <Clock size={13} />
-                            </button>
-                          )}
-                          {puedeGestionar && (a.estado === 'confirmado' || a.estado === 'en_progreso' || a.estado === 'completado') && (
-                            <button
-                              onClick={() => setBonoAsig(a)}
-                              className={`transition-colors p-1 ${(a.bono_monto ?? 0) > 0 ? 'text-warning' : 'text-muted-foreground/60 hover:text-warning'}`}
-                              title={(a.bono_monto ?? 0) > 0 ? `Bono: ${fmtCOP(a.bono_monto ?? 0)}` : 'Agregar bono extra'}
-                              aria-label="Agregar o editar bono extra"
-                            >
-                              <Gift size={13} />
-                            </button>
-                          )}
-                          {puedeGestionar && a.estado === 'completado' && (
-                            <button
-                              onClick={() => setDescuentoAsig(a)}
-                              className="text-muted-foreground/60 hover:text-danger transition-colors p-1"
-                              title="Registrar descuento"
-                              aria-label="Registrar descuento"
-                            >
-                              <MinusCircle size={13} />
-                            </button>
-                          )}
-                          {puedeGestionar && a.sospechoso === 1 && (
-                            <button
-                              onClick={() => descartarSospechoso.mutate(a.id)}
-                              disabled={descartarSospechoso.isPending}
-                              className="text-warning/70 hover:text-warning transition-colors p-1 disabled:opacity-50"
-                              title="Descartar: ya lo revisé, no es fraude"
-                              aria-label="Descartar marcaje sospechoso"
-                            >
-                              <X size={13} />
-                            </button>
-                          )}
+
+                            {/* Menú desplegable */}
+                            {menuAbiertoId === a.id && (
+                              <>
+                                {/* Overlay para cerrar al hacer click fuera */}
+                                <div
+                                  className="fixed inset-0 z-10"
+                                  onClick={() => setMenuAbiertoId(null)}
+                                />
+
+                                {/* Menú */}
+                                <div className="absolute right-0 top-full mt-1 bg-card border border-border rounded-lg shadow-lg py-1 min-w-[180px] z-20">
+                                  {puedeGestionar && a.estado === 'confirmado' && (
+                                    <button
+                                      onClick={() => {
+                                        setMenuAbiertoId(null);
+                                        confirm({
+                                          title: 'Cancelar asignación',
+                                          detail: `¿Cancelar la asignación confirmada de ${a.trabajador_nombre} ${a.trabajador_apellido}?`,
+                                          confirmLabel: 'Cancelar asignación',
+                                          onConfirm: () => { cancelarAsig.mutate(a.id); close(); },
+                                        });
+                                      }}
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors text-foreground"
+                                    >
+                                      Cancelar asignación
+                                    </button>
+                                  )}
+
+                                  {puedeGestionar && (a.estado === 'confirmado' || a.estado === 'en_progreso') && (
+                                    <button
+                                      onClick={() => {
+                                        setMenuAbiertoId(null);
+                                        confirm({
+                                          title: 'Marcar como no presentado',
+                                          detail: `¿Marcar a ${a.trabajador_nombre} ${a.trabajador_apellido} como no presentado? Esto puede afectar su ranking.`,
+                                          confirmLabel: 'Marcar no presentado',
+                                          onConfirm: () => { noPresentado.mutate(a.id); close(); },
+                                        });
+                                      }}
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors text-danger"
+                                    >
+                                      No presentado
+                                    </button>
+                                  )}
+
+                                  {puedeGestionar && a.estado === 'completado' && a.calificacion == null && (
+                                    <button
+                                      onClick={() => {
+                                        setMenuAbiertoId(null);
+                                        setCalificandoId(a.id);
+                                      }}
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center gap-2"
+                                    >
+                                      <Star size={14} /> Calificar
+                                    </button>
+                                  )}
+
+                                  {puedeVerContratos && a.estado === 'completado' && (
+                                    <button
+                                      onClick={() => {
+                                        setMenuAbiertoId(null);
+                                        handleDescargarContrato(a.id);
+                                      }}
+                                      disabled={descargandoContratoId === a.id}
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center gap-2 disabled:opacity-50"
+                                    >
+                                      {descargandoContratoId === a.id ? <Spinner size={14} /> : <Download size={14} />}
+                                      Descargar contrato
+                                    </button>
+                                  )}
+
+                                  {puedeGestionar && (a.estado === 'confirmado' || a.estado === 'en_progreso' || a.estado === 'completado') && (
+                                    <>
+                                      <button
+                                        onClick={() => {
+                                          setMenuAbiertoId(null);
+                                          setCorrigiendoAsig(a);
+                                        }}
+                                        className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center gap-2"
+                                      >
+                                        <Clock size={14} /> Corregir horario
+                                      </button>
+
+                                      <button
+                                        onClick={() => {
+                                          setMenuAbiertoId(null);
+                                          setBonoAsig(a);
+                                        }}
+                                        className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center gap-2"
+                                      >
+                                        <Gift size={14} className={(a.bono_monto ?? 0) > 0 ? 'text-warning' : ''} />
+                                        {(a.bono_monto ?? 0) > 0 ? `Bono ${fmtCOP(a.bono_monto ?? 0)}` : 'Agregar bono'}
+                                      </button>
+                                    </>
+                                  )}
+
+                                  {puedeGestionar && a.estado === 'completado' && (
+                                    <button
+                                      onClick={() => {
+                                        setMenuAbiertoId(null);
+                                        setDescuentoAsig(a);
+                                      }}
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center gap-2 text-danger"
+                                    >
+                                      <MinusCircle size={14} /> Descuento
+                                    </button>
+                                  )}
+
+                                  {puedeGestionar && a.sospechoso === 1 && (
+                                    <button
+                                      onClick={() => {
+                                        setMenuAbiertoId(null);
+                                        descartarSospechoso.mutate(a.id);
+                                      }}
+                                      disabled={descartarSospechoso.isPending}
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center gap-2 disabled:opacity-50 text-warning"
+                                    >
+                                      <X size={14} /> Descartar sospecha
+                                    </button>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -537,7 +637,7 @@ export function OfertaDetailPage() {
           header para que no compita visualmente con el resto de la info. ── */}
       {puedeGestionar && (oferta.estado === 'borrador'
         || (turnoIniciado && !['borrador', 'completada', 'cancelada'].includes(oferta.estado))) && (
-        <div className="sticky bottom-0 -mx-6 px-6 py-3 mt-4 border-t border-border bg-background flex items-center gap-3 flex-wrap">
+        <div className="sticky bottom-0 -mx-6 px-6 py-3 mt-4 border-t border-border bg-background flex items-center gap-3 flex-wrap z-10 shadow-lg">
           {oferta.estado === 'borrador' && (
             <button
               onClick={() => {
@@ -576,7 +676,7 @@ export function OfertaDetailPage() {
               >
                 <CheckCircle2 size={14} /> {completar.isPending ? 'Marcando...' : 'Marcar completada'}
               </button>
-              {hayEnProgreso && (
+              {compensables.length > 0 && (
                 <button
                   onClick={() => setShowFallidoModal(true)}
                   className="flex items-center gap-1.5 border border-border hover:bg-muted text-sm font-medium px-3 py-1.5 rounded-lg transition-colors text-foreground"
@@ -601,6 +701,20 @@ export function OfertaDetailPage() {
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* La oferta se completa sola al marcar salida el último trabajador: aun así
+          se puede dar por fallida (fuerza mayor) y fijar la compensación. */}
+      {puedeGestionar && oferta.estado === 'completada' && compensables.length > 0 && (
+        <div className="sticky bottom-0 -mx-6 px-6 py-3 mt-4 border-t border-border bg-background flex items-center gap-3 z-10 shadow-lg">
+          <button
+            onClick={() => setShowFallidoModal(true)}
+            className="flex items-center gap-1.5 border border-border hover:bg-muted text-sm font-medium px-3 py-1.5 rounded-lg transition-colors text-foreground"
+            title="Cancelar por fuerza mayor, compensando a quien ya trabajó"
+          >
+            <AlertTriangle size={14} /> Turno fallido
+          </button>
         </div>
       )}
 
@@ -652,7 +766,7 @@ export function OfertaDetailPage() {
       {showFallidoModal && oferta && (
         <TurnoFallidoModal
           oferta={oferta}
-          enProgreso={enProgreso}
+          enProgreso={compensables}
           puestos={puestos}
           marcarFallida={marcarFallida}
           onClose={() => setShowFallidoModal(false)}
@@ -687,6 +801,7 @@ function EditarOfertaModal({
     hora_fin_estimada: oferta.hora_fin_estimada?.slice(0, 5) ?? '',
   });
   const [lugar, setLugar] = useState(oferta.lugar ?? '');
+  const [lugarAlias, setLugarAlias] = useState(oferta.lugar_alias ?? '');
   // mysql2 devuelve DECIMAL como string: se convierte para que el tipo sea número de verdad.
   const [latitud, setLatitud] = useState<number | null>(oferta.latitud == null ? null : Number(oferta.latitud));
   const [longitud, setLongitud] = useState<number | null>(oferta.longitud == null ? null : Number(oferta.longitud));
@@ -722,6 +837,8 @@ function EditarOfertaModal({
         hora_inicio: `${form.hora_inicio}:00`,
         hora_fin_estimada: form.hora_fin_estimada ? `${form.hora_fin_estimada}:00` : undefined,
         lugar,
+        // Como el lugar: se envía tal cual para que vaciarlo lo quite.
+        lugar_alias: lugarAlias,
         latitud: latitud ?? undefined,
         longitud: longitud ?? undefined,
       },
@@ -781,8 +898,9 @@ function EditarOfertaModal({
             value={lugar}
             latitud={latitud}
             longitud={longitud}
-            onChange={(l, lat, lng) => { setLugar(l); setLatitud(lat); setLongitud(lng); }}
+            onChange={(l, lat, lng) => { if (lat != null && l !== lugar) setLugarAlias(''); setLugar(l); setLatitud(lat); setLongitud(lng); }}
           />
+          <LugarAlias lugar={lugar} latitud={latitud} longitud={longitud} alias={lugarAlias} onChange={setLugarAlias} />
         </div>
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">Descripción</label>
@@ -1026,6 +1144,10 @@ function CorregirAsignacionModal({ asignacion, onClose }: { asignacion: Asignaci
 /* ── Turno fallido: fuerza mayor — quien ya marcó ingreso recibe una
    compensación en vez de perder el turno sin nada; el resto queda cancelado
    sin pago, como con "Marcar completada" / cancelar normal. ── */
+// Compensación mínima de un turno fallido: la mitad de la tarifa del puesto. Igual que
+// backend/config/constants.js (COMPENSACION_FALLIDO_MINIMA) y packages/api-client — mantener iguales.
+const COMPENSACION_FALLIDO_MINIMA = 0.5;
+
 function TurnoFallidoModal({
   oferta, enProgreso, puestos, marcarFallida, onClose, onDone,
 }: {
@@ -1041,6 +1163,15 @@ function TurnoFallidoModal({
     Object.fromEntries(enProgreso.map(a => [a.id, String(puestos.find(p => p.id === a.puesto_id)?.tarifa_dia ?? 0)]))
   );
 
+  const [confirmando, setConfirmando] = useState(false);
+  const minimoDe = (a: Asignacion) =>
+    Number(puestos.find(p => p.id === a.puesto_id)?.tarifa_dia ?? 0) * COMPENSACION_FALLIDO_MINIMA;
+  const nombreDe = (a: Asignacion) => `${a.trabajador_nombre} ${a.trabajador_apellido}`;
+  // Quien ya trabajó y quedaría con MENOS pago no se cambia solo: es una propuesta que el trabajador debe autorizar.
+  const bajaElPago = (a: Asignacion) =>
+    a.estado === 'completado' && a.pago_total != null
+    && (Number(montos[a.id]) || 0) + (Number(a.bono_monto) || 0) < Number(a.pago_total);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!motivo.trim()) {
@@ -1051,6 +1182,16 @@ function TurnoFallidoModal({
       asignacion_id: a.id,
       monto: Number(montos[a.id]) || 0,
     }));
+    const bajos = enProgreso.filter((a, i) => compensaciones[i].monto < minimoDe(a));
+    if (bajos.length > 0) {
+      toast.error(`Compensación mínima (la mitad de la tarifa): ${bajos.map(a => `${nombreDe(a)} ${fmtCOP(minimoDe(a))}`).join(', ')}.`);
+      return;
+    }
+    // Acción definitiva: primero se muestra qué cambia para cada persona y se pide confirmar.
+    if (!confirmando) {
+      setConfirmando(true);
+      return;
+    }
     await marcarFallida.mutateAsync({ id: oferta.id, motivo: motivo.trim(), compensaciones });
     onDone();
   };
@@ -1062,8 +1203,36 @@ function TurnoFallidoModal({
         El turno se cancelará por fuerza mayor. Quienes ya marcaron ingreso recibirán la compensación
         que definas abajo; el resto queda cancelado sin pago, como siempre.
       </p>
+      <p className="text-sm font-medium text-warning bg-warning-light rounded-lg px-3 py-2 mb-4">
+        Úsalo solo si la tarea no se realizó. Si la labor sí se realizó, se paga según el contrato: no la des por fallida.
+      </p>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div>
+        {confirmando && (
+          <div className="rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm flex flex-col gap-2">
+            <p className="font-medium text-foreground">
+              Se cancelará «{oferta.titulo}» y esto no se puede deshacer.
+            </p>
+            <ul className="flex flex-col gap-1 text-muted-foreground">
+              {enProgreso.map(a => (
+                <li key={a.id}>
+                  {nombreDe(a)}:{' '}
+                  {bajaElPago(a)
+                    ? <>propuesta de {fmtCOP(Number(a.pago_total))} a <strong className="text-foreground">{fmtCOP(Number(montos[a.id]) || 0)}</strong> (necesita su autorización; mientras no responda, ese turno queda en espera y no suma ni resta)</>
+                    : a.estado === 'completado' && a.pago_total != null
+                      ? <>de {fmtCOP(Number(a.pago_total))} a <strong className="text-foreground">{fmtCOP(Number(montos[a.id]) || 0)}</strong></>
+                      : <strong className="text-foreground">{fmtCOP(Number(montos[a.id]) || 0)}</strong>}
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-muted-foreground">
+              {enProgreso.some(bajaElPago)
+                ? 'A quien ya trabajó y quedaría con menos pago no se le cambia solo: el trabajador debe autorizarlo. '
+                : 'Quien ya había terminado su turno pasa de su pago a esa compensación. '}
+              Confirma que la tarea NO se realizó: si se realizó, debe pagarse según el contrato.
+            </p>
+          </div>
+        )}
+        <div className={confirmando ? 'hidden' : ''}>
           <label className="block text-sm font-medium text-foreground mb-1">Motivo</label>
           <input
             type="text"
@@ -1075,7 +1244,7 @@ function TurnoFallidoModal({
           />
         </div>
 
-        <div className="flex flex-col gap-3">
+        <div className={`flex flex-col gap-3 ${confirmando ? 'hidden' : ''}`}>
           <label className="block text-sm font-medium text-foreground">
             Compensación ({enProgreso.length} ya en turno)
           </label>
@@ -1092,16 +1261,17 @@ function TurnoFallidoModal({
                 onChange={e => setMontos(m => ({ ...m, [a.id]: e.target.value }))}
                 className="w-32 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
+              <span className="w-28 text-[11px] text-muted-foreground leading-tight">Mín. {fmtCOP(minimoDe(a))}</span>
             </div>
           ))}
         </div>
 
         <div className="flex gap-2 pt-2">
-          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
+          <button type="button" onClick={confirmando ? () => setConfirmando(false) : onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
             Volver
           </button>
           <button type="submit" disabled={marcarFallida.isPending} className="flex-1 bg-danger hover:opacity-90 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
-            {marcarFallida.isPending ? 'Confirmando...' : 'Confirmar turno fallido'}
+            {marcarFallida.isPending ? 'Confirmando...' : confirmando ? 'Sí, dar por fallido' : 'Confirmar turno fallido'}
           </button>
         </div>
       </form>

@@ -1,5 +1,5 @@
 import { api } from '@/shared/api/axios';
-import type { AsistenciaResponse, CostosResponse, PersonasResponse, Rango, ResumenResponse } from '../types';
+import type { AsistenciaResponse, CostosResponse, GruposReporteResponse, PersonasResponse, Rango, ResumenResponse } from '../types';
 
 // El backend envuelve todo en { success, data, message }
 const get = <T>(ruta: string, { desde, hasta }: Rango) =>
@@ -9,5 +9,6 @@ export const reportesApi = {
   resumen: (r: Rango) => get<ResumenResponse>('resumen', r),
   personas: (r: Rango) => get<PersonasResponse>('personas', r),
   asistencia: (r: Rango) => get<AsistenciaResponse>('asistencia', r),
+  grupos: (r: Rango) => get<GruposReporteResponse>('grupos', r),
   costos: (r: Rango) => get<CostosResponse>('costos', r),
 };

@@ -3,6 +3,32 @@
 const { pool } = require('../../../config/database');
 
 /**
+ * Avance de cada grupo respecto al rango liquidado: cuántos turnos tiene en total (sin los cancelados), cuántos caen
+ * dentro del rango, cuántos quedan para después y la fecha del siguiente. Así la cuenta de cobro puede decir
+ * «3 de 4 turnos» cuando un grupo se parte entre dos períodos. Sin rango cerrado no hay nada que comparar (null).
+ */
+async function progresoDeGrupos(empresaId, filas, fechaInicio, fechaFin) {
+  const ids = [...new Set(filas.map((f) => f.grupo_id).filter(Boolean))];
+  const mapa = new Map();
+  if (!ids.length || !fechaInicio || !fechaFin) return mapa;
+  const [res] = await pool.query(
+    `SELECT grupo_id,
+            COUNT(*) AS total,
+            SUM(fecha BETWEEN ? AND ?) AS en_periodo,
+            SUM(fecha > ?) AS despues,
+            DATE_FORMAT(MIN(CASE WHEN fecha > ? THEN fecha END), '%Y-%m-%d') AS proxima
+       FROM ofertas_turno
+      WHERE empresa_id = ? AND grupo_id IN (?) AND estado <> 'cancelada'
+      GROUP BY grupo_id`,
+    [fechaInicio, fechaFin, fechaFin, fechaFin, empresaId, ids]
+  );
+  for (const r of res) {
+    mapa.set(r.grupo_id, { total: Number(r.total), en_periodo: Number(r.en_periodo), despues: Number(r.despues), proxima: r.proxima ?? null });
+  }
+  return mapa;
+}
+
+/**
  * Liquidación de turnos: agrupa asignaciones completadas por trabajador.
  * Ver asignaciones.model.js para el resto de AsignacionesModel.
  */
@@ -34,6 +60,7 @@ module.exports = {
          a.id          AS asignacion_id,
          a.estado,
          a.compensacion_motivo,
+         a.compensacion_decision,
          a.horas_trabajadas,
          a.pago_total,
          COALESCE(a.pago_extra, 0)   AS pago_extra,
@@ -57,6 +84,9 @@ module.exports = {
          o.hora_fin_estimada,
          o.fin_dia_siguiente,
          o.lugar,
+         o.lugar_alias,
+         o.grupo_id,
+         (SELECT g.nombre FROM grupos_turno g WHERE g.id = o.grupo_id) AS grupo_nombre,
          p.tarifa_dia,
          carg.nombre   AS cargo_nombre,
          cal.calificacion,
@@ -78,6 +108,8 @@ module.exports = {
        ORDER BY t.apellido, t.nombre, o.fecha`,
       [...cuentaCobroParams, ...params]
     );
+
+    const progresoGrupos = await progresoDeGrupos(empresaId, filas, fechaInicio, fechaFin);
 
     const workers = new Map();
     for (const row of filas) {
@@ -103,6 +135,10 @@ module.exports = {
           // Turnos completados cuyo contrato aún no firma el trabajador — su pago
           // no se suma a los totales de arriba hasta que exista la firma.
           turnos_pendientes_firma: 0,
+          // Turnos completados con una propuesta de compensación que el trabajador aún no responde: quedan en
+          // espera, no suman ni restan en los totales hasta que decida (autoriza → fallido con la compensación;
+          // no autoriza → se paga según contrato y vuelve a contar).
+          turnos_pendientes_autorizacion: 0,
           turnos:             [],
         });
       }
@@ -121,7 +157,10 @@ module.exports = {
       const neto   = total - descuento;
       const horas  = Number(row.horas_trabajadas ?? 0);
       w.total_turnos++;
-      if (firmado) {
+      const enEspera = row.estado === 'completado' && row.compensacion_decision === 'pendiente';
+      if (enEspera) {
+        w.turnos_pendientes_autorizacion++;
+      } else if (firmado) {
         w.total_horas  = parseFloat((w.total_horas + horas).toFixed(4));
         w.pago_extra   += extra;
         w.bono_monto   += bono;
@@ -143,6 +182,10 @@ module.exports = {
         hora_fin_estimada: row.hora_fin_estimada,
         fin_dia_siguiente: row.fin_dia_siguiente,
         lugar:           row.lugar,
+        lugar_alias:     row.lugar_alias ?? null,
+        grupo_id:        row.grupo_id ?? null,
+        grupo_nombre:    row.grupo_nombre ?? null,
+        grupo_progreso:  progresoGrupos.get(row.grupo_id) ?? null,
         hora_ingreso_real: row.hora_ingreso_real,
         hora_egreso_real:  row.hora_egreso_real,
         horas_trabajadas:  horas,
@@ -156,6 +199,8 @@ module.exports = {
         pago_total:      neto,
         calificacion:    row.calificacion,
         firmado_trabajador: firmado,
+        // En espera de que el trabajador autorice una propuesta de compensación: no suma ni resta todavía.
+        pendiente_autorizacion: enEspera,
       });
     }
     return Array.from(workers.values());

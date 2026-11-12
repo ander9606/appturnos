@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/modules/auth/authStore';
 import { configuracionApi } from '../api/configuracionApi';
 
 function getErrMsg(err: unknown) {
@@ -16,9 +17,57 @@ export function useUpdateEmpresa() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: configuracionApi.updateEmpresa,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['config', 'empresa'] }); toast.success('Empresa actualizada'); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['config', 'empresa'] });
+      // El admin pudo encender/apagar los grupos o cambiar cómo los llama: que se vea de inmediato.
+      qc.invalidateQueries({ queryKey: ['opciones-grupos'] });
+      toast.success('Empresa actualizada');
+    },
     onError: (err: unknown) => toast.error(getErrMsg(err)),
   });
+}
+
+/** Nombre con el que se muestra un grupo cuando la empresa no eligió uno propio. */
+export const ETIQUETA_GRUPO_DEFECTO = 'Grupo';
+
+/**
+ * Plural de la etiqueta de la empresa ("Evento" → "Eventos", "Lugar" → "Lugares", "Cruz" → "Cruces"). Con «de»
+ * pluraliza lo de antes ("Centro de costos" → "Centros de costos"); si ya termina en «s» la deja igual.
+ * Espejo de pluralizarEtiqueta del móvil.
+ */
+export function pluralizarEtiqueta(etiqueta: string): string {
+  const palabras = etiqueta.trim().split(/\s+/);
+  let i = palabras.length - 1;
+  const de = palabras.findIndex((w, k) => k > 0 && /^(de|del)$/i.test(w));
+  if (de > 0) i = de - 1;
+  const w = palabras[i];
+  palabras[i] = /s$/i.test(w) ? w
+    : /z$/i.test(w) ? `${w.slice(0, -1)}ces`
+    : /[aeiouáéíóú]$/i.test(w) ? `${w}s`
+    : `${w}es`;
+  return palabras.join(' ');
+}
+
+/**
+ * ¿Usa la empresa los grupos de turnos y cómo los llama? Lo lee cualquier rol. Mientras carga, o si la
+ * consulta falla, `usa` es false: lo nuevo no aparece hasta saber que la empresa lo encendió.
+ * La clave lleva la empresa porque al cerrar sesión la caché no se limpia: sin ella, quien entra
+ * después desde otra empresa vería las opciones de la anterior.
+ */
+export function useOpcionesGrupos() {
+  const empresaId = useAuthStore(s => s.usuario?.empresa_id ?? null);
+  const { data, isLoading } = useQuery({
+    queryKey: ['opciones-grupos', empresaId],
+    queryFn: configuracionApi.getOpcionesGrupos,
+    enabled: empresaId !== null,
+  });
+  const etiqueta = data?.data.etiqueta_grupo?.trim() || ETIQUETA_GRUPO_DEFECTO;
+  return {
+    usa: data?.data.usa_grupos_turno ?? false,
+    etiqueta,
+    etiquetaPlural: pluralizarEtiqueta(etiqueta),
+    isLoading,
+  };
 }
 
 export function useReprocesarRecargos() {

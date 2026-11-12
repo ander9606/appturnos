@@ -18,6 +18,7 @@ import { bogotaToday } from '@/lib/formatters';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import type { Oferta, AsignacionResumen, EstadoAsignacion } from '@api-client';
+import { GrupoBadge } from '@/features/grupos/GrupoBadge';
 import { apiErrorMessage } from '@/lib/apiErrorMessage';
 import { confirm } from '@/lib/confirmDialog';
 import { alertError } from '@/lib/alertDialog';
@@ -302,11 +303,12 @@ function GestorOfertaItem({
             </Text>
             <View className="flex-row items-center gap-2">
               {esCancelada && <Badge label="Cancelada" variant="danger" size="sm" />}
-              {oferta.necesita_completar && <Badge label="Falta completar" variant="warning" size="sm" />}
+              {oferta.necesita_completar && <Badge label="Falta marcar completado" variant="warning" size="sm" />}
               {!esCancelada && !oferta.necesita_completar && esPasado && <Badge label="Finalizado" variant="default" size="sm" />}
               <Text className="text-lg text-muted-foreground">{expanded ? '▲' : '▼'}</Text>
             </View>
           </View>
+          <GrupoBadge nombre={oferta.grupo_nombre} />
 
           {/* Date / time / location */}
           <View className="flex-row gap-3 flex-wrap">
@@ -318,7 +320,7 @@ function GestorOfertaItem({
             </Text>
             {oferta.lugar ? (
               <Text className="text-sm text-muted-foreground" numberOfLines={1}>
-                📍 {oferta.lugar}
+                📍 {oferta.lugar_alias || oferta.lugar}
               </Text>
             ) : null}
           </View>
@@ -330,12 +332,12 @@ function GestorOfertaItem({
             </Text>
             {!esPasado && !expanded && tienePendientes ? (
               <Badge
-                label={`${pendientes.length} pendiente${pendientes.length > 1 ? 's' : ''}`}
+                label={`${pendientes.length} postulante${pendientes.length > 1 ? 's' : ''} por revisar`}
                 variant="warning"
                 size="sm"
               />
             ) : !esPasado && !expanded && detalle ? (
-              <Badge label="Sin pendientes" variant="success" size="sm" />
+              <Badge label="Postulaciones al día" variant="success" size="sm" />
             ) : null}
           </View>
         </View>

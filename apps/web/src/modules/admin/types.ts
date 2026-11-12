@@ -1,4 +1,4 @@
-export type Plan = 'basico' | 'profesional' | 'empresarial';
+export type Plan = 'basico' | 'profesional' | 'empresarial' | 'ilimitado';
 
 /** Fila de la tabla `planes` (backend) — precios editables por super_admin, COP/mes. */
 export interface PlanConfig {
@@ -7,6 +7,7 @@ export interface PlanConfig {
   orden: number;
   max_trabajadores: number | null;
   precio_cop: number;
+  precio_anual_cop: number | null;
   incluidos: number | null;
   precio_adicional_cop: number | null;
   updated_at: string;
@@ -14,10 +15,11 @@ export interface PlanConfig {
 
 export type ActualizarPlanPayload = Pick<PlanConfig, 'precio_cop' | 'max_trabajadores' | 'incluidos' | 'precio_adicional_cop'>;
 
-/** Precio mensual de un plan para `trabajadores` activos — espejo de precioPlanCop (backend). */
-export function precioPlan(p: PlanConfig, trabajadores: number): number {
+/** Precio de un plan para `trabajadores` activos — espejo de montoSuscripcionCop (backend): 12 meses = precio anual. */
+export function precioPlan(p: PlanConfig, trabajadores: number, meses = 1): number {
   const extra = p.incluidos != null ? Math.max(0, trabajadores - p.incluidos) : 0;
-  return p.precio_cop + extra * (p.precio_adicional_cop ?? 0);
+  if (meses === 12) return (p.precio_anual_cop ?? p.precio_cop * 10) + extra * (p.precio_adicional_cop ?? 0) * 10;
+  return (p.precio_cop + extra * (p.precio_adicional_cop ?? 0)) * meses;
 }
 
 export type OrigenSuscripcion = 'manual' | 'wompi' | 'logiq360';

@@ -6,6 +6,7 @@ const AsignacionesModel = require('../turnos/asignaciones/asignaciones.model');
 const TrabajadoresModel = require('../trabajadores/trabajadores.model');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
 const AppError = require('../../utils/AppError');
+const { lugarCorto } = require('../../utils/lugarCorto');
 const { ROLES } = require('../../config/constants');
 
 function verificarAcceso(cuenta, usuario) {
@@ -42,14 +43,26 @@ const redondear = (n) => Math.round(Number(n) * 100) / 100;
 
 const fechaCorta = (iso) => new Date(iso + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
 
+/**
+ * Grupo del turno en el momento de generar la cuenta. Va dentro del ítem (que ya se guarda como JSON): una cuenta
+ * firmada es un documento cerrado y no debe cambiar si después renombran el grupo. Sin grupo no agrega nada, así que
+ * las cuentas de empresas que no usan grupos quedan idénticas a las de antes.
+ */
+function datosGrupo(t) {
+  if (!t.grupo_id) return {};
+  return { grupo_id: t.grupo_id, grupo_nombre: t.grupo_nombre ?? null, ...(t.grupo_progreso ? { grupo_progreso: t.grupo_progreso } : {}) };
+}
+
 /** Línea completa de un turno que aún no estaba en ninguna cuenta firmada. */
 function itemCompleto(t) {
   return {
     asignacion_id: t.asignacion_id,
     fecha: t.oferta_fecha,
-    descripcion: t.oferta_titulo,
+    // Un turno fallido (fuerza mayor) se cobra como compensación, no como labor realizada: se marca en la línea.
+    descripcion: t.estado === 'fallido' ? `${t.oferta_titulo} (turno fallido: compensación por fuerza mayor)` : t.oferta_titulo,
     cargo: t.cargo_nombre,
-    lugar: t.lugar,
+    lugar: lugarCorto(t.lugar, t.lugar_alias),
+    ...datosGrupo(t),
     hora_inicio: t.hora_inicio,
     hora_fin: t.hora_fin_estimada,
     horas: t.horas_trabajadas,
@@ -69,9 +82,10 @@ function itemDiferencia(t, diferencia) {
   return {
     asignacion_id: t.asignacion_id,
     fecha: t.oferta_fecha,
-    descripcion: `${t.oferta_titulo} (ajuste por diferencia)`,
+    descripcion: `${t.oferta_titulo} (${t.estado === 'fallido' ? 'ajuste por turno fallido' : 'ajuste por diferencia'})`,
     cargo: t.cargo_nombre,
-    lugar: t.lugar,
+    lugar: lugarCorto(t.lugar, t.lugar_alias),
+    ...datosGrupo(t),
     hora_inicio: t.hora_inicio,
     hora_fin: t.hora_fin_estimada,
     horas: 0,
@@ -99,7 +113,8 @@ const CuentasCobroService = {
    *  - Una cuenta firmada es lo ya cobrado y no se reescribe. Si después un turno
    *    cambia (p. ej. un bono y el trabajador vuelve a firmar el contrato) o aparece
    *    un turno firmado tarde, se genera otra cuenta COMPLEMENTARIA (secuencia 2, 3…)
-   *    solo por la diferencia. Diferencias negativas o cero no generan nada.
+   *    solo por la diferencia. Diferencias negativas o cero no generan nada, salvo un turno que se
+   *    dio por fallido con una compensación menor a lo ya cobrado: ahí sale una cuenta de ajuste (valor negativo).
    *  - Mientras la última cuenta siga sin firmar se refresca en el lugar.
    *
    * trabajadorId: limita a ese trabajador (p. ej. al aceptar un descuento).
@@ -125,7 +140,8 @@ const CuentasCobroService = {
       const firmadas = cuentas.filter((c) => c.firmado_trabajador);
       const abierta = cuentas.find((c) => !c.firmado_trabajador) ?? null;
 
-      const sinFirmar = w.turnos.filter((t) => !t.firmado_trabajador).length;
+      // Un turno en espera de que el trabajador autorice una compensación no bloquea la cuenta ni entra en ella todavía.
+      const sinFirmar = w.turnos.filter((t) => !t.firmado_trabajador && !t.pendiente_autorizacion).length;
       if (cuentas.length === 0 && sinFirmar > 0) {
         bloqueados.push({ w, sinFirmar });
         continue;
@@ -140,13 +156,15 @@ const CuentasCobroService = {
       }
       const items = [];
       for (const t of w.turnos) {
-        if (!t.firmado_trabajador) continue;
+        if (!t.firmado_trabajador || t.pendiente_autorizacion) continue;
         const previo = cobrado.get(t.asignacion_id);
         if (previo === undefined) {
           items.push(itemCompleto(t));
         } else {
           const diferencia = redondear(t.pago_total - previo);
           if (diferencia > 0) items.push(itemDiferencia(t, diferencia));
+          // Solo el fallido se ajusta a la baja: ya estaba cobrado y su compensación es menor.
+          else if (diferencia < 0 && t.estado === 'fallido') items.push(itemDiferencia(t, diferencia));
         }
       }
       if (items.length === 0) {
@@ -187,7 +205,9 @@ const CuentasCobroService = {
           titulo: secuencia === 1 ? 'Tu cuenta de cobro está lista' : 'Tienes una cuenta de cobro complementaria',
           mensaje: secuencia === 1
             ? `Firma tu cuenta de cobro del período ${rango} para completar tu pago.`
-            : `Se generó una cuenta de cobro por la diferencia de $${valorTotal.toLocaleString('es-CO')} en tus turnos del período ${rango}. Fírmala para completar tu pago.`,
+            : valorTotal < 0
+              ? `Un turno del período ${rango} se dio por fallido y su compensación es menor a lo ya cobrado. Se generó una cuenta de ajuste por -$${Math.abs(valorTotal).toLocaleString('es-CO')}. Revísala y fírmala.`
+              : `Se generó una cuenta de cobro por la diferencia de $${valorTotal.toLocaleString('es-CO')} en tus turnos del período ${rango}. Fírmala para completar tu pago.`,
           data: { cuenta_cobro_id: id, periodo_id: periodoId },
         }).catch(() => {});
       }

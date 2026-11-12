@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { parseTarifa, calcularPresupuesto } from './utils';
 import { formatDateObj, formatTimeObj } from '@/lib/formatters';
+import { useOpcionesGrupos } from '@/features/empresas/useOpcionesGrupos';
 import type { WizardData } from './types';
 
 type Props = {
@@ -31,6 +32,7 @@ function SummaryRow({ icon, label, value }: { icon: string; label: string; value
 }
 
 export function Step3Revisar({ data, onBack, onPublish, isPublishing, isPublished, onClose }: Props) {
+  const { etiqueta } = useOpcionesGrupos();
   const fecha = data.fecha ? formatDateObj(data.fecha) : '';
   const inicio = data.hora_inicio ? formatTimeObj(data.hora_inicio) : '';
   const fin = data.hora_fin ? ` – ${formatTimeObj(data.hora_fin)}${data.fin_dia_siguiente ? ' (día siguiente)' : ''}` : '';
@@ -45,6 +47,7 @@ export function Step3Revisar({ data, onBack, onPublish, isPublishing, isPublishe
         style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 6 }}
       >
         <SummaryRow icon="text-outline"     label="Título"   value={data.titulo} />
+        {data.grupo ? <SummaryRow icon="albums-outline" label={etiqueta} value={data.grupo.nombre} /> : null}
         <SummaryRow icon="calendar-outline" label="Fecha"    value={fecha} />
         <SummaryRow icon="time-outline"     label="Horario"  value={`${inicio}${fin}`} />
         {data.ubicacion_libre ? (

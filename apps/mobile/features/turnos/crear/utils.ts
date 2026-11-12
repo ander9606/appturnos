@@ -1,5 +1,6 @@
 import { isChronological } from '@/lib/dateValidation';
 import { bogotaToday, toISODate, formatTimeObj } from '@/lib/formatters';
+import type { CrearOfertaPayload } from '@api-client';
 import type { WizardData, PuestoInput } from './types';
 
 export function buildFecha(data: WizardData): string {
@@ -16,6 +17,35 @@ export function parseTarifa(s: string): number {
 
 export function calcularPresupuesto(puestos: PuestoInput[]): number {
   return puestos.reduce((sum, p) => sum + parseTarifa(p.tarifa_dia) * p.plazas, 0);
+}
+
+/** Cuerpo para crear el turno con lo que llenó el asistente. `grupo_id` solo viaja si eligió un grupo. */
+export function buildPayload(data: WizardData): CrearOfertaPayload {
+  return {
+    titulo:            data.titulo.trim(),
+    ...(data.grupo ? { grupo_id: data.grupo.id } : {}),
+    descripcion:       data.descripcion.trim() || undefined,
+    notas_adicionales: data.notas_adicionales.trim() || undefined,
+    fecha:             buildFecha(data),
+    hora_inicio:       buildTime(data.hora_inicio!),
+    hora_fin_estimada: data.hora_fin ? buildTime(data.hora_fin) : undefined,
+    fin_dia_siguiente: data.fin_dia_siguiente || undefined,
+    lugar:             data.lugar.trim() || undefined,
+    lugar_alias:       data.lugar.trim() && data.lugar_alias.trim() ? data.lugar_alias.trim() : undefined,
+    latitud:           data.latitud ?? undefined,
+    longitud:          data.longitud ?? undefined,
+    ubicacion_libre:   data.ubicacion_libre,
+    encargado_nombre:   data.encargado_nombre.trim() || undefined,
+    encargado_telefono: data.encargado_telefono.trim() || undefined,
+    para_quien:        data.para_quien,
+    visibilidad:       data.visibilidad,
+    trabajador_ids:    data.visibilidad === 'dirigida' ? data.destinatarios.map((d) => d.id) : undefined,
+    puestos:           data.puestos.map((p) => ({
+      cargo_id:   p.cargo_id,
+      plazas:     p.plazas,
+      tarifa_dia: parseTarifa(p.tarifa_dia),
+    })),
+  };
 }
 
 export function validateStep1(data: WizardData): string | null {

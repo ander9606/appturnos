@@ -28,6 +28,7 @@ import { getMonthGrid, mesDeHoy, type CalendarDay } from '@/lib/calendar';
 import type { Asignacion, Oferta } from '@api-client';
 import { OfertaCard } from '@/features/turnos/pestana/OfertaCard';
 import { colorOferta } from '@/features/turnos/pestana/turnosPestana';
+import { nombresDeMisGrupos, tieneGrupos } from '@/features/grupos/misGrupos';
 import { CalendarioMesGestor, CalendarioMesTrabajador } from '@/features/turnos/pestana/CalendarioMes';
 import {
   ResumenGestor, FabCrearTurno, BannerEventual, SelectorTabs, EncabezadoOfertas, EmptyMisTurnos, EmptyOfertas,
@@ -189,6 +190,9 @@ export default function TurnosScreen() {
       });
   }, [ofertas, searchOfertas, selectedDate]);
 
+  // «Mis eventos» (con el nombre de la empresa): la pantalla propia del trabajador con sus turnos agrupados.
+  const hayGrupos = useMemo(() => tieneGrupos(misTurnos ?? []), [misTurnos]);
+
   const isRefreshing = refetchingMios || refetchingOfertas;
 
   const onRefresh = useCallback(() => {
@@ -238,6 +242,7 @@ export default function TurnosScreen() {
     return {
       key: `o${o.id}`,
       titulo: o.titulo,
+      grupo: o.grupo_nombre,
       detalle: `${fmtRange(o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente)} · ${cubiertas}/${total} plazas cubiertas`,
       color: colorOferta(o, pendientesPorOferta, today, theme.primary),
       onPress: () => router.push(`/oferta/${o.id}`),
@@ -247,6 +252,7 @@ export default function TurnosScreen() {
     ...(misTurnosPorDiaMes.get(fecha) ?? []).map(a => ({
       key: `a${a.id}`,
       titulo: a.oferta_titulo,
+      grupo: a.grupo_nombre,
       detalle: getEstadoConfig(a.estado).label,
       color: theme.primary,
       onPress: () => router.push(`/turno/${a.id}`),
@@ -254,6 +260,7 @@ export default function TurnosScreen() {
     ...(ofertasPorDiaMes.get(fecha) ?? []).filter(o => !aplicadosIds.has(o.id)).map(o => ({
       key: `d${o.id}`,
       titulo: o.titulo,
+      grupo: o.grupo_nombre,
       detalle: `Disponible · ${fmtRange(o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente)}`,
       color: COLORS.info,
       onPress: () => router.push(`/oferta/${o.id}`),
@@ -269,13 +276,24 @@ export default function TurnosScreen() {
       <EncabezadoPestana
         titulo={isGestor ? 'Gestión de Turnos' : isNomina ? 'Turnos Extra' : 'Mis Turnos'}
         derecha={(isGestor || isWorker) ? (
-          <TouchableOpacity
-            onPress={() => setViewMode(v => v === 'lista' ? 'mes' : 'lista')}
-            accessibilityLabel={viewMode === 'lista' ? 'Ver mes' : 'Ver lista'}
-            className="p-2 -mr-2 active:opacity-60"
-          >
-            <Ionicons name={viewMode === 'lista' ? 'calendar-outline' : 'list-outline'} size={22} color={COLORS.white} />
-          </TouchableOpacity>
+          <View className="flex-row items-center">
+            {isWorker && hayGrupos && (
+              <TouchableOpacity
+                onPress={() => router.push('/mis-grupos')}
+                accessibilityLabel={`Mis ${nombresDeMisGrupos(misTurnos ?? [])}`}
+                className="p-2 active:opacity-60"
+              >
+                <Ionicons name="albums-outline" size={22} color={COLORS.white} />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={() => setViewMode(v => v === 'lista' ? 'mes' : 'lista')}
+              accessibilityLabel={viewMode === 'lista' ? 'Ver mes' : 'Ver lista'}
+              className="p-2 -mr-2 active:opacity-60"
+            >
+              <Ionicons name={viewMode === 'lista' ? 'calendar-outline' : 'list-outline'} size={22} color={COLORS.white} />
+            </TouchableOpacity>
+          </View>
         ) : undefined}
       >
         {/* Saldo a pagar del mes + postulantes pendientes — igual patrón que Nómina */}

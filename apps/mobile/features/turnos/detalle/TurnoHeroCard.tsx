@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Badge } from '@/components/ui/Badge';
 import { fmtDate, fmtRange, type EstadoConfig } from '../turnosUtils';
 import type { Asignacion } from '@api-client';
+import { GrupoBadge } from '@/features/grupos/GrupoBadge';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -71,6 +72,7 @@ export function TurnoHeroCard({
             <Badge label={estadoConfig.label} variant={estadoConfig.badgeVariant} />
           )}
         </View>
+        <GrupoBadge nombre={asignacion.grupo_nombre} />
 
         {isGestor && trabajador_nombre && (
           <View className="flex-row items-center gap-1.5 mt-1">

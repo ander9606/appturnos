@@ -3,7 +3,7 @@ import { Controller, type Control } from 'react-hook-form';
 import { Input } from '@/components/ui/Input';
 import type { FormData } from './miEmpresaForm';
 
-type NombreCampo = 'nombre' | 'nit' | 'representante_nombre' | 'representante_cedula' | 'actividad' | 'ciudad' | 'descripcion';
+type NombreCampo = 'nombre' | 'nit' | 'representante_nombre' | 'representante_cedula' | 'actividad' | 'ciudad' | 'descripcion' | 'etiqueta_grupo';
 
 /** Campo de texto del formulario de la empresa: enlaza `Input` con react-hook-form y muestra su error. */
 export function CampoEmpresa({ control, name, error, ...inputProps }: {

@@ -10,7 +10,7 @@ const logger = require('../../utils/logger');
 const { enviarEmail } = require('../../utils/mailer');
 const { plantillaCorreo, esc, tablaDatos } = require('../../utils/plantillaCorreo');
 const { ROLES } = require('../../config/constants');
-const { PlanesModel } = require('../suscripciones/planes.model');
+const { PlanesModel, CODIGOS_PLAN } = require('../suscripciones/planes.model');
 
 const DEFAULT_PAGE_SIZE = 20;
 const BCRYPT_ROUNDS = 11;
@@ -196,7 +196,7 @@ const AdminService = {
 
   async gestionarSuscripcion(id, { plan, vigente_hasta, origen = 'manual' }) {
     const empresa = await AdminService.obtenerEmpresa(id); // throws 404 if not found
-    const planesValidos = ['basico', 'profesional', 'empresarial'];
+    const planesValidos = CODIGOS_PLAN;
     if (plan && !planesValidos.includes(plan)) throw new AppError('plan inválido', 400);
     // vigente_hasta null explícito = indefinido (super_admin override)
     const vha = vigente_hasta === null ? null : vigente_hasta ? new Date(vigente_hasta) : undefined;

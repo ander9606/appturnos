@@ -15,6 +15,14 @@ export const turnosApi = {
   actualizarOferta: (id: number, data: Record<string, unknown>) =>
     api.put(`/turnos/ofertas/${id}`, data).then(r => r.data),
 
+  /** Mete el turno en un grupo, o lo saca con `null`. 409 si el grupo está cerrado; no toca el lugar del turno. */
+  vincularOfertaAGrupo: (id: number, grupoId: number | null) =>
+    api.put(`/turnos/ofertas/${id}/grupo`, { grupo_id: grupoId }).then(r => r.data),
+
+  /** Copia el turno a otra fecha (y hora); la copia conserva el grupo. */
+  duplicarOferta: (id: number, fecha: string, hora_inicio?: string) =>
+    api.post(`/turnos/ofertas/${id}/duplicar`, { fecha, hora_inicio }).then(r => r.data),
+
   publicarOferta: (id: number) =>
     api.post(`/turnos/ofertas/${id}/publicar`).then(r => r.data),
 

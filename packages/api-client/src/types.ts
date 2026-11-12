@@ -68,10 +68,22 @@ export interface ChangePasswordParams {
 
 // ── API wrapper ───────────────────────────────────────────────────────────
 
+/**
+ * Detalle de un error del servidor (422 de validación: `{ campo, mensaje }`). Algunos errores
+ * agregan datos propios: un grupo con nombre repetido (409) trae `grupo_id`, el del grupo que ya lo usa.
+ */
+export interface ApiErrorDetalle {
+  campo?: string;
+  mensaje?: string;
+  grupo_id?: number | null;
+  [clave: string]: unknown;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data: T;
   message: string;
+  detalles?: ApiErrorDetalle[];
 }
 
 export class ApiError extends Error {
@@ -79,6 +91,7 @@ export class ApiError extends Error {
     message: string,
     public readonly code: string | undefined,
     public readonly status: number,
+    public readonly detalles?: ApiErrorDetalle[],
   ) {
     super(message);
     this.name = 'ApiError';

@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router';
-import { LayoutDashboard, Users, Calendar, CalendarDays, Settings, DollarSign, LogOut, Plug, Building2, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, CalendarDays, Settings, DollarSign, LogOut, Plug, Building2, BarChart3, Layers } from 'lucide-react';
+import { useOpcionesGrupos } from '@/modules/configuracion/hooks/useConfiguracion';
 import { useAuthStore } from '@/modules/auth/authStore';
 import type { Rol } from '@/modules/auth/authStore';
 import logoMark from '@/assets/logo-mark.png';
@@ -12,6 +13,8 @@ type NavItem = {
   accent?: 'success';
   /** Ítems de soporte (config, integraciones) van anclados abajo, separados de la navegación principal. */
   bottom?: boolean;
+  /** Solo se muestra si la empresa activó los grupos de turnos. */
+  soloConGrupos?: boolean;
 };
 
 const NAV_BY_ROL: Record<Rol, NavItem[]> = {
@@ -22,6 +25,7 @@ const NAV_BY_ROL: Record<Rol, NavItem[]> = {
     { label: 'Inicio',         to: '/dashboard',     icon: LayoutDashboard },
     { label: 'Calendario',     to: '/calendario',     icon: CalendarDays },
     { label: 'Turnos',         to: '/turnos',         icon: Calendar },
+    { label: 'Grupos',         to: '/grupos',         icon: Layers, soloConGrupos: true },
     { label: 'Nómina',         to: '/nomina',         icon: DollarSign, accent: 'success' },
     { label: 'Equipo',         to: '/equipo',         icon: Users },
     { label: 'Reportes',       to: '/reportes',       icon: BarChart3 },
@@ -40,6 +44,7 @@ const NAV_BY_ROL: Record<Rol, NavItem[]> = {
     { label: 'Inicio',        to: '/dashboard',     icon: LayoutDashboard },
     { label: 'Calendario',    to: '/calendario',    icon: CalendarDays },
     { label: 'Turnos',        to: '/turnos',        icon: Calendar },
+    { label: 'Grupos',        to: '/grupos',        icon: Layers, soloConGrupos: true },
     { label: 'Equipo',        to: '/equipo',        icon: Users },
     { label: 'Reportes',      to: '/reportes',      icon: BarChart3 },
     { label: 'Configuración', to: '/configuracion', icon: Settings, bottom: true },
@@ -63,7 +68,12 @@ const ROL_LABEL: Record<Rol, string> = {
 export function Sidebar() {
   const { usuario, clearAuth } = useAuthStore();
   const navigate = useNavigate();
-  const items = usuario ? (NAV_BY_ROL[usuario.rol] ?? []) : [];
+  const { usa: usaGrupos, etiquetaPlural } = useOpcionesGrupos();
+  // «Grupos» solo aparece si la empresa activó la función; para el resto de clientes el menú no cambia.
+  const items = (usuario ? (NAV_BY_ROL[usuario.rol] ?? []) : [])
+    .filter(item => !item.soloConGrupos || usaGrupos)
+    // …y se llama como la empresa llama a sus grupos («Eventos», «Obras»…).
+    .map(item => (item.soloConGrupos ? { ...item, label: etiquetaPlural } : item));
   const mainItems = items.filter(item => !item.bottom);
   const bottomItems = items.filter(item => item.bottom);
 

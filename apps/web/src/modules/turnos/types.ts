@@ -38,6 +38,9 @@ export interface OfertaDestinatario {
 export interface Oferta {
   id: number;
   titulo: string;
+  /** Grupo al que pertenece el turno (etiqueta de la tarjeta). null o ausente = sin grupo. */
+  grupo_id?: number | null;
+  grupo_nombre?: string | null;
   fecha: string;
   hora_inicio: string;
   hora_fin_estimada: string | null;
@@ -45,6 +48,8 @@ export interface Oferta {
   // Detalles adicionales para el trabajador (ej. qué llevar) — el trabajador SÍ los ve, pero nunca salen en el contrato.
   notas_adicionales: string | null;
   lugar: string | null;
+  /** Nombre corto del lugar (tarjetas y cuenta de cobro); la dirección completa sigue en `lugar`. */
+  lugar_alias?: string | null;
   /** Resuelta por geocodificación a partir de latitud/longitud (best-effort, puede quedar null). */
   ciudad: string | null;
   latitud: number | null;
@@ -98,6 +103,9 @@ export interface LiquidacionTurno {
   hora_inicio: string;
   hora_fin_estimada: string | null;
   lugar: string | null;
+  lugar_alias?: string | null;
+  /** Grupo de turnos al que pertenece el turno; null si no tiene. */
+  grupo_nombre?: string | null;
   hora_ingreso_real: string | null;
   hora_egreso_real: string | null;
   horas_trabajadas: number;
@@ -112,6 +120,11 @@ export interface LiquidacionTurno {
   /** Si es `false`, el contrato del turno aún no lo firma el trabajador —
    *  su pago no está incluido en los totales de `LiquidacionTurnosTrabajador`. */
   firmado_trabajador: boolean;
+  /** Propuesta de compensación sin respuesta del trabajador: el turno está en espera y no suma ni resta todavía. */
+  pendiente_autorizacion?: boolean;
+  /** 'fallido' = compensación por fuerza mayor: su pago_total reemplaza al del turno trabajado. */
+  estado?: string;
+  compensacion_motivo?: string | null;
 }
 
 export interface LiquidacionTurnosTrabajador {
@@ -130,6 +143,8 @@ export interface LiquidacionTurnosTrabajador {
   pago_total: number;
   /** Turnos completados sin firma del trabajador, excluidos de los totales de pago. */
   turnos_pendientes_firma: number;
+  /** Turnos en espera de que el trabajador autorice una compensación: no suman ni restan en los totales. */
+  turnos_pendientes_autorizacion?: number;
   /** Cuenta de cobro ya generada para este rango exacto (fecha_inicio/fecha_fin) — null si el rango no coincide con un ciclo generado. */
   cuenta_cobro_id: number | null;
   turnos: LiquidacionTurno[];
@@ -190,6 +205,9 @@ export interface Asignacion {
   /** Solo presente cuando estado === 'fallido' — monto de la compensación y por qué. */
   pago_total?: number | null;
   compensacion_motivo?: string | null;
+  /** Propuesta de compensación sobre un turno ya trabajado que bajaría el pago: 'pendiente' espera la autorización del trabajador (mientras tanto se paga según contrato); 'rechazada' no la dio. */
+  compensacion_propuesta?: number | string | null;
+  compensacion_decision?: 'pendiente' | 'autorizada' | 'rechazada' | null;
 }
 
 /** Descuentos de un turno con el tope legal (art. 113 CST: 1/5 de la tarifa del día). */

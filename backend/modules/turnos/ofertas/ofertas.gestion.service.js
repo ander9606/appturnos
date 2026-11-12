@@ -6,14 +6,18 @@ const AsignacionesService = require('../asignaciones/asignaciones.service');
 const CargosModel = require('../../cargos/cargos.model');
 const TrabajadoresService = require('../../trabajadores/trabajadores.service');
 const PuntosMarcajeModel = require('../../puntos-marcaje/puntos-marcaje.model');
+const GruposTurnoModel = require('../../grupos-turno/grupos-turno.model');
+const EmpresasModel = require('../../empresas/empresas.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const NotificacionesModel = require('../../notificaciones/notificaciones.model');
 const CostoLaborService = require('../../integracion/costo-labor.service');
 const PeriodosTurnosService = require('../periodos/periodos-turnos.service');
+const { ajustarContratoYCuenta } = require('../asignaciones/fallido.postproceso');
 const GeocodingService = require('../../geocoding/geocoding.service');
 const AppError = require('../../../utils/AppError');
 const {
   ROLES, MAX_OFERTAS_ACTIVAS_POR_EMPRESA, DIAS_GRACIA_ASIGNACIONES_COLGADAS, HORAS_CORTE_EDICION_OFERTA,
+  COMPENSACION_FALLIDO_MINIMA,
 } = require('../../../config/constants');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 const logger = require('../../../utils/logger');
@@ -139,6 +143,23 @@ async function validarPuntosMarcaje(empresaId, puntoMarcajeIds) {
   for (const id of ids) {
     const punto = await PuntosMarcajeModel.obtenerPorId(empresaId, id);
     if (!punto) throw new AppError(`Punto de marcaje ${id} no encontrado`, 404);
+  }
+}
+
+/**
+ * Un turno solo se vincula a un grupo de su empresa, que esté activo, y solo si la empresa
+ * tiene la función encendida. `null`/`undefined` = sin grupo: no consulta nada, así que para
+ * las empresas que no usan grupos este chequeo no cuesta ni una consulta.
+ */
+async function validarGrupo(empresaId, grupoId) {
+  if (grupoId == null) return;
+  if (!(await EmpresasModel.usaGruposTurno(empresaId))) {
+    throw new AppError('Los grupos de turnos no están activados para tu empresa.', 403);
+  }
+  const grupo = await GruposTurnoModel.obtenerPorId(empresaId, Number(grupoId));
+  if (!grupo) throw new AppError('Grupo no encontrado', 404);
+  if (grupo.estado === 'cerrado') {
+    throw new AppError(`El grupo "${grupo.nombre}" está cerrado. Reábrelo para agregarle turnos.`, 409);
   }
 }
 
@@ -291,6 +312,7 @@ module.exports = {
     await validarPuestosParaEmpresa(empresaId, datos.puestos);
     await validarDestinatarios(empresaId, datos.visibilidad, datos.trabajador_ids);
     await validarPuntosMarcaje(empresaId, datos.punto_marcaje_ids);
+    await validarGrupo(empresaId, datos.grupo_id);
     const id = await OfertasModel.crear(empresaId, datos, creadoPor);
     const oferta = await OfertasModel.obtenerPorId(empresaId, id);
 
@@ -326,6 +348,8 @@ module.exports = {
    */
   async actualizar(empresaId, id, datos) {
     if (datos.fin_dia_siguiente !== undefined) datos = { ...datos, fin_dia_siguiente: datos.fin_dia_siguiente ? 1 : 0 };
+    // Un nombre corto de lugar vacío significa "quitarlo".
+    if (datos.lugar_alias !== undefined) datos = { ...datos, lugar_alias: datos.lugar_alias?.trim() || null };
     const oferta = await OfertasModel.obtenerPorId(empresaId, id);
     if (!oferta) throw new AppError('Oferta no encontrada', 404);
     if (oferta.estado !== 'abierta' && oferta.estado !== 'borrador') {
@@ -459,21 +483,42 @@ module.exports = {
     const oferta = await OfertasModel.obtenerPorId(empresaId, id);
     if (!oferta) throw new AppError('Oferta no encontrada', 404);
     if (oferta.estado === 'cancelada') return;
-    if (oferta.estado === 'completada') {
-      throw new AppError('No se puede marcar como fallida una oferta completada', 409);
-    }
+    // Una oferta 'completada' sí puede darse por fallida: al marcar salida el
+    // último trabajador el sistema la completa solo (CostoLaborService), y
+    // aun así el gestor puede necesitar compensar por fuerza mayor.
 
     const activas = await AsignacionesModel.listarActivasConTarifa(empresaId, id);
-    const enProgreso = activas.filter((a) => a.estado === 'en_progreso');
+    // 'completado' también compensa: quien ya cerró su turno (marcó salida)
+    // antes de que el gestor diera la oferta por fallida no debe quedar fuera.
+    const enProgreso = activas.filter((a) => a.estado === 'en_progreso' || a.estado === 'completado');
     const motivoFinal = (motivo || '').trim() || 'Fuerza mayor';
 
     const overrides = new Map((compensaciones || []).map((c) => [Number(c.asignacion_id), Number(c.monto)]));
-    const montos = enProgreso.map((a) => ({
-      asignacionId: a.id,
-      monto: overrides.has(a.id) ? overrides.get(a.id) : Number(a.tarifa_dia),
-    }));
+    // Piso: la compensación no puede bajar de la mitad de la tarifa del puesto (!(x >= min) también
+    // rechaza NaN). Se valida antes de tocar nada para que un monto bajo no deje el turno a medias.
+    for (const a of enProgreso) {
+      if (!overrides.has(a.id)) continue;
+      const minimo = Number(a.tarifa_dia) * COMPENSACION_FALLIDO_MINIMA;
+      if (!(overrides.get(a.id) >= minimo)) {
+        throw new AppError(
+          `La compensación de ${a.trabajador_nombre} ${a.trabajador_apellido} no puede ser menor a $${minimo.toLocaleString('es-CO')} (la mitad de la tarifa del turno).`,
+          422
+        );
+      }
+    }
+    const montoDe = (a) => (overrides.has(a.id) ? overrides.get(a.id) : Number(a.tarifa_dia));
+    const pagoActual = (a) => Number(a.pago_total || 0);
+    const pagoNuevo = (a) => montoDe(a) + Number(a.bono_monto || 0);
+    // Quien ya trabajó (completado) y quedaría con MENOS pago NO se cambia solo: se le baja el pago por trabajo
+    // hecho, y eso necesita su autorización. Queda una propuesta que el trabajador autoriza o no
+    // (AsignacionesService.autorizarCompensacion); mientras tanto sigue completado y se le paga según su contrato.
+    const bajaElPago = (a) => a.estado === 'completado' && pagoNuevo(a) < pagoActual(a);
+    const montos = enProgreso.filter((a) => !bajaElPago(a)).map((a) => ({ asignacionId: a.id, monto: montoDe(a) }));
+    const propuestas = enProgreso.filter(bajaElPago).map((a) => ({ asignacionId: a.id, monto: montoDe(a) }));
 
-    const actualizados = await OfertasModel.marcarFallida(empresaId, id, montos, motivoFinal, usuarioId);
+    const actualizados = await OfertasModel.marcarFallida(
+      empresaId, id, montos, motivoFinal, usuarioId, ...(propuestas.length ? [propuestas] : [])
+    );
     const idsActualizados = new Set(actualizados);
 
     // Mismo detalle que verá luego en el turno: la frase pedida se mantiene
@@ -501,7 +546,20 @@ module.exports = {
       });
     }));
 
-    const otros = activas.filter((a) => a.estado !== 'en_progreso');
+    // Propuestas: se le avisa al trabajador que debe autorizar el cambio (nada se aplicó todavía).
+    await Promise.all(enProgreso.filter(bajaElPago).map((a) => {
+      if (!a.usuario_id) return null;
+      return NotificacionesService.notificar({
+        empresaId,
+        usuarioId: a.usuario_id,
+        tipo: 'asignacion.compensacion_propuesta',
+        titulo: 'Necesitamos tu autorización',
+        mensaje: `El turno "${oferta.titulo}" se canceló por ${detalleMotivo}. Se propone cambiar tu pago de $${pagoActual(a).toLocaleString('es-CO')} a $${pagoNuevo(a).toLocaleString('es-CO')} (compensación). Mientras no respondas, este turno queda en espera: no se suma a tu pago hasta que decidas. Si no lo autorizas, se te paga según tu contrato.`,
+        data: { oferta_id: id, asignacion_id: a.id },
+      });
+    }));
+
+    const otros = activas.filter((a) => a.estado !== 'en_progreso' && a.estado !== 'completado');
     const destinatariosOtros = otros.map((a) => a.usuario_id).filter(Boolean);
     if (destinatariosOtros.length) {
       await NotificacionesService.notificarVarios(destinatariosOtros, {
@@ -513,9 +571,20 @@ module.exports = {
       });
     }
 
+    // Quien ya había cerrado su turno (completado) tenía contrato y quizá cuenta de cobro con el valor
+    // anterior: se anula la firma del contrato (ese valor ya no rige) y, si el período está cerrado,
+    // se genera la cuenta complementaria o de ajuste con la compensación (ver CuentasCobroService).
+    // Best-effort: un fallo aquí no debe deshacer el turno fallido ya guardado.
+    const veniaCompletado = activas.filter((a) => a.estado === 'completado' && idsActualizados.has(a.id));
+    for (const a of veniaCompletado) {
+      await ajustarContratoYCuenta(empresaId, a.id, a.trabajador_id);
+    }
+
     // Igual que al cerrar un turno normal: la compensación es un costo de
     // mano de obra (logiq360) y debe caer dentro de un período de turnos.
-    await CostoLaborService.verificarYEmitir(empresaId, id).catch(() => {});
+    // Si la oferta ya estaba 'completada' su costo ya se había reportado a logiq360: este envío es una
+    // corrección con el total vigente (la compensación reemplaza al pago anterior), no un segundo costo.
+    await CostoLaborService.verificarYEmitir(empresaId, id, { correccion: oferta.estado === 'completada' }).catch(() => {});
     await PeriodosTurnosService.autoCrear(empresaId).catch(() => {});
   },
 
@@ -619,6 +688,13 @@ module.exports = {
   async duplicar(empresaId, id, nuevaFecha, creadoPor, nuevaHoraInicio) {
     const original = await OfertasModel.obtenerPorId(empresaId, id);
     if (!original) throw new AppError('Oferta no encontrada', 404);
+    // La copia se queda en el grupo del original; a un grupo cerrado no se le agregan turnos.
+    if (original.grupo_estado === 'cerrado') {
+      throw new AppError(
+        `El grupo "${original.grupo_nombre}" está cerrado. Reábrelo para duplicar este turno dentro de él.`,
+        409
+      );
+    }
     const activas = await OfertasModel.contarActivasPorEmpresa(empresaId);
     if (activas >= MAX_OFERTAS_ACTIVAS_POR_EMPRESA) {
       throw new AppError(
@@ -630,6 +706,19 @@ module.exports = {
     const oferta = await OfertasModel.obtenerPorId(empresaId, nuevaId);
     await notificarCoGestores(empresaId, oferta, creadoPor);
     return oferta;
+  },
+
+  /**
+   * Vincula una oferta a un grupo, la cambia de grupo o la saca de él (`grupoId = null`).
+   * Es solo una etiqueta (no toca horario, pagos ni asignaciones), así que a diferencia de
+   * `actualizar` se permite en cualquier estado: también sirve para ordenar turnos ya hechos.
+   */
+  async vincularGrupo(empresaId, id, grupoId) {
+    const oferta = await OfertasModel.obtenerPorId(empresaId, id);
+    if (!oferta) throw new AppError('Oferta no encontrada', 404);
+    await validarGrupo(empresaId, grupoId);
+    await OfertasModel.asignarGrupo(empresaId, id, grupoId);
+    return OfertasModel.obtenerPorId(empresaId, id);
   },
 
   /**

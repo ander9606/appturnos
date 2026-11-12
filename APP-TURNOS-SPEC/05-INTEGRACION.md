@@ -469,6 +469,8 @@ dirección tras crear la orden.
 
 **Qué hace logiq360:** Actualiza `costo_mano_obra` en la orden de trabajo.
 
+**Corrección:** si una orden ya reportada (oferta `completada`) se da después por fallido por fuerza mayor, App Turnos vuelve a emitir este evento con el total vigente (la compensación reemplaza al pago anterior) y el campo extra `"correccion": true`. `total_pagado` y `resumen` son siempre el estado completo de la orden, no una diferencia: el receptor debe **reemplazar** `costo_mano_obra`, no sumarlo. Si no viene `correccion`, es el primer reporte.
+
 **Implementación (App Turnos):**
 - Trigger: al ejecutarse `marcarEgreso()` en `asignaciones.service.js`, se invoca
   `CostoLaborService.verificarYEmitir(empresaId, ofertaId)`

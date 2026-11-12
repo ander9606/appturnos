@@ -10,6 +10,7 @@ import { showToast } from '@/lib/toast';
 import { useActualizarOferta, useActualizarPuesto, useCrearPuesto, useCargos } from '@/features/turnos/useTurnos';
 import { parseTarifa } from '@/features/turnos/crear/utils';
 import { LugarInput } from '@/features/turnos/crear/LugarInput';
+import { LugarAlias } from '@/features/turnos/crear/LugarAlias';
 import { Button } from '@/components/ui/Button';
 import { formatCOP, formatTimeObj, toISODate } from '@/lib/formatters';
 import type { Cargo, OfertaPuesto } from '@api-client';
@@ -22,7 +23,7 @@ import { fmtDate } from './fechasOferta';
 type OfertaEditable = {
   id: number; titulo: string; descripcion: string | null;
   fecha: string; hora_inicio: string; hora_fin_estimada: string | null; fin_dia_siguiente?: number | null;
-  lugar: string | null; latitud: number | null; longitud: number | null;
+  lugar: string | null; lugar_alias?: string | null; latitud: number | null; longitud: number | null;
   puestos: OfertaPuesto[];
 };
 
@@ -43,6 +44,7 @@ export function EditarOfertaModal({
   const [horaInicio, setHoraInicio] = useState(new Date());
   const [horaFin, setHoraFin] = useState<Date | null>(null);
   const [lugar, setLugar] = useState(oferta.lugar ?? '');
+  const [lugarAlias, setLugarAlias] = useState(oferta.lugar_alias ?? '');
   // mysql2 devuelve DECIMAL como string: se convierte para que LugarInput pueda usar toFixed.
   const [latitud, setLatitud] = useState<number | null>(oferta.latitud == null ? null : Number(oferta.latitud));
   const [longitud, setLongitud] = useState<number | null>(oferta.longitud == null ? null : Number(oferta.longitud));
@@ -81,6 +83,7 @@ export function EditarOfertaModal({
     }
     setFinDiaSiguiente(Boolean(oferta.fin_dia_siguiente));
     setLugar(oferta.lugar ?? '');
+    setLugarAlias(oferta.lugar_alias ?? '');
     setLatitud(oferta.latitud == null ? null : Number(oferta.latitud));
     setLongitud(oferta.longitud == null ? null : Number(oferta.longitud));
     setShowFecha(false);
@@ -168,6 +171,8 @@ export function EditarOfertaModal({
         hora_fin_estimada: horaFin ? `${formatTimeObj(horaFin)}:00` : undefined,
         fin_dia_siguiente: finDiaSiguiente,
         lugar,
+        // Como el lugar: tal cual, para que vaciarlo lo quite.
+        lugar_alias: lugarAlias,
         latitud: latitud ?? undefined,
         longitud: longitud ?? undefined,
       });
@@ -302,8 +307,9 @@ export function EditarOfertaModal({
               value={lugar}
               latitud={latitud}
               longitud={longitud}
-              onChange={(l, lat, lng) => { setLugar(l); setLatitud(lat); setLongitud(lng); }}
+              onChange={(l, lat, lng) => { if (lat != null && l !== lugar) setLugarAlias(''); setLugar(l); setLatitud(lat); setLongitud(lng); }}
             />
+            <LugarAlias lugar={lugar} latitud={latitud} longitud={longitud} alias={lugarAlias} onChange={setLugarAlias} />
           </View>
 
           <View className="gap-1.5">

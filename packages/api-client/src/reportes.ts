@@ -219,6 +219,33 @@ export interface HistorialTrabajadorResponse {
   resumen: { total_turnos: number; pago_turnos: number; dias_nomina: number };
 }
 
+/** Un grupo (evento, obra…) con turnos en el período. */
+export interface GrupoReporte {
+  grupo_id: number;
+  nombre: string;
+  estado: 'activo' | 'cerrado';
+  /** Turnos del grupo en el rango (sin cancelados ni borradores). */
+  turnos: number;
+  convocados: number;
+  completados: number;
+  no_presentados: number;
+  /** Lo pagado por turnos completados (con bonos): el mismo costo del resumen de Turnos. */
+  costo: number;
+  plazas: number;
+  cubiertas: number;
+  /** Parte del costo de turnos del período; null si no hubo costo. */
+  pct: number | null;
+}
+
+/** GET /api/reportes/grupos — solo existe para empresas que usan grupos de turnos (si no, 403). */
+export interface GruposReporteResponse {
+  rango: ReporteRango;
+  costo_total: number;
+  /** Turnos completados que no pertenecen a ningún grupo. */
+  sin_grupo: { completados: number; costo: number };
+  grupos: GrupoReporte[];
+}
+
 export interface ReporteParams {
   desde: string;
   hasta: string;
@@ -240,6 +267,11 @@ export const reportesApi = {
   personas(params: ReporteParams): Promise<PersonasResponse> {
     const qs = new URLSearchParams({ desde: params.desde, hasta: params.hasta });
     return api.get<PersonasResponse>(`/api/reportes/personas?${qs}`);
+  },
+
+  grupos(params: ReporteParams): Promise<GruposReporteResponse> {
+    const qs = new URLSearchParams({ desde: params.desde, hasta: params.hasta });
+    return api.get<GruposReporteResponse>(`/api/reportes/grupos?${qs}`);
   },
 
   costos(params: ReporteParams): Promise<CostosResponse> {

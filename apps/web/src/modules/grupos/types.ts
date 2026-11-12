@@ -1,0 +1,77 @@
+export type EstadoGrupo = 'activo' | 'cerrado';
+
+/** Momento del grupo, calculado por el servidor con las fechas de sus turnos; 'cerrado' si lo cerraron a mano. */
+export type FaseGrupo = 'sin_turnos' | 'proximo' | 'en_curso' | 'terminado' | 'cerrado';
+
+/** Un grupo de turnos tal como lo devuelve GET /api/grupos-turno (solo lo que usa la web hasta ahora). */
+export interface GrupoTurno {
+  id: number;
+  nombre: string;
+  descripcion?: string | null;
+  /** Lugar por defecto de los turnos nuevos del grupo (cada turno guarda su propia copia). */
+  lugar: string | null;
+  /** Nombre corto del lugar por defecto; se copia a los turnos nuevos junto con el lugar. */
+  lugar_alias?: string | null;
+  latitud: number | null;
+  longitud: number | null;
+  estado: EstadoGrupo;
+  /** Turnos del grupo sin contar los cancelados. */
+  total_turnos: number;
+  /** Primer y último día de sus turnos (YYYY-MM-DD); null si aún no tiene turnos. Se calculan, no se guardan. */
+  fecha_inicio: string | null;
+  fecha_fin: string | null;
+  fase: FaseGrupo;
+}
+
+/** Un turno dentro del detalle de un grupo (los cancelados también salen, con su estado). */
+export interface TurnoDeGrupo {
+  id: number;
+  titulo: string;
+  fecha: string; // YYYY-MM-DD
+  hora_inicio: string;
+  hora_fin_estimada: string | null;
+  fin_dia_siguiente: number | null;
+  lugar: string | null;
+  estado: string;
+  plazas: number;
+  plazas_cubiertas: number;
+  /** Trabajadores con compensación por turno fallido (fuerza mayor). Con el turno cancelado y > 0, es un «turno fallido». */
+  fallidos?: number;
+}
+
+/** Costos de un grupo (espejo de `CostosGrupo` del api-client): para pagar, sin firmar, en espera, por hacer y proyectado. */
+export interface CostosGrupo {
+  real: { total: number; tarifas: number; bonos: number; descuentos: number; turnos_pagados: number };
+  sin_firmar: { cantidad: number; monto: number };
+  en_espera: { cantidad: number };
+  estimado: { total: number; turnos: number };
+  proyectado: number;
+  trabajadores: number;
+  horas: number;
+}
+
+export interface GrupoTurnoDetalle extends GrupoTurno {
+  turnos: TurnoDeGrupo[];
+}
+
+/** Lo que el formulario de turno guarda del grupo elegido (el lugar sirve para prellenar el del turno). */
+export type GrupoElegido = Pick<GrupoTurno, 'id' | 'nombre' | 'lugar' | 'lugar_alias' | 'latitud' | 'longitud'>;
+
+export interface CrearGrupoPayload {
+  nombre: string;
+  /** lugar, latitud y longitud van los tres o ninguno (422 si falta alguno). */
+  lugar?: string;
+  lugar_alias?: string;
+  latitud?: number;
+  longitud?: number;
+}
+
+/** `null` quita el valor. Para quitar el lugar hay que mandar lugar, lugar_alias, latitud y longitud en null. */
+export interface ActualizarGrupoPayload {
+  nombre?: string;
+  descripcion?: string | null;
+  lugar?: string | null;
+  lugar_alias?: string | null;
+  latitud?: number | null;
+  longitud?: number | null;
+}

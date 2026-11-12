@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Pressable } from 'react-native';
 import type { Asignacion } from '@api-client';
 import { fmtRange } from '@/features/turnos/turnosUtils';
+import { GrupoBadge } from '@/features/grupos/GrupoBadge';
 import { t } from '@/lib/i18n';
 
 /** Inicio y fin de hoy; si el turno termina al día siguiente, el fin es mañana (o el inicio fue ayer, ya pasada la medianoche). */
@@ -82,10 +83,11 @@ export function ActiveShiftCard({ turno, primaryColor, onPress, onEgreso }: Acti
       <Text className="text-white text-xl font-bold" numberOfLines={1}>
         {turno.oferta_titulo}
       </Text>
+      <GrupoBadge nombre={turno.grupo_nombre} sobreMarca />
 
       <Text className="text-white/80 text-sm">
         {fmtRange(turno.hora_inicio, turno.hora_fin_estimada, turno.fin_dia_siguiente)}
-        {turno.lugar ? `  ·  ${turno.lugar}` : ''}
+        {turno.lugar ? `  ·  ${turno.lugar_alias || turno.lugar}` : ''}
       </Text>
 
       <View className="h-1.5 bg-white/30 rounded-full overflow-hidden">

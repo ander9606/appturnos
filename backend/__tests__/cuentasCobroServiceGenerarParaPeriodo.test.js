@@ -63,6 +63,53 @@ describe('CuentasCobroService.generarParaPeriodo', () => {
     }));
   });
 
+  test('el lugar del ítem usa el nombre corto; sin él, una dirección larga se acorta y una corta se deja igual', async () => {
+    const larga = 'Corferias, Carrera 37, Quinta Paredes, Teusaquillo, Bogotá, Bogotá Distrito Capital, RAP (Especial) Central, 111321, Colombia';
+    AsignacionesModel.liquidacion.mockResolvedValue([
+      trabajador([
+        turno({ asignacion_id: 1, lugar: larga, lugar_alias: 'Feria' }),
+        turno({ asignacion_id: 2, oferta_fecha: '2026-09-04', lugar: larga }),
+        turno({ asignacion_id: 3, oferta_fecha: '2026-09-05', lugar: 'Bodega Central' }),
+      ]),
+    ]);
+
+    await CuentasCobroService.generarParaPeriodo(7, 10);
+
+    const { items } = CuentasCobroModel.crear.mock.calls[0][1];
+    expect(items.map((i) => i.lugar)).toEqual(['Feria', 'Corferias, Carrera 37', 'Bodega Central']);
+  });
+
+  test('el grupo del turno queda en el ítem; sin grupo el ítem no trae esas claves (igual que antes)', async () => {
+    AsignacionesModel.liquidacion.mockResolvedValue([
+      trabajador([
+        turno({ grupo_id: 3, grupo_nombre: 'Feria del Libro' }),
+        turno({ asignacion_id: 2, oferta_fecha: '2026-09-05', grupo_id: null, grupo_nombre: null }),
+      ]),
+    ]);
+
+    await CuentasCobroService.generarParaPeriodo(7, 10);
+
+    const { items } = CuentasCobroModel.crear.mock.calls[0][1];
+    expect(items[0]).toMatchObject({ grupo_id: 3, grupo_nombre: 'Feria del Libro' });
+    expect(items[1]).not.toHaveProperty('grupo_id');
+    expect(items[1]).not.toHaveProperty('grupo_nombre');
+  });
+
+  test('la cuenta complementaria por diferencia también lleva el grupo del turno', async () => {
+    AsignacionesModel.liquidacion.mockResolvedValue([
+      trabajador([turno({ pago_total: 70000, grupo_id: 3, grupo_nombre: 'Feria del Libro' })]),
+    ]);
+    CuentasCobroModel.listarPorPeriodoYTrabajador.mockResolvedValue([
+      { id: 1, secuencia: 1, firmado_trabajador: true, items: [{ asignacion_id: 1, valor: 60000 }] },
+    ]);
+
+    await CuentasCobroService.generarParaPeriodo(7, 10);
+
+    const { items } = CuentasCobroModel.crear.mock.calls[0][1];
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ valor: 10000, grupo_id: 3, grupo_nombre: 'Feria del Libro' });
+  });
+
   test('con un turno sin firmar NO genera la cuenta y avisa al trabajador y a los gestores', async () => {
     AsignacionesModel.liquidacion.mockResolvedValue([
       trabajador([turno(), turno({ asignacion_id: 2, firmado_trabajador: false })]),
@@ -103,6 +150,83 @@ describe('CuentasCobroService.generarParaPeriodo', () => {
     const resultado = await CuentasCobroService.generarParaPeriodo(7, 10);
 
     expect(resultado.generadas).toBe(1);
+  });
+
+  test('turno ya cobrado que se dio por fallido con compensación menor → cuenta de ajuste con valor negativo', async () => {
+    CuentasCobroModel.listarPorPeriodoYTrabajador.mockResolvedValue([
+      { id: 500, secuencia: 1, firmado_trabajador: 1, items: [{ asignacion_id: 1, valor: 60000 }] },
+    ]);
+    AsignacionesModel.liquidacion.mockResolvedValue([
+      trabajador([turno({ estado: 'fallido', pago_total: 40000 })]),
+    ]);
+
+    const resultado = await CuentasCobroService.generarParaPeriodo(7, 10);
+
+    expect(resultado.generadas).toBe(1);
+    expect(CuentasCobroModel.crear).toHaveBeenCalledWith(7, expect.objectContaining({
+      secuencia: 2, valorTotal: -20000,
+      items: [expect.objectContaining({ asignacion_id: 1, valor: -20000, descripcion: 'Turno A (ajuste por turno fallido)' })],
+    }));
+    expect(NotificacionesService.notificar).toHaveBeenCalledWith(expect.objectContaining({
+      mensaje: expect.stringContaining('cuenta de ajuste por -$20.000'),
+    }));
+  });
+
+  test('un turno fallido que se cobra por primera vez lleva la marca en su línea; uno normal no', async () => {
+    AsignacionesModel.liquidacion.mockResolvedValue([
+      trabajador([
+        turno({ estado: 'fallido', pago_total: 60000, oferta_titulo: 'Montaje Gala' }),
+        turno({ asignacion_id: 2, oferta_titulo: 'Desmontaje' }),
+      ]),
+    ]);
+
+    await CuentasCobroService.generarParaPeriodo(7, 10);
+
+    const { items } = CuentasCobroModel.crear.mock.calls[0][1];
+    expect(items[0].descripcion).toBe('Montaje Gala (turno fallido: compensación por fuerza mayor)');
+    expect(items[1].descripcion).toBe('Desmontaje');
+  });
+
+  test('fallido con compensación mayor a lo ya cobrado: la diferencia se rotula como ajuste por turno fallido', async () => {
+    CuentasCobroModel.listarPorPeriodoYTrabajador.mockResolvedValue([
+      { id: 500, secuencia: 1, firmado_trabajador: 1, items: [{ asignacion_id: 1, valor: 40000 }] },
+    ]);
+    AsignacionesModel.liquidacion.mockResolvedValue([trabajador([turno({ estado: 'fallido', pago_total: 60000 })])]);
+
+    await CuentasCobroService.generarParaPeriodo(7, 10);
+
+    expect(CuentasCobroModel.crear.mock.calls[0][1].items[0]).toMatchObject({ valor: 20000, descripcion: 'Turno A (ajuste por turno fallido)' });
+  });
+
+  test('un turno en espera de autorización no bloquea la cuenta ni entra en ella todavía', async () => {
+    AsignacionesModel.liquidacion.mockResolvedValue([
+      trabajador([
+        turno({ asignacion_id: 1 }),
+        turno({ asignacion_id: 2, pago_total: 135000, firmado_trabajador: false, pendiente_autorizacion: true }),
+      ]),
+    ]);
+
+    const resultado = await CuentasCobroService.generarParaPeriodo(7, 10);
+
+    expect(resultado.bloqueados).toBe(0);
+    const { items, valorTotal } = CuentasCobroModel.crear.mock.calls[0][1];
+    expect(items.map((i) => i.asignacion_id)).toEqual([1]);
+    expect(valorTotal).toBe(60000);
+  });
+
+  test('ya ajustado (cuenta de ajuste firmada) no vuelve a generar nada', async () => {
+    CuentasCobroModel.listarPorPeriodoYTrabajador.mockResolvedValue([
+      { id: 500, secuencia: 1, firmado_trabajador: 1, items: [{ asignacion_id: 1, valor: 60000 }] },
+      { id: 501, secuencia: 2, firmado_trabajador: 1, items: [{ asignacion_id: 1, valor: -20000 }] },
+    ]);
+    AsignacionesModel.liquidacion.mockResolvedValue([
+      trabajador([turno({ estado: 'fallido', pago_total: 40000 })]),
+    ]);
+
+    const resultado = await CuentasCobroService.generarParaPeriodo(7, 10);
+
+    expect(resultado.generadas).toBe(0);
+    expect(CuentasCobroModel.crear).not.toHaveBeenCalled();
   });
 
   test('cuenta ya firmada + bono posterior → cuenta complementaria solo por la diferencia', async () => {

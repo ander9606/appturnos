@@ -9,6 +9,7 @@ const promoverTokenDeQuery = require('../../middleware/promoverTokenDeQuery');
 const verificarSuscripcion = require('../../middleware/verificarSuscripcion');
 const { ROLES } = require('../../config/constants');
 const ctrl = require('./empresas.controller');
+const { CODIGOS_PLAN } = require('../suscripciones/planes.model');
 
 const router = express.Router();
 
@@ -50,6 +51,9 @@ router.get(
 // GET /api/empresas/suscripcion — cualquier rol autenticado consulta el estado de su suscripción
 router.get('/suscripcion', verificarToken, ctrl.obtenerSuscripcion);
 
+// GET /api/empresas/opciones — cualquier rol autenticado sabe si su empresa usa grupos de turnos y cómo los llama
+router.get('/opciones', verificarToken, ctrl.opcionesGruposTurno);
+
 // POST /api/empresas/suscripcion/pagar — admin_empresa genera su propio link de pago Wompi.
 // Empresas con integracion_config activa (logiq360) quedan excluidas — 409, ver empresas.service.js.
 router.post(
@@ -58,7 +62,7 @@ router.post(
   verificarRol(SOLO_ADMIN),
   [
     body('meses').optional().isInt({ min: 1, max: 12 }).toInt(),
-    body('plan').optional().isIn(['basico', 'profesional', 'empresarial']),
+    body('plan').optional().isIn(CODIGOS_PLAN),
   ],
   validar,
   ctrl.generarLinkPago
@@ -102,6 +106,9 @@ router.patch(
     body('tipo_contrato').optional().isIn(['laboral', 'prestacion_servicios']).withMessage('tipo_contrato inválido'),
     body('sumar_nocturnas_festivo').optional().isBoolean().withMessage('sumar_nocturnas_festivo debe ser booleano'),
     body('regla_domingo_habitual').optional().isIn(['ley', 'dos_meses']).withMessage('regla_domingo_habitual inválida'),
+    // Grupos de turnos: el propio admin enciende la función y decide cómo la llama (p. ej. "Evento", "Obra").
+    body('usa_grupos_turno').optional().isBoolean().withMessage('usa_grupos_turno debe ser booleano'),
+    body('etiqueta_grupo').optional({ values: 'falsy' }).isString().trim().isLength({ min: 1, max: 40 }).withMessage('etiqueta_grupo inválida (máx. 40 caracteres)'),
   ],
   validar,
   ctrl.actualizarMiEmpresa

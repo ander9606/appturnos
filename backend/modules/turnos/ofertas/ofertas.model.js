@@ -21,8 +21,15 @@ function minutosAHora(minutos) {
  */
 
 const COLUMNAS = `id, empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente,
-  lugar, ciudad, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad,
+  lugar, lugar_alias, ciudad, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad,
   external_ref, alquiler_ref, externo_notas, creado_por, created_at`;
+
+// Grupo al que pertenece la oferta (migración 120): grupo_id es NULL si no tiene, y entonces
+// nombre y estado también salen NULL (y la subconsulta no busca nada). `alias` es el de la
+// tabla en la consulta; sin alias, el nombre de la tabla.
+const grupoInfo = (alias = 'ofertas_turno') => `${alias}.grupo_id,
+  (SELECT g.nombre FROM grupos_turno g WHERE g.id = ${alias}.grupo_id) AS grupo_nombre,
+  (SELECT g.estado FROM grupos_turno g WHERE g.id = ${alias}.grupo_id) AS grupo_estado`;
 
 // Subquery que adjunta los puestos como JSON array a cada oferta. Evita N+1
 // al listar/obtener. mysql2 devuelve esto como string si es resultado de
@@ -113,6 +120,7 @@ const CAMPOS_EDITABLES = [
   'hora_fin_estimada',
   'fin_dia_siguiente',
   'lugar',
+  'lugar_alias',
   'latitud',
   'longitud',
   'ubicacion_libre',
@@ -194,7 +202,7 @@ const OfertasModel = {
     const whereSql = where.join(' AND ');
 
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}, ${PUNTOS_JSON}, ${ASIGNACIONES_RESUMEN}
+      `SELECT ${COLUMNAS}, ${grupoInfo()}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}, ${PUNTOS_JSON}, ${ASIGNACIONES_RESUMEN}
        FROM ofertas_turno
        WHERE ${whereSql}
        ORDER BY fecha DESC, hora_inicio
@@ -284,7 +292,7 @@ const OfertasModel = {
     // gestor ya sabe en qué empresa está), acá el nombre es indispensable para distinguir
     // de un vistazo de qué empresa es cada oferta.
     const [filas] = await pool.query(
-      `SELECT ${colsAliased}, e.nombre AS empresa_nombre, ${PUESTOS_JSON_ALIAS}, ${DESTINATARIOS_JSON_ALIAS}, ${PUNTOS_JSON_ALIAS}
+      `SELECT ${colsAliased}, ${grupoInfo('o')}, e.nombre AS empresa_nombre, ${PUESTOS_JSON_ALIAS}, ${DESTINATARIOS_JSON_ALIAS}, ${PUNTOS_JSON_ALIAS}
        FROM ofertas_turno o
        ${joinSql}
        WHERE ${whereSql}
@@ -421,7 +429,7 @@ const OfertasModel = {
       params.push(antiguedadMinMin);
     }
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}, ${PUNTOS_JSON}, ${ASIGNACIONES_RESUMEN}
+      `SELECT ${COLUMNAS}, ${grupoInfo()}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}, ${PUNTOS_JSON}, ${ASIGNACIONES_RESUMEN}
        FROM ofertas_turno WHERE id = ? AND empresa_id = ?${extra} LIMIT 1`,
       params
     );
@@ -454,6 +462,15 @@ const OfertasModel = {
       [empresaId]
     );
     return fila.total;
+  },
+
+  /** Vincula la oferta a un grupo (migración 120) o la deja sin grupo con `null`. */
+  async asignarGrupo(empresaId, id, grupoId) {
+    const [res] = await pool.query(
+      'UPDATE ofertas_turno SET grupo_id = ? WHERE id = ? AND empresa_id = ?',
+      [grupoId, id, empresaId]
+    );
+    return res.affectedRows;
   },
 
   async cambiarEstado(empresaId, id, estado) {
@@ -548,6 +565,16 @@ const OfertasModel = {
         ]
       );
       const ofertaId = res.insertId;
+
+      // ponytail: UPDATE aparte (y solo si hay grupo) para no tocar el INSERT de quienes no usan
+      // grupos — su SQL queda idéntico — upgrade path: meter grupo_id en el INSERT y regenerar el golden.
+      if (datos.grupo_id != null) {
+        await conn.query('UPDATE ofertas_turno SET grupo_id = ? WHERE id = ? AND empresa_id = ?', [datos.grupo_id, ofertaId, empresaId]);
+      }
+      // Nombre corto del lugar (migración 121), con el mismo criterio: UPDATE aparte y solo si viene.
+      if (datos.lugar_alias) {
+        await conn.query('UPDATE ofertas_turno SET lugar_alias = ? WHERE id = ? AND empresa_id = ?', [datos.lugar_alias, ofertaId, empresaId]);
+      }
 
       // Insertar puestos en la misma transacción.
       if (Array.isArray(datos.puestos)) {
@@ -714,7 +741,8 @@ const OfertasModel = {
   /**
    * Copia una oferta a una nueva fecha, con plazas_cubiertas = 0 en todos los puestos.
    * Si se pasa `nuevaHoraInicio`, la hora de fin se desplaza el mismo delta para
-   * conservar la duración original del turno.
+   * conservar la duración original del turno. La copia queda en el mismo grupo
+   * (`grupo_id`) que el original; el servicio ya verificó que no esté cerrado.
    */
   async duplicar(empresaId, id, nuevaFecha, creadoPor, nuevaHoraInicio) {
     const conn = await pool.getConnection();
@@ -743,13 +771,13 @@ const OfertasModel = {
 
       const [res] = await conn.query(
         `INSERT INTO ofertas_turno
-           (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente,
-            lugar, latitud, longitud, ubicacion_libre, estado, para_quien, creado_por)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierta', ?, ?)`,
+           (empresa_id, grupo_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente,
+            lugar, lugar_alias, latitud, longitud, ubicacion_libre, estado, para_quien, creado_por)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierta', ?, ?)`,
         [
-          empresaId, original.titulo, original.descripcion, original.notas_adicionales, nuevaFecha,
+          empresaId, original.grupo_id, original.titulo, original.descripcion, original.notas_adicionales, nuevaFecha,
           horaInicio, horaFinEstimada, finDiaSiguiente,
-          original.lugar, original.latitud, original.longitud, original.ubicacion_libre,
+          original.lugar, original.lugar_alias ?? null, original.latitud, original.longitud, original.ubicacion_libre,
           original.para_quien, creadoPor,
         ]
       );
@@ -799,10 +827,24 @@ const OfertasModel = {
    * UPDATE, su fila ya no está 'en_progreso' y el WHERE no la toca; el
    * caller no debe notificarle una compensación que nunca se aplicó.
    */
-  async marcarFallida(empresaId, id, compensaciones, motivo, usuarioId) {
+  async marcarFallida(empresaId, id, compensaciones, motivo, usuarioId, propuestas = []) {
     return enTransaccion(async (conn) => {
       const ahora = ahoraColombiaSQL();
       const actualizados = [];
+
+      // `propuestas`: quien ya trabajó y quedaría con MENOS pago no se cambia solo — queda una propuesta que
+      // el trabajador autoriza o no (ver AsignacionesService.autorizarCompensacion). Su turno sigue 'completado'
+      // y su pago intacto mientras tanto; por eso estas filas no van en `actualizados`.
+      for (const { asignacionId, monto } of propuestas) {
+        await conn.query(
+          `UPDATE asignaciones_turno
+           SET compensacion_propuesta = ?, compensacion_propuesta_por = ?, compensacion_propuesta_at = ?,
+               compensacion_pago_anterior = pago_total,
+               compensacion_decision = 'pendiente', compensacion_decision_at = NULL, compensacion_motivo = ?
+           WHERE id = ? AND empresa_id = ? AND oferta_id = ? AND estado = 'completado'`,
+          [monto, usuarioId, ahora, motivo, asignacionId, empresaId, id]
+        );
+      }
 
       for (const { asignacionId, monto } of compensaciones) {
         const [res] = await conn.query(
@@ -810,15 +852,15 @@ const OfertasModel = {
            JOIN oferta_puestos p ON p.id = a.puesto_id
            JOIN ofertas_turno o  ON o.id = a.oferta_id
            SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?),
-               a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real,
-                   LEAST(?, o.fin_ts)
-               ) / 60,
+               a.horas_trabajadas = IF(a.estado = 'completado', a.horas_trabajadas,
+                   TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, o.fin_ts)) / 60),
                a.estado = 'fallido',
+               a.pago_extra = 0,
                a.pago_total = ? + a.bono_monto,
                a.compensacion_motivo = ?,
                a.fallido_por = ?,
                a.fallido_at = ?
-           WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'`,
+           WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado IN ('en_progreso', 'completado')`,
           [ahora, ahora, monto, motivo, usuarioId, ahora, asignacionId, empresaId, id]
         );
         if (res.affectedRows > 0) actualizados.push(asignacionId);

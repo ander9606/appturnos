@@ -4,6 +4,7 @@ const PDFDocument = require('pdfkit');
 const { piePdfMarca } = require('./marcaPdf');
 const { dibujarFirma } = require('./firmaPdf');
 const logger = require('./logger');
+const { lugarCorto } = require('./lugarCorto');
 
 /**
  * `empresas.logo_url` guarda, en la misma columna MEDIUMTEXT, una imagen
@@ -22,6 +23,70 @@ async function obtenerLogoBuffer(logoUrl) {
   }
   return null;
 }
+
+const redondear2 = (n) => Math.round(Number(n) * 100) / 100;
+
+/**
+ * Reparte los ítems de la cuenta por grupo de turnos, con el subtotal de cada uno. Devuelve null si ningún ítem
+ * tiene grupo: entonces la cuenta se dibuja como siempre (lista plana), igual que para las empresas que no usan
+ * grupos. Orden: cada grupo según su primer ítem (los ítems ya vienen por fecha) y «sin grupo» al final. La
+ * clave es el id (el nombre es el de cuando se generó la cuenta). Los subtotales suman exactamente `valor_total`.
+ */
+function agruparItemsPorGrupo(items) {
+  if (!items.some((i) => i.grupo_id)) return null;
+  const secciones = new Map();
+  for (const item of items) {
+    const clave = item.grupo_id ?? null;
+    if (!secciones.has(clave)) secciones.set(clave, { grupo_id: clave, nombre: clave === null ? null : (item.grupo_nombre || 'Grupo'), progreso: null, items: [], subtotal: 0 });
+    const sec = secciones.get(clave);
+    if (item.grupo_progreso && !sec.progreso) sec.progreso = item.grupo_progreso;
+    sec.items.push(item);
+    sec.subtotal = redondear2(sec.subtotal + Number(item.valor));
+  }
+  const lista = [...secciones.values()];
+  return [...lista.filter((s) => s.grupo_id !== null), ...lista.filter((s) => s.grupo_id === null)];
+}
+
+const fechaCorta = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+
+/**
+ * Avance del grupo en esta cuenta cuando el grupo se parte entre varios períodos: «3 de 4 turnos» y una nota de lo
+ * que quedó en otras cuentas. Devuelve null si la cuenta tiene el grupo completo (o es una cuenta anterior a esta
+ * función, sin datos de avance): entonces el PDF queda igual que siempre.
+ */
+function avanceGrupo(progreso) {
+  if (!progreso || !(progreso.total > progreso.en_periodo)) return null;
+  const antes = progreso.total - progreso.en_periodo - progreso.despues;
+  const partes = [];
+  if (antes > 0) partes.push(`${plural(antes, 'turno', 'turnos')} en cuentas anteriores`);
+  if (progreso.despues > 0) {
+    const desde = progreso.proxima ? ` (desde el ${fechaCorta(progreso.proxima)})` : '';
+    partes.push(`${plural(progreso.despues, 'turno queda', 'turnos quedan')} para la siguiente cuenta${desde}`);
+  }
+  return { titulo: `${progreso.en_periodo} de ${progreso.total} turnos`, nota: partes.join(' · ') };
+}
+
+/**
+ * Línea de desglose de un turno ("Base $ 80.000 + bono $ 15.000 - descuento $ 5.000 (motivo)"), o null si el
+ * turno no tiene recargo, bono ni descuento. Ojo: el PDF usa la fuente estándar Helvetica (WinAnsi), que no
+ * trae el signo de resta Unicode "−": salía como una comilla ("). Aquí va el guion normal.
+ */
+function textoDesglose(item) {
+  const extra = Number(item.pago_extra || 0);
+  const bono = Number(item.bono_monto || 0);
+  const descuento = Number(item.descuento_monto || 0);
+  if (!(extra > 0 || bono > 0 || descuento > 0)) return null;
+  const partes = [`Base $ ${Number(item.valor_base).toLocaleString('es-CO')}`];
+  if (extra > 0) partes.push(`recargo $ ${extra.toLocaleString('es-CO')}`);
+  if (bono > 0) partes.push(`bono $ ${bono.toLocaleString('es-CO')}${item.bono_motivo ? ` (${item.bono_motivo})` : ''}`);
+  let texto = partes.join(' + ');
+  if (descuento > 0) texto += ` - descuento $ ${descuento.toLocaleString('es-CO')}${item.descuento_motivo ? ` (${item.descuento_motivo})` : ''}`;
+  return texto;
+}
+
+/** "$ 1.234" o, si es negativo (cuenta de ajuste), "- $ 1.234". */
+const cop = (n) => `${Number(n) < 0 ? '- ' : ''}$ ${Math.abs(Number(n)).toLocaleString('es-CO')}`;
 
 /**
  * Genera el PDF de una cuenta de cobro (agregado de turnos de un período) y
@@ -49,7 +114,10 @@ async function generarCuentaCobroPdf(cuenta, stream) {
   doc.fontSize(16).font('Helvetica-Bold').text('CUENTA DE COBRO', { align: 'center' });
   doc.moveDown(0.3);
   doc.fontSize(10).font('Helvetica').text(`N.º ${cuenta.numero_cuenta}`, { align: 'center' });
-  if (cuenta.secuencia > 1) {
+  if (Number(cuenta.valor_total) < 0) {
+    doc.fontSize(9).font('Helvetica-Oblique')
+      .text('Cuenta de ajuste: descuenta lo ya cobrado de un turno dado por fallido (fuerza mayor) con una compensación menor', { align: 'center' });
+  } else if (cuenta.secuencia > 1) {
     doc.fontSize(9).font('Helvetica-Oblique')
       .text('Cuenta complementaria: diferencia de valores respecto a cuentas anteriores del período', { align: 'center' });
   }
@@ -102,48 +170,75 @@ async function generarCuentaCobroPdf(cuenta, stream) {
   };
   dibujarEncabezado();
 
-  doc.font('Helvetica').fontSize(9);
-  for (const item of cuenta.items) {
+  const dibujarItem = (item) => {
     if (doc.y > 700) {
       doc.addPage();
       dibujarEncabezado();
       doc.font('Helvetica').fontSize(9);
     }
     const y = doc.y;
+    const descripcion = item.descripcion || '—';
+    // Una descripción larga ocupa varias líneas. Se mide antes de dibujar: si no, doc.y queda al final de la última
+    // celda de la fila (una sola línea) y la línea de cargo/lugar de abajo se dibuja ENCIMA del resto del título.
+    const alturaDescripcion = doc.heightOfString(descripcion, { width: 240 });
     doc.text(item.fecha, col.fecha, y, { width: 70 });
-    doc.text(item.descripcion || '—', col.desc, y, { width: 240 });
+    doc.text(descripcion, col.desc, y, { width: 240 });
     doc.text(Number(item.horas).toFixed(1), col.horas, y, { width: 50, align: 'right' });
-    doc.text(`$ ${Number(item.valor).toLocaleString('es-CO')}`, col.valor, y, { width: 100, align: 'right' });
+    doc.text(cop(item.valor), col.valor, y, { width: 100, align: 'right' });
+    doc.y = y + alturaDescripcion;
     doc.moveDown(0.3);
 
-    const meta = [item.cargo, item.lugar].filter(Boolean).join(' · ');
+    // Las cuentas ya generadas guardaron la dirección completa; lugarCorto no toca lo que ya es corto.
+    const meta = [item.cargo, lugarCorto(item.lugar, item.lugar_alias)].filter(Boolean).join(' · ');
     if (meta) {
       doc.font('Helvetica-Oblique').fontSize(8).fillColor('#475569')
         .text(meta, col.desc, doc.y, { width: 240 });
       doc.font('Helvetica').fontSize(9).fillColor('#000000');
     }
 
-    const extra = Number(item.pago_extra || 0);
-    const bono = Number(item.bono_monto || 0);
-    const descuento = Number(item.descuento_monto || 0);
-    if (extra > 0 || bono > 0 || descuento > 0) {
-      const partes = [`Base $ ${Number(item.valor_base).toLocaleString('es-CO')}`];
-      if (extra > 0) partes.push(`recargo $ ${extra.toLocaleString('es-CO')}`);
-      if (bono > 0) partes.push(`bono $ ${bono.toLocaleString('es-CO')}${item.bono_motivo ? ` (${item.bono_motivo})` : ''}`);
-      let texto = partes.join(' + ');
-      if (descuento > 0) texto += ` − descuento $ ${descuento.toLocaleString('es-CO')}${item.descuento_motivo ? ` (${item.descuento_motivo})` : ''}`;
+    const texto = textoDesglose(item);
+    if (texto) {
       doc.font('Helvetica-Oblique').fontSize(8).fillColor('#B45309')
         .text(texto, col.desc, doc.y, { width: 240 });
       doc.font('Helvetica').fontSize(9).fillColor('#000000');
     }
     doc.moveDown(0.4);
+  };
+
+  doc.font('Helvetica').fontSize(9);
+  const secciones = agruparItemsPorGrupo(cuenta.items);
+  if (!secciones) {
+    cuenta.items.forEach(dibujarItem);
+  } else {
+    for (const sec of secciones) {
+      if (doc.y > 680) {
+        doc.addPage();
+        dibujarEncabezado();
+      }
+      const avance = avanceGrupo(sec.progreso);
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#0F172A')
+        .text(`${sec.nombre ?? 'Sin grupo'}${avance ? ` · ${avance.titulo}` : ''}`, col.fecha, doc.y, { width: 484 });
+      if (avance?.nota) {
+        doc.font('Helvetica-Oblique').fontSize(8).fillColor('#475569').text(avance.nota, col.fecha, doc.y, { width: 484 });
+      }
+      doc.moveDown(0.3);
+      doc.font('Helvetica').fontSize(9).fillColor('#000000');
+      sec.items.forEach(dibujarItem);
+      const y = doc.y;
+      doc.font('Helvetica-Bold').fontSize(9);
+      doc.text(`Subtotal ${sec.nombre ?? 'sin grupo'}`, col.desc, y, { width: 300 });
+      doc.text(cop(sec.subtotal), col.valor, y, { width: 100, align: 'right' });
+      doc.x = col.fecha; // el texto del subtotal deja el cursor en la columna de valores
+      doc.moveDown(0.8);
+      doc.font('Helvetica').fontSize(9);
+    }
   }
 
   doc.moveTo(56, doc.y).lineTo(540, doc.y).strokeColor('#94A3B8').stroke();
   doc.moveDown(0.4);
   doc.font('Helvetica-Bold').fontSize(11);
   doc.text(`Total turnos: ${cuenta.total_turnos}    Total horas: ${Number(cuenta.total_horas).toFixed(1)}`);
-  doc.text(`VALOR TOTAL: $ ${Number(cuenta.valor_total).toLocaleString('es-CO')}`);
+  doc.text(`VALOR TOTAL: ${cop(cuenta.valor_total)}`);
   doc.moveDown(1.5);
 
   doc
@@ -185,4 +280,4 @@ async function generarCuentaCobroPdf(cuenta, stream) {
   doc.end();
 }
 
-module.exports = { generarCuentaCobroPdf, obtenerLogoBuffer };
+module.exports = { generarCuentaCobroPdf, obtenerLogoBuffer, agruparItemsPorGrupo, avanceGrupo, textoDesglose };

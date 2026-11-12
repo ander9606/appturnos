@@ -14,8 +14,9 @@ import DateTimePicker, { type DateTimePickerEvent } from '@react-native-communit
 
 import { useTheme }    from '@/lib/theme';
 import { Button }      from '@/components/ui/Button';
-import { LugarInput }   from './LugarInput';
 import { TrabajadorPickerModal } from './TrabajadorPickerModal';
+import { GrupoSelector } from '@/features/grupos/GrupoSelector';
+import { parcheAlElegirGrupo } from '@/features/grupos/grupoUtils';
 import { validateStep1 } from './utils';
 import { bogotaToday, formatShortDate, formatTimeObj, toISODate } from '@/lib/formatters';
 import type { WizardData } from './types';
@@ -68,6 +69,9 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
           returnKeyType="next"
         />
       </View>
+
+      {/* Grupo de turnos (solo si la empresa los usa): al elegirlo, el lugar del turno (paso «Lugar») se prellena con el suyo */}
+      <GrupoSelector grupo={data.grupo} fecha={data.fecha ? toISODate(data.fecha) : undefined} onChange={(g) => onChange(parcheAlElegirGrupo(data, g))} />
 
       <View className="gap-1.5">
         <Text className="text-sm font-semibold text-foreground">Descripción</Text>
@@ -209,56 +213,6 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
           onValueChange={(v) => onChange({ fin_dia_siguiente: v })}
           trackColor={{ true: theme.primary }}
           thumbColor={COLORS.white}
-        />
-      </View>
-
-      <View className="flex-row items-center justify-between bg-muted rounded-2xl px-4 py-3">
-        <View className="flex-1 mr-4">
-          <Text className="text-sm font-semibold text-foreground">Ubicación libre</Text>
-          <Text className="text-xs text-muted-foreground mt-0.5">
-            El trabajador podrá marcar entrada y salida desde cualquier lugar — para turnos sin un punto fijo (rutas, entregas, mandados).
-          </Text>
-        </View>
-        <Switch
-          value={data.ubicacion_libre}
-          onValueChange={(v) => onChange({ ubicacion_libre: v })}
-          trackColor={{ true: theme.primary }}
-          thumbColor={COLORS.white}
-        />
-      </View>
-
-      <View className="gap-1.5">
-        <Text className="text-sm font-semibold text-foreground">
-          Lugar{data.ubicacion_libre ? ' (opcional)' : ''}
-        </Text>
-        <LugarInput
-          value={data.lugar}
-          latitud={data.latitud}
-          longitud={data.longitud}
-          onChange={(lugar, lat, lng) => onChange({ lugar, latitud: lat, longitud: lng })}
-        />
-      </View>
-
-      <View className="gap-1.5">
-        <Text className="text-sm font-semibold text-foreground">Encargado en el punto</Text>
-        <Text className="text-xs text-muted-foreground -mt-1">
-          A quién debe buscar o llamar el trabajador al llegar (opcional)
-        </Text>
-        <TextInput
-          className="bg-muted rounded-2xl px-4 py-3 text-base text-foreground"
-          placeholder="Nombre del encargado"
-          placeholderTextColor={COLORS.placeholder}
-          value={data.encargado_nombre}
-          onChangeText={(t) => onChange({ encargado_nombre: t })}
-          returnKeyType="next"
-        />
-        <TextInput
-          className="bg-muted rounded-2xl px-4 py-3 text-base text-foreground"
-          placeholder="Teléfono del encargado"
-          placeholderTextColor={COLORS.placeholder}
-          value={data.encargado_telefono}
-          onChangeText={(t) => onChange({ encargado_telefono: t })}
-          keyboardType="phone-pad"
         />
       </View>
 

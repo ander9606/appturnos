@@ -120,6 +120,11 @@ jest.mock('@/features/nomina/useNomina', () => ({
   usePeriodos: (...a: unknown[]) => { mockPeriodosArgs = a; return mockPeriodos; },
 }));
 
+let mockEtiqueta = 'Grupo';
+jest.mock('@/features/empresas/useOpcionesGrupos', () => ({
+  useOpcionesGrupos: () => ({ usa: true, etiqueta: mockEtiqueta, etiquetaPlural: `${mockEtiqueta}s`, isLoading: false }),
+}));
+
 // ── Datos ────────────────────────────────────────────────────────────────────
 const q = (data: unknown, extra: Partial<Q> = {}): Q => ({ data, isLoading: false, isError: false, error: null, refetch: jest.fn(), isRefetching: false, ...extra });
 const PUESTO = (o: Record<string, unknown> = {}) => ({ id: 1, cargo_id: 1, cargo_nombre: 'Mesero', tarifa_dia: 80000, plazas: 3, plazas_cubiertas: 1, ...o });
@@ -138,6 +143,7 @@ function montar(rol: string | undefined) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockEtiqueta = 'Grupo';
   mockMis = q([]);
   mockOfertas = q({ data: [] });
   mockOfertasMes = q({ data: [] });
@@ -679,7 +685,7 @@ describe('tarjeta de oferta', () => {
     ir([OFERTA()]);
     expect(screen.getByText('Acme')).toBeTruthy();
     expect(screen.getByText('Evento Gala')).toBeTruthy();
-    expect(screen.getByText('2 libres')).toBeTruthy();
+    expect(screen.getByText('2 plazas libres')).toBeTruthy();
     expect(screen.getByText('Mesero')).toBeTruthy();
     expect(screen.getByText('Lun 15 Jun')).toBeTruthy();
     expect(screen.getByText('8:00 – 17:30')).toBeTruthy();
@@ -691,8 +697,8 @@ describe('tarjeta de oferta', () => {
     ir([OFERTA({ id: 1, titulo: 'A', puestos: [PUESTO({ plazas: 2, plazas_cubiertas: 1 })] }),
         OFERTA({ id: 2, titulo: 'B', puestos: [PUESTO({ plazas: 9, plazas_cubiertas: 0 })] }),
         OFERTA({ id: 3, titulo: 'C', puestos: [PUESTO({ plazas: 2, plazas_cubiertas: 2 })] })]);
-    expect(screen.getByText('1 libre')).toBeTruthy();
-    expect(screen.getByText('9 libres')).toBeTruthy();
+    expect(screen.getByText('1 plaza libre')).toBeTruthy();
+    expect(screen.getByText('9 plazas libres')).toBeTruthy();
     expect(screen.getByText('Sin plazas')).toBeTruthy();
   });
   it('sin hora fin y sin lugar ni empresa', () => {
@@ -725,7 +731,7 @@ describe('tarjeta de oferta', () => {
   });
   it('ya postulado', () => {
     ir([OFERTA({ id: 5 })], [ASIG({ oferta_id: 5, oferta_fecha: '2026-06-01' })]);
-    expect(screen.getByText('Ya postulado')).toBeTruthy();
+    expect(screen.getByText('Ya te postulaste')).toBeTruthy();
     expect(screen.queryByText('Aplicar')).toBeNull();
   });
   it('Aplicar manda oferta y primer puesto libre; ignora el error', async () => {
@@ -740,21 +746,21 @@ describe('tarjeta de oferta', () => {
     expect(screen.queryByText('Aplicar')).toBeNull();
     expect(screen.getByLabelText('Aplicando…')).toBeTruthy();
   });
-  it('oferta pasada: badge Pasado, Evento finalizado y sin acciones ni traslape', () => {
+  it('oferta pasada: badge Finalizado, «Este turno ya terminó» y sin acciones ni traslape', () => {
     ir([OFERTA({ fecha: '2026-06-10', hora_inicio: '10:00:00', hora_fin_estimada: '11:00:00' })],
       [ASIG({ oferta_id: 99, oferta_fecha: '2026-06-10' })]);
     fireEvent.press(screen.getByTestId('weekstrip-pasado'));
-    expect(screen.getByText('Pasado')).toBeTruthy();
-    expect(screen.getByText('Evento finalizado')).toBeTruthy();
+    expect(screen.getByText('Finalizado')).toBeTruthy();
+    expect(screen.getByText('Este turno ya terminó')).toBeTruthy();
     expect(screen.queryByText('Aplicar')).toBeNull();
     expect(screen.queryByText('Ya tienes un turno confirmado en este horario')).toBeNull();
     expect(screen.queryByText(/libre/)).toBeNull();
   });
-  it('oferta pasada ya postulada sigue diciendo Evento finalizado', () => {
+  it('oferta pasada ya postulada sigue diciendo «Este turno ya terminó»', () => {
     ir([OFERTA({ id: 5, fecha: '2026-06-10' })], [ASIG({ oferta_id: 5, oferta_fecha: '2026-06-01' })]);
     fireEvent.press(screen.getByTestId('weekstrip-pasado'));
-    expect(screen.getByText('Evento finalizado')).toBeTruthy();
-    expect(screen.queryByText('Ya postulado')).toBeNull();
+    expect(screen.getByText('Este turno ya terminó')).toBeTruthy();
+    expect(screen.queryByText('Ya te postulaste')).toBeNull();
   });
   it('color de la franja: pasada, traslape y normal', () => {
     const franja = () => screen.UNSAFE_getAllByType(require('react-native').View)
@@ -782,7 +788,7 @@ describe('tarjeta de oferta', () => {
     ir([OFERTA({ id: 1, titulo: 'A', puestos: [PUESTO({ plazas: 3, plazas_cubiertas: 1 })] }),
         OFERTA({ id: 2, titulo: 'B', puestos: [PUESTO({ plazas: 4, plazas_cubiertas: 1 })] })]);
     const cls = (t: string) => String(screen.getByText(t).parent?.props.className ?? '') + String(screen.getByText(t).props.className ?? '');
-    expect(cls('2 libres')).not.toEqual(cls('3 libres'));
+    expect(cls('2 plazas libres')).not.toEqual(cls('3 plazas libres'));
   });
   it('traslape con turno confirmado o en progreso', () => {
     ir([OFERTA({ hora_inicio: '10:00:00', hora_fin_estimada: '11:00:00' })], [ASIG({ oferta_id: 99 })]);
@@ -956,5 +962,50 @@ describe('casos extra (sobrevivientes de mutación)', () => {
     const { getDateRange } = require('../../features/turnos/turnosUtils');
     montar('trabajador_turnos');
     expect(mockWeekStrip.days).toHaveLength(getDateRange(7, 42).length);
+  });
+});
+
+describe('trabajador — acceso a «Mis eventos» (su pantalla de turnos agrupados)', () => {
+  const G = (o: Record<string, unknown> = {}) => ASIG({ empresa_id: 1, grupo_id: 3, grupo_nombre: 'Feria del Libro', grupo_etiqueta: null, ...o });
+
+  it('sin ningún turno con grupo no ofrece el acceso', () => {
+    mockMis = q([ASIG({ id: 1 })]);
+    montar('trabajador_turnos');
+    expect(screen.queryByLabelText('Mis grupos')).toBeNull();
+  });
+
+  it('los gestores no lo ofrecen (tienen la pantalla Grupos)', () => {
+    mockMis = q([G({ id: 1 })]);
+    montar('admin_empresa');
+    expect(screen.queryByLabelText('Mis grupos')).toBeNull();
+  });
+
+  it('con un turno con grupo, el ícono lleva a su pantalla propia; la lista del día no cambia', () => {
+    mockMis = q([G({ id: 1 }), ASIG({ id: 3 })]);
+    montar('trabajador_turnos');
+    fireEvent.press(screen.getByLabelText('Mis grupos'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/mis-grupos');
+    expect(screen.getByTestId('weekstrip')).toBeTruthy();
+    expect(screen.getByTestId('shift-1')).toBeTruthy();
+  });
+
+  it('usa el nombre que la empresa de sus turnos le puso a los grupos', () => {
+    mockMis = q([G({ id: 1, grupo_etiqueta: 'Evento' })]);
+    montar('trabajador_turnos');
+    expect(screen.getByLabelText('Mis eventos')).toBeTruthy();
+    expect(screen.queryByLabelText('Mis grupos')).toBeNull();
+  });
+
+  it('trabajando en dos empresas que los llaman distinto, el acceso los nombra a los dos', () => {
+    mockMis = q([G({ id: 1, grupo_etiqueta: 'Evento' }), G({ id: 2, grupo_id: 8, empresa_id: 2, grupo_etiqueta: 'Obra' })]);
+    montar('trabajador_turnos');
+    expect(screen.getByLabelText('Mis eventos y obras')).toBeTruthy();
+  });
+
+  it('también está disponible en la vista de mes', () => {
+    mockMis = q([G({ id: 1 })]);
+    montar('trabajador_turnos');
+    fireEvent.press(screen.getByLabelText('Ver mes'));
+    expect(screen.getByLabelText('Mis grupos')).toBeTruthy();
   });
 });

@@ -41,6 +41,14 @@ function construirGeofenceInfo(row) {
   };
 }
 
+// Grupo del turno (migración 120) para la etiqueta de las tarjetas: NULL si no tiene. `grupo_etiqueta` es cómo llama
+// la empresa del turno a sus grupos («Evento», «Obra»…; NULL = «Grupo»): un trabajador en dos empresas puede ver dos nombres.
+const SELECT_GRUPO_COLS = `o.grupo_id, (SELECT g.nombre FROM grupos_turno g WHERE g.id = o.grupo_id) AS grupo_nombre,
+              (SELECT e.etiqueta_grupo FROM empresas e WHERE e.id = o.empresa_id AND o.grupo_id IS NOT NULL) AS grupo_etiqueta,`;
+// Descuentos que el trabajador ya aceptó sobre el turno (los mismos que resta la liquidación): con ellos, `pago_total`
+// (bruto) pasa a lo que realmente cobra. Los pendientes o rechazados no cuentan.
+const SELECT_DESCUENTO_COL = `COALESCE((SELECT SUM(d.monto) FROM descuentos_turno d
+                WHERE d.asignacion_id = a.id AND d.estado = 'aceptado'), 0) AS descuento_aceptado,`;
 const SELECT_GEOFENCE_COLS = `carg.tipo_geofence,
               pm.id   AS punto_id,      pm.nombre AS punto_nombre,
               pm.latitud AS punto_latitud, pm.longitud AS punto_longitud,
@@ -132,12 +140,13 @@ module.exports = {
     const [filas] = await pool.query(
       `SELECT a.id, a.estado, a.trabajador_id, t.usuario_id,
               t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
+              a.pago_total, a.bono_monto,
               p.tarifa_dia
        FROM asignaciones_turno a
        JOIN trabajadores t ON t.id = a.trabajador_id
        JOIN oferta_puestos p ON p.id = a.puesto_id
        WHERE a.empresa_id = ? AND a.oferta_id = ?
-         AND a.estado NOT IN ('completado', 'cancelado')`,
+         AND a.estado != 'cancelado'`,
       [empresaId, ofertaId]
     );
     return filas;
@@ -219,6 +228,8 @@ module.exports = {
 
     const [filas] = await pool.query(
       `SELECT a.*, o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
+              ${SELECT_GRUPO_COLS}
+              ${SELECT_DESCUENTO_COL}
               o.fecha AS oferta_fecha, o.hora_inicio,
               t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
               carg.codigo AS cargo_codigo, carg.nombre AS cargo_nombre
@@ -248,14 +259,18 @@ module.exports = {
       `SELECT a.id, a.empresa_id, a.oferta_id, a.puesto_id, a.trabajador_id, a.estado,
               a.horas_trabajadas, a.pago_total, a.pago_extra,
               a.bono_monto, a.bono_motivo,
+              a.compensacion_motivo, a.fallido_aceptado_at,
+              a.compensacion_propuesta, a.compensacion_decision, a.compensacion_decision_at,
               a.hora_ingreso_real, a.hora_egreso_real, a.firma_digital,
               a.latitud_ingreso, a.longitud_ingreso,
               a.latitud_egreso, a.longitud_egreso,
               a.device_ingreso, a.sospechoso, a.cancelado_por, a.cancelado_at,
               a.rechazado_por, a.rechazado_at,
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
+              ${SELECT_GRUPO_COLS}
+              ${SELECT_DESCUENTO_COL}
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente,
-              o.lugar, o.latitud, o.longitud, o.ubicacion_libre,
+              o.lugar, o.lugar_alias, o.latitud, o.longitud, o.ubicacion_libre,
               ${SELECT_DETALLE_OFERTA_COLS}
               emp.nombre AS empresa_nombre, emp.tipo_liquidacion AS empresa_tipo_liquidacion,
               p.tarifa_dia, p.cargo_id,
@@ -290,14 +305,18 @@ module.exports = {
       `SELECT a.id, a.empresa_id, a.oferta_id, a.puesto_id, a.trabajador_id, a.estado,
               a.horas_trabajadas, a.pago_total, a.pago_extra,
               a.bono_monto, a.bono_motivo,
+              a.compensacion_motivo, a.fallido_aceptado_at,
+              a.compensacion_propuesta, a.compensacion_decision, a.compensacion_decision_at,
               a.hora_ingreso_real, a.hora_egreso_real, a.firma_digital,
               a.latitud_ingreso, a.longitud_ingreso,
               a.latitud_egreso, a.longitud_egreso,
               a.device_ingreso, a.sospechoso, a.cancelado_por, a.cancelado_at,
               a.rechazado_por, a.rechazado_at,
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
+              ${SELECT_GRUPO_COLS}
+              ${SELECT_DESCUENTO_COL}
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente,
-              o.lugar, o.latitud, o.longitud, o.ubicacion_libre,
+              o.lugar, o.lugar_alias, o.latitud, o.longitud, o.ubicacion_libre,
               ${SELECT_DETALLE_OFERTA_COLS}
               emp.nombre AS empresa_nombre, emp.tipo_liquidacion AS empresa_tipo_liquidacion,
               p.tarifa_dia, p.cargo_id,
@@ -331,10 +350,12 @@ module.exports = {
     const [filas] = await pool.query(
       `SELECT a.*,
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
+              ${SELECT_GRUPO_COLS}
+              ${SELECT_DESCUENTO_COL}
               o.notas_adicionales AS oferta_notas_adicionales,
               o.externo_notas AS oferta_externo_notas,
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente,
-              o.lugar, o.latitud, o.longitud, o.ubicacion_libre,
+              o.lugar, o.lugar_alias, o.latitud, o.longitud, o.ubicacion_libre,
               o.encargado_nombre, o.encargado_telefono,
               o.external_ref AS oferta_external_ref,
               emp.nombre AS empresa_nombre, emp.tipo_liquidacion AS empresa_tipo_liquidacion,

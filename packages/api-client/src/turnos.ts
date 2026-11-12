@@ -32,6 +32,13 @@ export const ESTADOS_ASIGNACION = [
   'fallido',
 ] as const satisfies EstadoAsignacion[];
 
+/**
+ * Compensación mínima de un turno fallido (fuerza mayor): la mitad de la tarifa_dia del puesto,
+ * por trabajador. El backend la exige (backend/config/constants.js → COMPENSACION_FALLIDO_MINIMA):
+ * mantener iguales.
+ */
+export const COMPENSACION_FALLIDO_MINIMA = 0.5;
+
 export type EstadoOferta =
   | 'borrador'
   | 'abierta'
@@ -54,11 +61,18 @@ export interface Asignacion {
   empresa_id: number;
   oferta_id: number;
   trabajador_id: number;
+  /** Grupo del turno (etiqueta de la tarjeta). null o ausente = sin grupo. */
+  grupo_id?: number | null;
+  grupo_nombre?: string | null;
+  /** Cómo llama la empresa de este turno a sus grupos («Evento», «Obra»…); null = «Grupo». Un trabajador en dos empresas ve dos nombres. */
+  grupo_etiqueta?: string | null;
   estado: EstadoAsignacion;
   hora_ingreso_real: string | null;
   hora_egreso_real: string | null;
   horas_trabajadas: number | null;
   pago_total: number | null;
+  /** Descuentos que el trabajador ya aceptó sobre este turno (MySQL lo manda como texto). Lo que cobra es `pago_total` menos esto. */
+  descuento_aceptado?: number | string | null;
   /** Bono extra (ej. propina) que el gestor asignó a este turno — ya sumado dentro de `pago_total`. */
   bono_monto?: number;
   bono_motivo?: string | null;
@@ -84,6 +98,8 @@ export interface Asignacion {
   /** 1 si el turno termina al día siguiente (cruza la medianoche). */
   fin_dia_siguiente?: number | null;
   lugar: string | null;
+  /** Nombre corto del lugar (tarjetas y cuenta de cobro); la dirección completa sigue en `lugar`. */
+  lugar_alias?: string | null;
   latitud: number | null;
   longitud: number | null;
   encargado_nombre: string | null;
@@ -116,6 +132,16 @@ export interface Asignacion {
   compensacion_motivo?: string | null;
   fallido_por?: number | null;
   fallido_at?: string | null;
+  /** Cuándo el trabajador dio por enterado el turno fallido; null = aún no (el pago no depende de esto). */
+  fallido_aceptado_at?: string | null;
+  /**
+   * Propuesta de compensación sobre un turno que el trabajador YA completó y que bajaría su pago (fuerza mayor).
+   * 'pendiente': espera su autorización y mientras tanto se le paga según su contrato; 'rechazada': no la autorizó;
+   * 'autorizada': el turno ya pasó a 'fallido'. null/ausente: nunca hubo propuesta.
+   */
+  compensacion_propuesta?: number | string | null;
+  compensacion_decision?: 'pendiente' | 'autorizada' | 'rechazada' | null;
+  compensacion_decision_at?: string | null;
   // Joined from calificaciones_turno (LEFT JOIN — null if not yet rated)
   calificacion: number | null;
   calificacion_comentario: string | null;
@@ -212,6 +238,11 @@ export interface Oferta {
   empresa_id: number;
   /** Solo presente en el feed agregado multi-empresa (listarOfertas para trabajador_turnos). */
   empresa_nombre?: string;
+  /** Grupo al que pertenece el turno (etiqueta de la tarjeta). null o ausente = sin grupo. */
+  grupo_id?: number | null;
+  grupo_nombre?: string | null;
+  /** Solo en el detalle de una oferta; un grupo cerrado no recibe turnos nuevos. */
+  grupo_estado?: 'activo' | 'cerrado' | null;
   titulo: string;
   descripcion: string | null;
   /** Detalles adicionales para el trabajador (ej. qué llevar) — el trabajador SÍ los ve, pero nunca salen en el contrato. */
@@ -222,6 +253,8 @@ export interface Oferta {
   /** 1 si el turno termina al día siguiente (cruza la medianoche). */
   fin_dia_siguiente?: number | null;
   lugar: string | null;
+  /** Nombre corto del lugar (tarjetas y cuenta de cobro); la dirección completa sigue en `lugar`. */
+  lugar_alias?: string | null;
   /** Resuelta por geocodificación a partir de latitud/longitud (best-effort, puede tardar unos segundos
    *  tras crear la oferta o quedar null si no se pudo resolver). Alimenta el filtro por ciudad del
    *  directorio de empresas — no se muestra en ninguna pantalla todavía. */
@@ -274,6 +307,8 @@ export interface Oferta {
 export interface CrearOfertaPayload {
   titulo: string;
   descripcion?: string;
+  /** Grupo de turnos al que pertenece. Debe ser de la empresa y estar activo; omitido = sin grupo. */
+  grupo_id?: number;
   /** Detalles adicionales para el trabajador (ej. qué llevar) — el trabajador SÍ los ve, pero nunca salen en el contrato. */
   notas_adicionales?: string;
   fecha: string;           // YYYY-MM-DD
@@ -282,6 +317,8 @@ export interface CrearOfertaPayload {
   /** El turno termina al día siguiente (cruza la medianoche). */
   fin_dia_siguiente?: boolean;
   lugar?: string;
+  /** Nombre corto del lugar; opcional. */
+  lugar_alias?: string;
   latitud?: number;
   longitud?: number;
   /** Sin restricción de ubicación al marcar ingreso/egreso (ej. rutas, entregas). Default: false. */
@@ -319,6 +356,8 @@ export interface ActualizarOfertaPayload {
   hora_fin_estimada?: string;
   fin_dia_siguiente?: boolean;
   lugar?: string;
+  /** Nombre corto del lugar; con '' se quita. */
+  lugar_alias?: string;
   latitud?: number;
   longitud?: number;
   ubicacion_libre?: boolean;
@@ -341,6 +380,10 @@ export interface AsignacionResumen {
   puesto_id: number;
   cargo_codigo: string;
   cargo_nombre: string;
+  /** Lo que ya tiene a pagar este turno (DECIMAL: puede llegar como string). */
+  pago_total?: number | string | null;
+  /** Bono ya otorgado: el pago tras la compensación es compensación + bono. */
+  bono_monto?: number | string | null;
 }
 
 export interface PaginatedResponse<T> {
@@ -363,6 +406,11 @@ export interface LiquidacionTurnoLinea {
   hora_fin_estimada: string | null;
   fin_dia_siguiente?: number | null;
   lugar: string | null;
+  /** Nombre corto del lugar (tarjetas y cuenta de cobro); la dirección completa sigue en `lugar`. */
+  lugar_alias?: string | null;
+  /** Grupo de turnos al que pertenece el turno; null si no tiene. */
+  grupo_id?: number | null;
+  grupo_nombre?: string | null;
   hora_ingreso_real: string | null;
   hora_egreso_real: string | null;
   horas_trabajadas: number;
@@ -377,6 +425,8 @@ export interface LiquidacionTurnoLinea {
   /** Si es `false`, el contrato del turno aún no lo firma el trabajador —
    *  su pago no está incluido en los totales de `LiquidacionTurnosTrabajador`. */
   firmado_trabajador: boolean;
+  /** Propuesta de compensación sin respuesta del trabajador: el turno está en espera y no suma ni resta todavía. */
+  pendiente_autorizacion?: boolean;
 }
 
 export interface LiquidacionTurnosTrabajador {
@@ -395,6 +445,8 @@ export interface LiquidacionTurnosTrabajador {
   pago_total: number;
   /** Turnos completados sin firma del trabajador, excluidos de los totales de pago. */
   turnos_pendientes_firma: number;
+  /** Turnos en espera de que el trabajador autorice una compensación: no suman ni restan en los totales. */
+  turnos_pendientes_autorizacion?: number;
   turnos: LiquidacionTurnoLinea[];
 }
 
@@ -442,6 +494,14 @@ export const turnosApi = {
   /** Crea una oferta nueva con sus puestos en una sola transacción. */
   crearOferta(payload: CrearOfertaPayload): Promise<Oferta> {
     return api.post<Oferta>('/api/turnos/ofertas', payload);
+  },
+
+  /**
+   * Vincula la oferta a un grupo, la cambia de grupo o la saca de él (`null`). Es solo una etiqueta:
+   * se permite en cualquier estado del turno. 409 si el grupo está cerrado, 404 si no es de la empresa.
+   */
+  vincularOfertaAGrupo(ofertaId: number, grupoId: number | null): Promise<OfertaDetalle> {
+    return api.put<OfertaDetalle>(`/api/turnos/ofertas/${ofertaId}/grupo`, { grupo_id: grupoId });
   },
 
   /**
@@ -600,6 +660,21 @@ export const turnosApi = {
    */
   reconfirmarAsignacion(id: number, acepta: boolean): Promise<Asignacion> {
     return api.post<Asignacion>(`/api/turnos/asignaciones/${id}/reconfirmar`, { acepta });
+  },
+
+  /** El trabajador AUTORIZA bajarle el pago de un turno ya trabajado (propuesta de compensación por fuerza mayor). */
+  autorizarCompensacion(id: number): Promise<Asignacion> {
+    return api.post<Asignacion>(`/api/turnos/asignaciones/${id}/autorizar-compensacion`);
+  },
+
+  /** El trabajador NO la autoriza: su turno sigue completado y se le paga según su contrato. */
+  rechazarCompensacion(id: number): Promise<Asignacion> {
+    return api.post<Asignacion>(`/api/turnos/asignaciones/${id}/rechazar-compensacion`);
+  },
+
+  /** El trabajador da por enterado su turno fallido (fuerza mayor) y la compensación. Idempotente. */
+  aceptarFallido(id: number): Promise<Asignacion> {
+    return api.post<Asignacion>(`/api/turnos/asignaciones/${id}/aceptar-fallido`);
   },
 
   /**

@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Excel Caótico</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Calibri, sans-serif;
+      background: #F0F0F0;
+      width: 1200px;
+      height: 800px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Excel ribbon */
+    .ribbon {
+      background: #2B579A;
+      height: 80px;
+      padding: 10px 20px;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .ribbon-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    /* Sheet tabs */
+    .sheet-tabs {
+      background: #E7E6E6;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 0 10px;
+      border-top: 1px solid #D4D4D4;
+    }
+
+    .sheet-tab {
+      background: white;
+      padding: 6px 16px;
+      font-size: 11px;
+      border: 1px solid #D4D4D4;
+      border-bottom: none;
+      border-radius: 3px 3px 0 0;
+    }
+
+    .sheet-tab.active {
+      background: white;
+      font-weight: 600;
+    }
+
+    /* Excel grid */
+    .excel-grid {
+      background: white;
+      padding: 20px;
+      overflow: auto;
+      height: calc(100% - 110px);
+    }
+
+    .grid-table {
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+
+    .grid-table th {
+      background: #F2F2F2;
+      border: 1px solid #D4D4D4;
+      padding: 6px 12px;
+      font-weight: 600;
+      text-align: left;
+      color: #333;
+    }
+
+    .grid-table td {
+      border: 1px solid #D4D4D4;
+      padding: 6px 12px;
+      color: #333;
+    }
+
+    /* Error cells */
+    .error {
+      background: #FFC7CE;
+      color: #9C0006;
+      font-weight: 600;
+    }
+
+    /* Formula cells */
+    .formula {
+      background: #FFF2CC;
+      color: #7F6000;
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+    }
+
+    /* Warning cells */
+    .warning {
+      background: #FFEB9C;
+      color: #9C6500;
+    }
+
+    /* Old data highlight */
+    .outdated {
+      background: #E0E0E0;
+      color: #666;
+      font-style: italic;
+    }
+
+    /* Messy notes */
+    .note {
+      position: relative;
+    }
+
+    .note::after {
+      content: '📝';
+      position: absolute;
+      right: 2px;
+      top: 2px;
+      font-size: 8px;
+    }
+
+    /* Error indicators */
+    .error-indicator {
+      position: absolute;
+      top: 140px;
+      left: 300px;
+      background: #D8000C;
+      color: white;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(216, 0, 12, 0.3);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .error-indicator::before {
+      content: '⚠️ ';
+    }
+
+    /* Messy formula bar */
+    .formula-bar {
+      background: white;
+      border: 1px solid #D4D4D4;
+      padding: 8px 12px;
+      margin: 10px 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      color: #333;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+  </style>
+</head>
+<body>
+  <!-- Excel Ribbon -->
+  <div class="ribbon">
+    <div class="ribbon-title">Microsoft Excel</div>
+    <div style="flex: 1;"></div>
+    <div style="font-size: 11px; opacity: 0.8;">equipo_nomina_2026_v3_FINAL_REAL.xlsx</div>
+  </div>
+
+  <!-- Formula bar with messy formula -->
+  <div class="formula-bar">=IF(ISBLANK(C23),"",IF(D23="Activo",VLOOKUP(B23,BaseDatos!$A$2:$Z$500,12,FALSE)*H23+IF(J23>42,K23*1.25,0)+...</div>
+
+  <!-- Excel grid -->
+  <div class="excel-grid">
+    <table class="grid-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Cédula</th>
+          <th>Estado</th>
+          <th>Cargo</th>
+          <th>Fecha Ingreso</th>
+          <th>Salario Base</th>
+          <th>EPS</th>
+          <th>AFP</th>
+          <th>Banco</th>
+          <th>Nro Cuenta</th>
+          <th>Horas Mes</th>
+          <th class="formula">Total Nómina</th>
+          <th>Observaciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>001</td>
+          <td>María González</td>
+          <td>1098765432</td>
+          <td>Activo</td>
+          <td>Operario</td>
+          <td>15/03/2023</td>
+          <td>$1.750.905</td>
+          <td>Sura</td>
+          <td>Porvenir</td>
+          <td>Bancolombia</td>
+          <td class="outdated">???</td>
+          <td>210</td>
+          <td class="formula">=G2*(H2/210)</td>
+          <td class="note warning">Actualizar banco</td>
+        </tr>
+        <tr>
+          <td>002</td>
+          <td>Juan Pérez Martínez</td>
+          <td class="error">#¿NOMBRE?</td>
+          <td>Activo</td>
+          <td>Supervisor</td>
+          <td>01/08/2022</td>
+          <td>$2.100.000</td>
+          <td>Nueva EPS</td>
+          <td>Protección</td>
+          <td>Davivienda</td>
+          <td>1234567890</td>
+          <td>220</td>
+          <td class="formula error">#¡REF!</td>
+          <td class="error">Error en fórmula</td>
+        </tr>
+        <tr>
+          <td>003</td>
+          <td class="outdated">Carlos Rodriguez</td>
+          <td>87654321</td>
+          <td class="warning">Inactivo?</td>
+          <td>Auxiliar</td>
+          <td>10/11/2024</td>
+          <td class="error">texto</td>
+          <td>Sanitas</td>
+          <td class="outdated">Sin AFP</td>
+          <td>BBVA</td>
+          <td class="outdated">Pendiente</td>
+          <td class="formula">=BUSCARV...</td>
+          <td class="formula error">#¡VALOR!</td>
+          <td class="note warning">Verificar datos</td>
+        </tr>
+        <tr>
+          <td>004</td>
+          <td>Ana María López</td>
+          <td>1123456789</td>
+          <td>Activo</td>
+          <td>Operario</td>
+          <td>20/01/2025</td>
+          <td>$1.750.905</td>
+          <td>Compensar</td>
+          <td>Colfondos</td>
+          <td>Banco Popular</td>
+          <td>9876543210</td>
+          <td>210</td>
+          <td class="formula">=SI(D4="Activo",...</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>005</td>
+          <td class="warning">Pedro Gómez</td>
+          <td class="warning">Duplicado?</td>
+          <td>Activo</td>
+          <td>Auxiliar</td>
+          <td class="outdated">??/??/2023</td>
+          <td class="formula">=G4*1.2</td>
+          <td class="outdated">??</td>
+          <td class="outdated">??</td>
+          <td>Bancolombia</td>
+          <td class="error">FALTA</td>
+          <td>195</td>
+          <td class="formula error">#¡DIV/0!</td>
+          <td class="note error">URGENTE revisar</td>
+        </tr>
+        <tr>
+          <td>006</td>
+          <td>Laura Martínez</td>
+          <td>1009876543</td>
+          <td>Activo</td>
+          <td>Supervisor</td>
+          <td>05/06/2023</td>
+          <td>$2.300.000</td>
+          <td>Sura</td>
+          <td>Porvenir</td>
+          <td class="outdated">Cambió de banco</td>
+          <td class="outdated">Desactualizado</td>
+          <td>210</td>
+          <td class="formula warning">=SI(ESERROR...</td>
+          <td class="note warning">Contactar</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Sheet tabs -->
+  <div class="sheet-tabs">
+    <div class="sheet-tab active">Empleados</div>
+    <div class="sheet-tab">Nómina Ene</div>
+    <div class="sheet-tab">Nómina Feb</div>
+    <div class="sheet-tab">Horas Extra</div>
+    <div class="sheet-tab">Liquidaciones</div>
+    <div class="sheet-tab">BaseDatos</div>
+    <div class="sheet-tab">Fórmulas</div>
+    <div class="sheet-tab">Backup_old</div>
+  </div>
+
+  <!-- Error indicator overlay -->
+  <div class="error-indicator">3 errores detectados</div>
+</body>
+</html>

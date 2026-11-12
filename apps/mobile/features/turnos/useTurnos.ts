@@ -3,6 +3,7 @@ import { turnosApi, cargosApi } from '@api-client';
 import type { LiquidacionTurnosTrabajador, OfertaDetalle, PaginatedResponse, Asignacion, CrearOfertaPayload, ActualizarOfertaPayload, CrearPuestoPayload, CrearCargoPayload, ActualizarCargoPayload } from '@api-client';
 import type { CargoFuncion } from '@api-client';
 import { useAuthStore } from '@/features/auth/useAuthStore';
+import { GRUPOS_KEY } from '@/features/grupos/useGrupos';
 import { bogotaToday } from '@/lib/formatters';
 import { getDeviceId } from '@/lib/deviceId';
 
@@ -284,6 +285,32 @@ export function useReconfirmarAsignacion() {
   });
 }
 
+/** El trabajador decide sobre la propuesta de bajarle el pago de un turno que ya trabajó (autoriza o no). */
+export function useDecidirCompensacion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, autoriza }: { id: number; autoriza: boolean }) =>
+      autoriza ? turnosApi.autorizarCompensacion(id) : turnosApi.rechazarCompensacion(id),
+    onSuccess: (_, { id }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(id) });
+      qc.invalidateQueries({ queryKey: ['asignaciones'] });
+    },
+  });
+}
+
+/** El trabajador da por enterado su turno fallido (fuerza mayor) y la compensación. */
+export function useAceptarFallido() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => turnosApi.aceptarFallido(id),
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(id) });
+    },
+  });
+}
+
 /** El trabajador cancela su turno confirmado (penaliza si faltan < 12 h; ver `penalizado` en la respuesta). */
 export function useCancelarPropiaAsignacion() {
   const qc = useQueryClient();
@@ -385,7 +412,26 @@ export function useDuplicarOferta() {
   return useMutation({
     mutationFn: ({ ofertaId, fecha, hora_inicio }: { ofertaId: number; fecha: string; hora_inicio?: string }) =>
       turnosApi.duplicarOferta(ofertaId, fecha, hora_inicio),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+      // La copia conserva el grupo: cambian sus contadores y fechas.
+      qc.invalidateQueries({ queryKey: GRUPOS_KEY });
+    },
+  });
+}
+
+/** Vincular un turno ya creado a un grupo (o quitarlo con `null`). Cambian el turno y los contadores del grupo. */
+export function useVincularGrupo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ofertaId, grupoId }: { ofertaId: number; grupoId: number | null }) =>
+      turnosApi.vincularOfertaAGrupo(ofertaId, grupoId),
+    onSuccess: (_d, { ofertaId }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+      qc.invalidateQueries({ queryKey: ['asignaciones'] });
+      qc.invalidateQueries({ queryKey: GRUPOS_KEY });
+    },
   });
 }
 
@@ -517,6 +563,8 @@ export function useCrearOferta() {
     mutationFn: (payload: CrearOfertaPayload) => turnosApi.crearOferta(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+      // Cambió el total y las fechas del grupo al que se agregó el turno.
+      qc.invalidateQueries({ queryKey: GRUPOS_KEY });
     },
   });
 }

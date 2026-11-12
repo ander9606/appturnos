@@ -1,0 +1,19 @@
+{
+  "name": "reel-zaturno",
+  "version": "1.0.0",
+  "description": "Sistema de generación de reels para Zaturno",
+  "type": "module",
+  "scripts": {
+    "build": "node build.js",
+    "preview": "node preview.js",
+    "capture-frame": "node capture-frame.js"
+  },
+  "dependencies": {
+    "playwright": "^1.40.0",
+    "elevenlabs": "latest"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

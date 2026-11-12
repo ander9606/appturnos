@@ -12,6 +12,10 @@ export interface PlanOpcion {
   precio_adicional_cop: number | null;
   /** Precio mensual con sus trabajadores activos actuales (incluye adicionales). */
   precio_mensual_cop: number;
+  /** Año completo (12 meses) con la promo: 10 mensualidades. */
+  precio_anual_cop: number;
+  /** Si sube a este plan en plena vigencia: solo paga la diferencia (el vencimiento no cambia). null = plan completo. */
+  precio_cambio_cop: number | null;
   /** false si el tope del plan es menor que sus trabajadores activos. */
   disponible: boolean;
 }
@@ -21,6 +25,8 @@ export interface Suscripcion {
   plan: PlanEmpresa;
   vigente_hasta: string | null;
   dias_restantes: number | null;
+  /** Días que sigue operando la empresa después de vencida (luego se bloquea la gestión). */
+  dias_gracia: number;
   origen: 'logiq360' | 'directo';
   logiq360_conectado: boolean;
   /** Canceló la renovación — sigue con acceso hasta vigente_hasta (ya pagado), pero no se le cobra ni avisa de nuevo. */
@@ -70,7 +76,18 @@ export interface Empresa extends EmpresaDirectorio {
   /** false = no se suman recargos nocturnos/festivos (solo se acumulan horas y se avisa al pasar 42 h). */
   sumar_nocturnas_festivo: boolean;
   regla_domingo_habitual: 'ley' | 'dos_meses';
+  /** Grupos de turnos encendidos para la empresa (0/1: así sale de la base). Los enciende su admin_empresa. */
+  usa_grupos_turno?: 0 | 1;
+  /** Cómo llama la empresa a un grupo ("Evento", "Obra"…). null = "Grupo". */
+  etiqueta_grupo?: string | null;
   created_at: string;
+}
+
+/** Lo que cualquier rol necesita saber de los grupos de turnos de su empresa. */
+export interface OpcionesGrupos {
+  usa_grupos_turno: boolean;
+  /** null = usar el nombre por defecto ("Grupo"). */
+  etiqueta_grupo: string | null;
 }
 
 export interface ActualizarMiEmpresaPayload {
@@ -88,6 +105,9 @@ export interface ActualizarMiEmpresaPayload {
   tipo_contrato?: TipoContrato;
   sumar_nocturnas_festivo?: boolean;
   regla_domingo_habitual?: 'ley' | 'dos_meses';
+  usa_grupos_turno?: boolean;
+  /** Vacío o null vuelve al nombre por defecto ("Grupo"). Máx. 40 caracteres. */
+  etiqueta_grupo?: string | null;
 }
 
 export interface DirectorioResponse {
@@ -120,12 +140,17 @@ export const empresasApi = {
     return api.get('/api/empresas/suscripcion');
   },
 
+  /** Opciones de grupos de turnos de la empresa activa — la lee cualquier rol autenticado. */
+  obtenerOpcionesGrupos(): Promise<OpcionesGrupos> {
+    return api.get<OpcionesGrupos>('/api/empresas/opciones');
+  },
+
   /**
    * Autoservicio: admin_empresa genera su propio link de pago Wompi.
    * Sin `plan` renueva el actual; con `plan` amplía (o reduce) — el backend
    * rechaza (422) un plan cuyo tope no admite sus trabajadores activos.
    */
-  generarLinkPago(payload: { meses?: number; plan?: PlanEmpresa } = {}): Promise<{ url: string; referencia: string; plan: PlanEmpresa; monto_cop: number; expira_at: string }> {
+  generarLinkPago(payload: { meses?: number; plan?: PlanEmpresa } = {}): Promise<{ url: string; referencia: string; plan: PlanEmpresa; monto_cop: number; prorrateado: boolean; expira_at: string }> {
     return api.post('/api/empresas/suscripcion/pagar', payload);
   },
 

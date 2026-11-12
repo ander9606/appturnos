@@ -9,6 +9,7 @@ import {
   formatDuration,
   getInitials,
   shortName,
+  formatCOP,
 } from '../formatters';
 
 describe('formatDate', () => {
@@ -81,5 +82,16 @@ describe('getInitials', () => {
 describe('shortName', () => {
   it('abrevia el apellido con punto', () => {
     expect(shortName('María', 'García López')).toBe('María G.');
+  });
+});
+
+describe('formatCOP', () => {
+  it('formatea pesos con separador de miles', () => {
+    expect(formatCOP(1234567)).toBe('$1.234.567');
+    expect(formatCOP(0)).toBe('$0');
+  });
+
+  it('un negativo (cuenta de ajuste) lleva el signo delante del $', () => {
+    expect(formatCOP(-20000)).toBe('-$20.000');
   });
 });

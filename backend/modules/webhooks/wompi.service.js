@@ -3,7 +3,7 @@
 const crypto = require('crypto');
 const WompiModel = require('./wompi.model');
 const logger   = require('../../utils/logger');
-const { PlanesModel, precioPlanCop, planParaTrabajadores } = require('../suscripciones/planes.model');
+const { PlanesModel, montoSuscripcionCop, prorrateoCambioPlanCop, planParaTrabajadores, CODIGOS_PLAN } = require('../suscripciones/planes.model');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
 const { enviarEmail } = require('../../utils/mailer');
 const { plantillaCorreo, esc } = require('../../utils/plantillaCorreo');
@@ -34,14 +34,25 @@ function verificarFirma(payload) {
 }
 
 function parsearReferencia(ref) {
-  const m = /^AT-(\d+)-(basico|profesional|empresarial)-(\d+)$/.exec(ref || '');
+  const m = new RegExp(`^AT-(\\d+)-(${CODIGOS_PLAN.join('|')})-(\\d+)$`).exec(ref || '');
   if (!m) return null;
   return { empresaId: Number(m[1]), plan: m[2], meses: Number(m[3]) };
 }
 
 /** Activa la suscripción y marca el evento como procesado. Lanza si el UPDATE falla. */
 async function activarSuscripcion(eventoId, { empresaId, plan, meses }, montoCop) {
-  await WompiModel.activarSuscripcion(empresaId, plan, meses);
+  let valorMes = Math.round(montoCop / meses), modalidad = meses;
+  if (meses === 0) {
+    // Cambio de plan a mitad de vigencia: lo pagado es solo la diferencia, así que el valor
+    // mensual nuevo es el del plan nuevo en la modalidad que ya tenía la empresa.
+    // ponytail: usa los trabajadores activos de hoy, no los de cuando se cotizó — upgrade path: guardar el valor en el evento.
+    const { activos, modalidad_meses } = await WompiModel.uso(empresaId);
+    const nuevo = (await PlanesModel.listar()).find((p) => p.codigo === plan);
+    modalidad = modalidad_meses || 1;
+    valorMes = Math.round(montoSuscripcionCop(nuevo, Number(activos), modalidad) / modalidad);
+    modalidad = null;
+  }
+  await WompiModel.activarSuscripcion(empresaId, plan, meses, valorMes, modalidad);
   await WompiModel.marcarProcesado(eventoId);
   logger.info(`Wompi: empresa ${empresaId} +${meses}m -> ${plan}`);
   await enviarFactura(eventoId, { empresaId, plan, meses }, montoCop);
@@ -49,10 +60,8 @@ async function activarSuscripcion(eventoId, { empresaId, plan, meses }, montoCop
 }
 
 /**
- * Envía la cuenta de cobro (PDF) al correo de la empresa. Best-effort: si falla
- * (SMTP caído, sin correo) se loguea y la suscripción ya quedó activa — también
- * se puede volver a descargar después desde el panel super_admin (admin.service.js
- * → generarCuentaCobroWompi).
+ * Envía la cuenta de cobro pagada (PDF) al correo de la empresa. Best-effort: si falla
+ * (SMTP caído, sin correo) se loguea y la suscripción ya quedó activa.
  * ponytail: número = id del evento, con huecos — upgrade path: tabla `facturas` con consecutivo propio.
  */
 async function enviarFactura(eventoId, { empresaId, plan, meses }, montoCop) {
@@ -61,7 +70,9 @@ async function enviarFactura(eventoId, { empresaId, plan, meses }, montoCop) {
     if (!emp?.email) return logger.warn(`Wompi: empresa ${empresaId} sin correo — factura no enviada`);
 
     const numero = `ZT-${String(eventoId).padStart(6, '0')}`;
-    const concepto = `Suscripción Zaturno plan ${plan} — ${meses} mes${meses !== 1 ? 'es' : ''}`;
+    const concepto = meses === 0
+      ? `Cambio a plan ${plan} — diferencia por el resto de la vigencia`
+      : `Suscripción Zaturno plan ${plan} — ${meses} mes${meses !== 1 ? 'es' : ''}`;
     const pdf = await generarFacturaPdf({
       numero,
       fecha: new Date().toLocaleDateString('es-CO', { timeZone: 'America/Bogota' }),
@@ -79,7 +90,7 @@ async function enviarFactura(eventoId, { empresaId, plan, meses }, montoCop) {
       subject: `Cuenta de cobro ${numero} — Zaturno`,
       html: plantillaCorreo({
         titulo: '¡Gracias por tu pago!',
-        cuerpo: `<p style="margin:0">Adjuntamos la cuenta de cobro de: <strong>${esc(concepto)}</strong>.</p>`,
+        cuerpo: `<p style="margin:0">Adjuntamos la cuenta de cobro (pagada) de: <strong>${esc(concepto)}</strong>.</p>`,
       }),
       attachments: [{ filename: `${numero}.pdf`, content: pdf }],
     });
@@ -128,6 +139,27 @@ function montoDeEvento(ev) {
 
 const WompiService = {
   /**
+   * Cuánto paga la empresa por subir a cada plan mayor al actual durante su vigencia (solo la
+   * diferencia, ver prorrateoCambioPlanCop). {codigo: monto}; sin entrada = no aplica y se
+   * cobra el plan completo (sin vigencia, sin pagos Wompi previos o plan que no es mayor).
+   */
+  async cotizarCambiosPlan(empresaId, planes, activos) {
+    const { plan_actual, dias_restantes, valor_mes_cop, modalidad_meses } = await WompiModel.uso(empresaId);
+    const actual = planes.find((p) => p.codigo === plan_actual);
+    const cotizaciones = {};
+    if (!actual || !(dias_restantes > 0) || !valor_mes_cop || !modalidad_meses) return cotizaciones;
+    for (const p of planes.filter((x) => x.orden > actual.orden)) {
+      const monto = prorrateoCambioPlanCop({
+        valorMesActual: valor_mes_cop,
+        valorMesNuevo: montoSuscripcionCop(p, activos, modalidad_meses) / modalidad_meses,
+        diasRestantes: dias_restantes,
+      });
+      if (monto > 0) cotizaciones[p.codigo] = monto;
+    }
+    return cotizaciones;
+  },
+
+  /**
    * Procesa un evento entrante de Wompi.
    * 1. Verifica firma
    * 2. Persiste el evento (idempotente via UNIQUE transaction_id)
@@ -150,16 +182,22 @@ const WompiService = {
     const parsed = esActualizacion ? parsearReferencia(tx.reference) : null;
 
     // Persistir primero — si ya existe, ignorar (idempotencia)
-    const { nuevo, id: eventoId } = await WompiModel.insertarEvento({
+    const datosEvento = {
       transactionId,
       referencia: tx.reference ?? null,
       empresaId: parsed?.empresaId ?? null,
       plan: parsed?.plan ?? null,
       meses: parsed?.meses ?? null,
       payload,
-    });
+    };
+    let { nuevo, id: eventoId } = await WompiModel.insertarEvento(datosEvento);
 
-    if (!nuevo) return { ok: true, razon: 'duplicado' };
+    // La misma transacción puede avisar dos veces: primero en revisión (PENDING, queda 'ignorado')
+    // y luego aprobada. Ese segundo aviso no es un duplicado: reabre el evento y se procesa.
+    if (!nuevo) {
+      eventoId = await WompiModel.reabrirIgnorado(datosEvento);
+      if (!eventoId) return { ok: true, razon: 'duplicado' };
+    }
 
     if (esActualizacion && tx.status === 'APPROVED' && parsed) {
       try {
@@ -234,9 +272,11 @@ const WompiService = {
       ? planes.find((p) => p.codigo === plan)
       : (actual && actual.orden >= minimo.orden ? actual : minimo);
     const planCobro   = elegido.codigo;
-    const montoCop    = precioPlanCop(elegido, n) * meses;
+    const cambio      = plan ? (await WompiService.cotizarCambiosPlan(empresaId, planes, n))[planCobro] : undefined;
+    const mesesCobro  = cambio ? 0 : meses;
+    const montoCop    = cambio ?? montoSuscripcionCop(elegido, n, meses);
     const amountCents = montoCop * 100;
-    const reference   = `AT-${empresaId}-${planCobro}-${meses}`;
+    const reference   = `AT-${empresaId}-${planCobro}-${mesesCobro}`;
     const expiresAt   = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 19) + '.000Z';
     const redirectUrl = process.env.WOMPI_REDIRECT_URL || 'https://zaturno.app';
 
@@ -245,7 +285,7 @@ const WompiService = {
       headers: { 'Authorization': `Bearer ${privateKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: `Zaturno — Plan ${planCobro.charAt(0).toUpperCase() + planCobro.slice(1)}`,
-        description: `Suscripcion ${meses} mes(es) para ${nombreEmpresa}`,
+        description: cambio ? `Cambio de plan (diferencia) para ${nombreEmpresa}` : `Suscripcion ${meses} mes(es) para ${nombreEmpresa}`,
         single_use: true,
         collect_shipping: false,
         amount_in_cents: amountCents,
@@ -264,7 +304,7 @@ const WompiService = {
 
     // La API de creación no devuelve la URL pública — se construye a partir del id.
     const url = `https://checkout.wompi.co/l/${json.data.id}`;
-    return { url, referencia: reference, plan: planCobro, monto_cop: montoCop, expira_at: expiresAt };
+    return { url, referencia: reference, plan: planCobro, monto_cop: montoCop, prorrateado: Boolean(cambio), expira_at: expiresAt };
   },
 };
 

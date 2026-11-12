@@ -75,7 +75,7 @@ describe('WompiService.procesarEvento', () => {
     expect(q[1][0]).toContain('UPDATE empresas SET plan = ?');
     expect(q[1][0]).toContain("suscripcion_origen = 'wompi'");
     expect(q[1][0]).toContain('WHERE id = ? AND activo = 1');
-    expect(q[1][1]).toEqual(['profesional', 3, 7]);
+    expect(q[1][1]).toEqual(['profesional', 3, 169333, 3, 7]); // valor/mes y modalidad guardados para el prorrateo
     expect(q[2][0]).toContain("SET estado = 'procesado', procesado_at = NOW(), intentos = intentos + 1");
     expect(q[2][1]).toEqual([42]);
     expect(q[3][0]).toContain('FROM empresas e LEFT JOIN usuarios u');
@@ -93,10 +93,30 @@ describe('WompiService.procesarEvento', () => {
   });
 
   test('duplicado: no vuelve a activar nada', async () => {
-    simularDb([[/INSERT IGNORE INTO wompi_eventos/, [{ affectedRows: 0, insertId: 0 }]]]);
+    simularDb([
+      [/INSERT IGNORE INTO wompi_eventos/, [{ affectedRows: 0, insertId: 0 }]],
+      [/WHERE transaction_id = \? AND estado = 'ignorado'/, [{ affectedRows: 0 }]], // ya procesado: nada que reabrir
+    ]);
     const r = await WompiService.procesarEvento(evento());
     expect(r).toEqual({ ok: true, razon: 'duplicado' });
-    expect(pool.query).toHaveBeenCalledTimes(1);
+    expect(sqls().some(([s]) => s.includes('UPDATE empresas'))).toBe(false);
+  });
+
+  test('en revisión y luego aprobado: el segundo aviso reabre el evento ignorado y activa la suscripción', async () => {
+    simularDb([[/INSERT IGNORE INTO wompi_eventos/, [{ affectedRows: 1, insertId: 50 }]]]);
+    const r1 = await WompiService.procesarEvento(evento({ status: 'PENDING', id: 'tx-9' }));
+    expect(r1).toEqual({ ok: true, razon: 'ignorado' });
+
+    jest.clearAllMocks();
+    simularDb([
+      [/INSERT IGNORE INTO wompi_eventos/, [{ affectedRows: 0, insertId: 0 }]],
+      [/WHERE transaction_id = \? AND estado = 'ignorado'/, [{ affectedRows: 1 }]],
+      [/SELECT id FROM wompi_eventos WHERE transaction_id/, [[{ id: 50 }]]],
+    ]);
+    const r2 = await WompiService.procesarEvento(evento({ status: 'APPROVED', id: 'tx-9' }));
+    expect(r2).toMatchObject({ ok: true, empresaId: 7, plan: 'profesional', meses: 3 });
+    expect(sqls().some(([s]) => s.includes('UPDATE empresas'))).toBe(true);
+    expect(sqls().some(([s, params]) => s.includes("SET estado = 'procesado'") && params[0] === 50)).toBe(true);
   });
 
   test('si falla el UPDATE de empresas: marca el evento en error (el worker reintenta) y devuelve error_db', async () => {
@@ -167,7 +187,7 @@ describe('WompiService.reintentarEvento / procesarPendientes', () => {
       [/FROM empresas e\s+LEFT JOIN usuarios/, [[{}]]],
     ]);
     await expect(WompiService.reintentarEvento(9)).resolves.toEqual({ ok: true, empresaId: 7, plan: 'basico', meses: 1 });
-    expect(sqls()[1][1]).toEqual(['basico', 1, 7]);
+    expect(sqls()[1][1]).toEqual(['basico', 1, 129000, 1, 7]);
   });
 
   test('procesarPendientes: lee eventos en error con <3 intentos; uno falla y otro pasa', async () => {

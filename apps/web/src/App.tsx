@@ -17,6 +17,8 @@ import { EquipoPage } from '@/modules/equipo/pages/EquipoPage';
 import { TrabajadorDetailPage } from '@/modules/equipo/pages/TrabajadorDetailPage';
 import { TurnosPage } from '@/modules/turnos/pages/TurnosPage';
 import { OfertaDetailPage } from '@/modules/turnos/pages/OfertaDetailPage';
+import { GruposPage } from '@/modules/grupos/pages/GruposPage';
+import { GrupoDetailPage } from '@/modules/grupos/pages/GrupoDetailPage';
 import { ConfiguracionPage } from '@/modules/configuracion/pages/ConfiguracionPage';
 import { IntegracionPage } from '@/modules/integracion/pages/IntegracionPage';
 import { ReportesPage } from '@/modules/reportes/pages/ReportesPage';
@@ -67,6 +69,8 @@ export default function App() {
               <Route path="reportes" element={<ReportesPage />} />
             </Route>
             <Route element={<RoleRoute roles={['admin_empresa', 'jefe_turnos']} />}>
+              <Route path="grupos" element={<GruposPage />} />
+              <Route path="grupos/:id" element={<GrupoDetailPage />} />
               <Route path="configuracion" element={<ConfiguracionPage />} />
             </Route>
             <Route element={<RoleRoute roles={['admin_empresa']} />}>

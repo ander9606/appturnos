@@ -43,6 +43,7 @@ export function ErrorState({ error, onRetry }: Props) {
       <p className="text-base font-bold text-foreground">{title}</p>
       <p className="max-w-sm text-sm text-muted-foreground">{body}</p>
       <button
+        type="button"
         onClick={onRetry}
         className="mt-2 rounded-xl border border-primary-300 bg-primary-50 px-5 py-2 text-sm font-semibold text-primary-700 hover:bg-primary-100"
       >

@@ -2,18 +2,21 @@ import type { IconName } from '@/components/ui/Icon';
 import { actionSheet } from '@/lib/actionSheet';
 import { showAlert } from '@/lib/alertDialog';
 import { COLORS } from '@/lib/designTokens';
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { KeyboardAvoidingView, Platform } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme }        from '@/lib/theme';
 import { useCrearOferta }  from '@/features/turnos/useTurnos';
+import { useGrupo }        from '@/features/grupos/useGrupos';
+import { aElegido, parcheAlElegirGrupo } from '@/features/grupos/grupoUtils';
 import { StepIndicator }   from '@/features/turnos/crear/StepIndicator';
 import { Step1Basicos }    from '@/features/turnos/crear/Step1Basicos';
+import { StepLugar }       from '@/features/turnos/crear/StepLugar';
 import { Step2Puestos }    from '@/features/turnos/crear/Step2Puestos';
 import { Step3Revisar }    from '@/features/turnos/crear/Step3Revisar';
-import { buildFecha, buildTime } from '@/features/turnos/crear/utils';
+import { buildPayload } from '@/features/turnos/crear/utils';
 import { INITIAL }         from '@/features/turnos/crear/types';
 import { ApiError }        from '@api-client';
 import { useConfirmDiscard } from '@/lib/useConfirmDiscard';
@@ -22,19 +25,31 @@ import { useAuthStore } from '@/features/auth/useAuthStore';
 import { showAnuncioTurno } from '@/lib/anuncioTurno';
 import type { WizardData } from '@/features/turnos/crear/types';
 
-const TITLES = ['Información básica', 'Roles y tarifas', 'Revisar y publicar'];
+const TITLES = ['Información básica', 'Lugar', 'Roles y tarifas', 'Revisar y publicar'];
 
 export default function NuevoTurnoScreen() {
   const router  = useRouter();
   const theme   = useTheme();
   const { usuario } = useAuthStore();
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [data, setData] = useState<WizardData>(INITIAL);
+  // "Agregar turno" desde un grupo llega con ?grupoId=: el grupo (y su lugar) ya vienen elegidos.
+  const { grupoId } = useLocalSearchParams<{ grupoId?: string }>();
+  const grupoPrevio = useGrupo(Number(grupoId));
+  const [base, setBase] = useState<WizardData>(INITIAL);
+  const preseleccionado = useRef(false);
+  useEffect(() => {
+    if (!grupoId || preseleccionado.current || !grupoPrevio.data || grupoPrevio.data.estado !== 'activo') return;
+    preseleccionado.current = true;
+    const desde = { ...INITIAL, ...parcheAlElegirGrupo(INITIAL, aElegido(grupoPrevio.data)) };
+    setBase(desde);
+    setData((prev) => (JSON.stringify(prev) === JSON.stringify(INITIAL) ? desde : prev));
+  }, [grupoId, grupoPrevio.data]);
 
   const crearMutation = useCrearOferta();
 
   const allowNextLeave = useConfirmDiscard(
-    !crearMutation.isSuccess && JSON.stringify(data) !== JSON.stringify(INITIAL)
+    !crearMutation.isSuccess && JSON.stringify(data) !== JSON.stringify(base)
   );
 
   const patch = useCallback((p: Partial<WizardData>) => {
@@ -45,29 +60,7 @@ export default function NuevoTurnoScreen() {
   if (denied) return denied;
 
   const handlePublish = async () => {
-    const payload = {
-      titulo:            data.titulo.trim(),
-      descripcion:       data.descripcion.trim() || undefined,
-      notas_adicionales: data.notas_adicionales.trim() || undefined,
-      fecha:             buildFecha(data),
-      hora_inicio:       buildTime(data.hora_inicio!),
-      hora_fin_estimada: data.hora_fin ? buildTime(data.hora_fin) : undefined,
-      fin_dia_siguiente: data.fin_dia_siguiente || undefined,
-      lugar:             data.lugar.trim() || undefined,
-      latitud:           data.latitud ?? undefined,
-      longitud:          data.longitud ?? undefined,
-      ubicacion_libre:   data.ubicacion_libre,
-      encargado_nombre:   data.encargado_nombre.trim() || undefined,
-      encargado_telefono: data.encargado_telefono.trim() || undefined,
-      para_quien:        data.para_quien,
-      visibilidad:       data.visibilidad,
-      trabajador_ids:    data.visibilidad === 'dirigida' ? data.destinatarios.map((d) => d.id) : undefined,
-      puestos:           data.puestos.map((p) => ({
-        cargo_id:   p.cargo_id,
-        plazas:     p.plazas,
-        tarifa_dia: parseFloat(p.tarifa_dia.replace(/\./g, '').replace(',', '.')) || 0,
-      })),
-    };
+    const payload = buildPayload(data);
 
     try {
       const oferta = await crearMutation.mutateAsync(payload);
@@ -128,12 +121,15 @@ export default function NuevoTurnoScreen() {
             <Step1Basicos data={data} onChange={patch} onNext={() => setStep(2)} />
           )}
           {step === 2 && (
-            <Step2Puestos data={data} onChange={patch} onNext={() => setStep(3)} onBack={() => setStep(1)} />
+            <StepLugar data={data} onChange={patch} onNext={() => setStep(3)} onBack={() => setStep(1)} />
           )}
           {step === 3 && (
+            <Step2Puestos data={data} onChange={patch} onNext={() => setStep(4)} onBack={() => setStep(2)} />
+          )}
+          {step === 4 && (
             <Step3Revisar
               data={data}
-              onBack={() => setStep(2)}
+              onBack={() => setStep(3)}
               onPublish={handlePublish}
               isPublishing={crearMutation.isPending}
               isPublished={crearMutation.isSuccess}

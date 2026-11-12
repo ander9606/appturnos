@@ -19,6 +19,17 @@ export interface Empresa {
   sumar_nocturnas_festivo: boolean;
   /** 'ley' = habitual desde el 3.º domingo del mes; 'dos_meses' = domingos seguidos trabajados durante 2 meses. */
   regla_domingo_habitual: 'ley' | 'dos_meses';
+  /** Grupos de turnos encendidos para la empresa (0/1: así sale de la base). Los enciende su admin_empresa. */
+  usa_grupos_turno?: 0 | 1;
+  /** Cómo llama la empresa a un grupo ("Evento", "Obra"…). null = "Grupo". */
+  etiqueta_grupo?: string | null;
+}
+
+/** Lo que cualquier rol necesita saber de los grupos de turnos de su empresa. */
+export interface OpcionesGrupos {
+  usa_grupos_turno: boolean;
+  /** null = usar el nombre por defecto ("Grupo"). */
+  etiqueta_grupo: string | null;
 }
 
 export type AlcancePunto = 'todos' | 'nomina';
@@ -71,7 +82,7 @@ export interface GestorCreado {
   password_temporal: string;
 }
 
-export type PlanCodigo = 'basico' | 'profesional' | 'empresarial';
+export type PlanCodigo = 'basico' | 'profesional' | 'empresarial' | 'ilimitado';
 
 /** Un plan tal como lo ve el admin_empresa, con el precio que pagaría hoy. */
 export interface PlanOpcion {
@@ -82,6 +93,10 @@ export interface PlanOpcion {
   precio_adicional_cop: number | null;
   /** Precio mensual con sus trabajadores activos actuales (incluye adicionales). */
   precio_mensual_cop: number;
+  /** Año completo (12 meses) con la promo: 10 mensualidades. */
+  precio_anual_cop: number;
+  /** Si sube a este plan en plena vigencia: solo paga la diferencia (el vencimiento no cambia). null = plan completo. */
+  precio_cambio_cop: number | null;
   /** false si el tope del plan es menor que sus trabajadores activos. */
   disponible: boolean;
 }
@@ -91,6 +106,7 @@ export interface Suscripcion {
   plan: PlanCodigo;
   vigente_hasta: string | null;
   dias_restantes: number | null;
+  dias_gracia: number;
   origen: 'directo' | 'logiq360';
   /** Canceló la renovación — sigue con acceso hasta vigente_hasta (ya pagado), pero no se le cobra ni avisa de nuevo. */
   cancelada: boolean;

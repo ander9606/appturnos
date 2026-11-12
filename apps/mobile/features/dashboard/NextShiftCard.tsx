@@ -3,6 +3,7 @@ import React from 'react';
 import { View, Pressable } from 'react-native';
 import type { Asignacion } from '@api-client';
 import { fmtTime } from '@/features/turnos/turnosUtils';
+import { GrupoBadge } from '@/features/grupos/GrupoBadge';
 
 interface NextShiftCardProps {
   turno: Asignacion;
@@ -33,11 +34,12 @@ export function NextShiftCard({ turno, primaryColor, onPress, onIngreso }: NextS
       <Text className="text-foreground text-lg font-bold" numberOfLines={1}>
         {turno.oferta_titulo}
       </Text>
+      <GrupoBadge nombre={turno.grupo_nombre} />
 
       <Text className="text-muted-foreground text-sm">
         {fmtTime(turno.hora_inicio)}
         {turno.hora_fin_estimada ? ` – ${fmtTime(turno.hora_fin_estimada)}` : ''}
-        {turno.lugar ? `  ·  ${turno.lugar}` : ''}
+        {turno.lugar ? `  ·  ${turno.lugar_alias || turno.lugar}` : ''}
       </Text>
 
       {porReconfirmar ? (

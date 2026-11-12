@@ -121,6 +121,17 @@ router.post(
   ctrl.reconfirmar
 );
 
+// POST /api/turnos/asignaciones/:id/aceptar-fallido  (el trabajador da por enterado un turno
+// fallido por fuerza mayor y su compensación; el pago no depende de esto). Sin verificarSuscripcion,
+// mismo criterio que reconfirmar: es el trabajador resolviendo lo suyo.
+router.post('/:id/aceptar-fallido', verificarRol(TRABAJADOR), [idParam], validar, ctrl.aceptarFallido);
+
+// POST /api/turnos/asignaciones/:id/autorizar-compensacion | /rechazar-compensacion  (el trabajador decide sobre
+// la propuesta de bajarle el pago de un turno que ya trabajó, al darlo por fallido por fuerza mayor). Sin
+// verificarSuscripcion, mismo criterio que reconfirmar: es el trabajador resolviendo lo suyo.
+router.post('/:id/autorizar-compensacion', verificarRol(TRABAJADOR), [idParam], validar, ctrl.autorizarCompensacion);
+router.post('/:id/rechazar-compensacion', verificarRol(TRABAJADOR), [idParam], validar, ctrl.rechazarCompensacion);
+
 // PATCH /api/turnos/asignaciones/:id/corregir  (jefe/admin corrige ingreso/egreso manualmente)
 router.patch(
   '/:id/corregir',

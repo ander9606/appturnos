@@ -1,10 +1,13 @@
 import { api } from '@/shared/api/axios';
-import type { Empresa, PuntoMarcaje, PuntoParaTurno, Cargo, Gestor, GestorCreado, Suscripcion, LinkPago, PlanCodigo } from '../types';
+import type { Empresa, OpcionesGrupos, PuntoMarcaje, PuntoParaTurno, Cargo, Gestor, GestorCreado, Suscripcion, LinkPago, PlanCodigo } from '../types';
 
 export const configuracionApi = {
   // Empresa
   getEmpresa: () => api.get<{ data: Empresa }>('/empresas/me').then(r => r.data),
   updateEmpresa: (data: Partial<Empresa>) => api.patch<{ data: Empresa }>('/empresas/me', data).then(r => r.data),
+
+  /** Opciones de grupos de turnos de la empresa activa — la lee cualquier rol autenticado. */
+  getOpcionesGrupos: () => api.get<{ data: OpcionesGrupos }>('/empresas/opciones').then(r => r.data),
 
   // Suscripción
   /** Reclasifica (horas nocturnas/festivo/extra) los días ya registrados del período abierto con la config de recargos actual. */

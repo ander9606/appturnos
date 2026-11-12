@@ -7,8 +7,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMarcarOfertaFallida } from '@/features/turnos/useTurnos';
 import { parseTarifa } from '@/features/turnos/crear/utils';
 import { Button } from '@/components/ui/Button';
+import { confirm } from '@/lib/confirmDialog';
+import { formatCOP } from '@/lib/formatters';
 import type { OfertaDetalle } from '@api-client';
-import { ApiError } from '@api-client';
+import { ApiError, COMPENSACION_FALLIDO_MINIMA } from '@api-client';
 
 // ── Turno fallido (gestores) — fuerza mayor: quien ya marcó ingreso recibe
 // una compensación en vez de perder el turno sin nada. ─────────────────────
@@ -26,7 +28,7 @@ export function TurnoFallidoModal({
   onClose: () => void;
   onDone: () => void;
 }) {
-  const enProgreso = oferta.asignaciones.filter((a) => a.estado === 'en_progreso');
+  const enProgreso = oferta.asignaciones.filter((a) => a.estado === 'en_progreso' || a.estado === 'completado');
   const otros = oferta.asignaciones.filter((a) =>
     a.estado !== 'en_progreso' && a.estado !== 'completado' && a.estado !== 'cancelado'
   );
@@ -46,6 +48,11 @@ export function TurnoFallidoModal({
 
   if (!visible) return null;
 
+  // Piso: la mitad de la tarifa del puesto (el backend lo exige igual).
+  const minimoDe = (a: (typeof enProgreso)[number]) =>
+    Number(oferta.puestos.find((p) => p.id === a.puesto_id)?.tarifa_dia ?? 0) * COMPENSACION_FALLIDO_MINIMA;
+  const nombreDe = (a: (typeof enProgreso)[number]) => `${a.trabajador_nombre} ${a.trabajador_apellido}`;
+
   async function handleConfirmar() {
     if (!motivo.trim()) {
       showAlert('Falta el motivo', 'Escribe por qué este turno es fuerza mayor.', 'warning');
@@ -55,6 +62,42 @@ export function TurnoFallidoModal({
       asignacion_id: a.id,
       monto: parseTarifa(montos[a.id] ?? '0'),
     }));
+
+    const bajos = enProgreso.filter((a, i) => compensaciones[i].monto < minimoDe(a));
+    if (bajos.length > 0) {
+      showAlert(
+        'Compensación muy baja',
+        `El mínimo es la mitad de la tarifa del turno:\n${bajos.map((a) => `• ${nombreDe(a)}: mínimo ${formatCOP(minimoDe(a))}`).join('\n')}`,
+        'warning',
+      );
+      return;
+    }
+
+    // Paso de confirmación: acción definitiva, así que se muestra qué cambia para cada persona.
+    // Quien ya trabajó y quedaría con MENOS pago no se cambia solo: es una propuesta que el trabajador debe autorizar
+    // (mientras tanto se le paga según su contrato). Misma regla que OfertasService.marcarFallida.
+    const bajaElPago = (a: (typeof enProgreso)[number], i: number) =>
+      a.estado === 'completado' && a.pago_total != null
+      && compensaciones[i].monto + (Number(a.bono_monto) || 0) < Number(a.pago_total);
+    const lineas = enProgreso.map((a, i) => {
+      const nuevo = formatCOP(compensaciones[i].monto);
+      if (bajaElPago(a, i)) {
+        return `• ${nombreDe(a)}: propuesta de ${formatCOP(Number(a.pago_total))} a ${nuevo} (necesita su autorización; mientras no responda, ese turno queda en espera y no suma ni resta)`;
+      }
+      return a.estado === 'completado' && a.pago_total != null
+        ? `• ${nombreDe(a)}: de ${formatCOP(Number(a.pago_total))} a ${nuevo}`
+        : `• ${nombreDe(a)}: ${nuevo}`;
+    });
+    const hayPropuestas = enProgreso.some((a, i) => bajaElPago(a, i));
+    const ok = await confirm({
+      title: 'Confirmar turno fallido',
+      message: `Se cancelará "${oferta.titulo}" y esto no se puede deshacer.\n\nCompensación:\n${lineas.join('\n')}\n\n${hayPropuestas ? 'A quien ya trabajó y quedaría con menos pago no se le cambia solo: el trabajador debe autorizarlo. ' : 'Quien ya había terminado su turno pasa de su pago a esa compensación. '}Confirma que la tarea NO se realizó: si se realizó, debe pagarse según el contrato.`,
+      cancelLabel: 'Volver',
+      confirmLabel: 'Sí, dar por fallido',
+      destructive: true,
+    });
+    if (!ok) return;
+
     try {
       await marcarFallidaM.mutateAsync({ ofertaId: oferta.id, motivo: motivo.trim(), compensaciones });
       onDone();
@@ -83,6 +126,11 @@ export function TurnoFallidoModal({
             El turno se cancelará por fuerza mayor. Quienes ya marcaron ingreso recibirán la compensación
             que definas abajo; el resto queda cancelado sin pago, como siempre.
           </Text>
+          <View className="bg-warning-light rounded-xl px-4 py-3">
+            <Text className="text-sm font-medium text-warning">
+              Úsalo solo si la tarea no se realizó. Si la labor sí se realizó, se paga según el contrato: no la des por fallida.
+            </Text>
+          </View>
 
           <View className="gap-1.5">
             <Text className="text-sm font-semibold text-foreground">Motivo</Text>
@@ -114,6 +162,9 @@ export function TurnoFallidoModal({
                     keyboardType="numeric"
                   />
                 </View>
+                <Text className="text-[11px] text-muted-foreground">
+                  Mínimo {formatCOP(minimoDe(a))} (la mitad de la tarifa del turno)
+                </Text>
               </View>
             ))}
           </View>

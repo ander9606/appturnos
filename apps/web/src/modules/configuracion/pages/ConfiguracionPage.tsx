@@ -183,6 +183,8 @@ function FirmaUploader({ firmaB64, uploading, onUpload, onRemove }: { firmaB64: 
   );
 }
 
+const INPUT_CLS = 'w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:bg-muted disabled:text-muted-foreground';
+
 function EmpresaTab() {
   const isAdmin = useAuthStore(s => s.usuario?.rol) === 'admin_empresa';
   const { data, isLoading, isError, error, refetch } = useEmpresa();
@@ -212,15 +214,19 @@ function EmpresaTab() {
   base.tipo_contrato = empresa.tipo_contrato ?? 'laboral';
   base.sumar_nocturnas_festivo = (empresa.sumar_nocturnas_festivo ?? true) ? '1' : '0';
   base.regla_domingo_habitual = empresa.regla_domingo_habitual ?? 'ley';
+  base.usa_grupos_turno = empresa.usa_grupos_turno ? '1' : '0';
+  base.etiqueta_grupo = empresa.etiqueta_grupo ?? '';
   const val = editing ? form : base;
 
   const handleSave = async () => {
     if (!form) return;
-    await update.mutateAsync(form);
+    // Los campos de grupos solo se envían si se tocaron: guardar otros datos nunca pisa con valores
+    // viejos lo que otro admin cambió mientras tanto, y quien no usa grupos guarda lo de siempre.
+    const cambios = { ...form };
+    for (const k of ['usa_grupos_turno', 'etiqueta_grupo']) if (form[k] === base[k]) delete cambios[k];
+    await update.mutateAsync(cambios);
     setForm(null);
   };
-
-  const INPUT_CLS = 'w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:bg-muted disabled:text-muted-foreground';
 
   return (
     <div className="bg-card border border-border rounded-2xl p-6 max-w-2xl">
@@ -283,6 +289,7 @@ function EmpresaTab() {
         </div>
       </div>
       <RecargosSection editing={editing} val={val} setForm={setForm} />
+      <GruposTurnoSection editing={editing} val={val} setForm={setForm} />
       {isAdmin && (
         <FirmaUploader
           firmaB64={empresa.firma_representante_b64}
@@ -415,6 +422,55 @@ function RecargosSection({ editing, val, setForm }: {
           onConfirm={confirmState.onConfirm}
           onCancel={close}
         />
+      )}
+    </div>
+  );
+}
+
+/* ── Grupos de turnos: se guarda con el botón Guardar de los datos de la empresa ── */
+function GruposTurnoSection({ editing, val, setForm }: {
+  editing: boolean;
+  val: Record<string, string>;
+  setForm: Dispatch<SetStateAction<Record<string, string> | null>>;
+}) {
+  const usa = val.usa_grupos_turno === '1';
+  const elegir = (valor: boolean) => editing && setForm(f => ({ ...f!, usa_grupos_turno: valor ? '1' : '0' }));
+
+  return (
+    <div className="mt-6 pt-6 border-t border-border">
+      <h3 className="text-sm font-semibold text-foreground">Grupos de turnos</h3>
+      <p className="text-xs text-muted-foreground mt-0.5 mb-4">
+        Une turnos de distintos días bajo un mismo nombre: una feria, una obra, un proyecto. {editing ? 'Se guarda con el botón Guardar.' : 'Edita los datos para cambiarlo.'}
+      </p>
+
+      <div role="radiogroup" aria-label="Grupos de turnos" className="grid grid-cols-2 gap-3">
+        <button type="button" role="radio" aria-checked={!usa} disabled={!editing} onClick={() => elegir(false)} className={BOTON_RECARGO(!usa)}>
+          <span className={`block text-sm font-semibold ${!usa ? 'text-primary' : 'text-foreground'}`}>No agrupar</span>
+          <span className="block text-xs text-muted-foreground mt-0.5">Los turnos se manejan como hasta ahora.</span>
+        </button>
+        <button type="button" role="radio" aria-checked={usa} disabled={!editing} onClick={() => elegir(true)} className={BOTON_RECARGO(usa)}>
+          <span className={`block text-sm font-semibold ${usa ? 'text-primary' : 'text-foreground'}`}>Agrupar turnos</span>
+          <span className="block text-xs text-muted-foreground mt-0.5">Podrás crear grupos y asociarles turnos de distintos días.</span>
+        </button>
+      </div>
+
+      {usa ? (
+        <div className="mt-4">
+          <label htmlFor="etiqueta_grupo" className="block text-xs font-medium text-muted-foreground uppercase mb-1">¿Cómo los llamas?</label>
+          <input
+            id="etiqueta_grupo"
+            type="text"
+            maxLength={40}
+            disabled={!editing}
+            placeholder="Grupo"
+            value={val.etiqueta_grupo ?? ''}
+            onChange={e => setForm(f => ({ ...f!, etiqueta_grupo: e.target.value }))}
+            className={INPUT_CLS}
+          />
+          <p className="text-xs text-muted-foreground mt-1">Por ejemplo: Evento, Obra o Proyecto. Si lo dejas vacío se llama «Grupo».</p>
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground mt-3">Si ya tenías grupos, se conservan: al volver a activarlos todo sigue ahí.</p>
       )}
     </div>
   );
@@ -946,7 +1002,7 @@ function GestoresTab() {
 }
 
 /* ── Mi plan ── */
-const PLAN_LABEL: Record<string, string> = { basico: 'Básico', profesional: 'Profesional', empresarial: 'Empresarial' };
+const PLAN_LABEL: Record<string, string> = { basico: 'Básico', profesional: 'Profesional', empresarial: 'Empresarial', ilimitado: 'Ilimitado' };
 
 // ponytail: formatea tanto suscripcion_vigente_hasta (DATE) como link.expira_at (datetime ISO
 // generado en el backend) — el fmtDate compartido asume fechas puras (columnas DATE) y rompería
@@ -995,6 +1051,7 @@ function PlanTab() {
   const elegido = planElegido ?? s.plan;
   const opcion = s.planes.find(p => p.codigo === elegido);
   const esCambio = elegido !== s.plan;
+  const soloDiferencia = opcion?.precio_cambio_cop != null;
   const uso = s.max_trabajadores ? Math.min(100, Math.round((s.trabajadores_activos / s.max_trabajadores) * 100)) : null;
   const enTope = s.max_trabajadores != null && s.trabajadores_activos >= s.max_trabajadores;
 
@@ -1117,7 +1174,7 @@ function PlanTab() {
         <div className="bg-card border border-border rounded-2xl p-6">
           <h2 className="text-sm font-semibold text-foreground mb-1">Renovar o ampliar plan</h2>
           <p className="text-xs text-muted-foreground mb-4">
-            Al pagar, el plan elegido se activa de inmediato y tu suscripción se extiende por los meses que pagues.
+            Al pagar, el plan elegido se activa de inmediato y tu suscripción se extiende por el período que pagues.
           </p>
           {link ? (
             <div className="flex flex-col gap-2">
@@ -1147,7 +1204,7 @@ function PlanTab() {
                   <label
                     key={p.codigo}
                     className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-sm transition-colors ${
-                      !p.disponible ? 'opacity-50 cursor-not-allowed border-border'
+                      !p.disponible ? 'cursor-not-allowed border-border bg-muted/50 grayscale opacity-60'
                       : elegido === p.codigo ? 'border-primary-600 bg-primary-50 cursor-pointer'
                       : 'border-border hover:bg-muted/40 cursor-pointer'}`}
                   >
@@ -1162,32 +1219,59 @@ function PlanTab() {
                     />
                     <div className="flex-1">
                       <p className="font-medium text-foreground">
-                        {p.nombre}{p.codigo === s.plan && <span className="text-xs text-muted-foreground font-normal"> · tu plan actual</span>}
+                        {p.nombre}{p.codigo === s.plan && <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-primary-100 text-primary-600 text-[10px] font-semibold align-middle">Tu plan actual</span>}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {p.disponible ? describirPlan(p) : `No admite tus ${s.trabajadores_activos} trabajadores activos`}
                       </p>
                     </div>
-                    <span className="font-semibold text-foreground">{fmtCOP(p.precio_mensual_cop)}<span className="text-xs font-normal text-muted-foreground">/mes</span></span>
+                    <div className="text-right">
+                      <p className="font-semibold text-foreground">{fmtCOP(p.precio_mensual_cop)}<span className="text-xs font-normal text-muted-foreground">/mes</span></p>
+                      <p className="text-xs text-muted-foreground">o {fmtCOP(p.precio_anual_cop)}/año</p>
+                    </div>
                   </label>
                 ))}
               </fieldset>
 
+              {soloDiferencia ? (
+                <p className="text-sm text-foreground bg-primary-50 border border-primary-600/30 rounded-xl px-4 py-3">
+                  Como ya tienes una suscripción vigente, solo pagas la diferencia por lo que te resta.
+                  Tu fecha de vencimiento no cambia.
+                </p>
+              ) : (
+                <>
+              <fieldset className="flex flex-col gap-2">
+                  <legend className="sr-only">Modalidad de pago</legend>
+                  <label className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-sm cursor-pointer transition-colors ${
+                    meses === 1 ? 'border-primary-600 bg-primary-50' : 'border-border hover:bg-muted/40'}`}>
+                    <input type="radio" name="modalidad" checked={meses === 1} onChange={() => setMeses(1)} className="accent-primary-600" />
+                    <span className="flex-1 font-medium text-foreground">Mensual</span>
+                    <span className="font-semibold text-foreground">{opcion ? fmtCOP(opcion.precio_mensual_cop) : '—'}</span>
+                  </label>
+                  <label className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-sm cursor-pointer transition-colors ${
+                    meses === 12 ? 'border-primary-600 bg-primary-50' : 'border-border hover:bg-muted/40'}`}>
+                    <input type="radio" name="modalidad" checked={meses === 12} onChange={() => setMeses(12)} className="accent-primary-600" />
+                    <div className="flex-1">
+                      <p className="font-medium text-foreground">Anual · promoción</p>
+                      <p className="text-xs text-muted-foreground">
+                        12 meses{opcion ? ` — ahorras ${fmtCOP(opcion.precio_mensual_cop * 12 - opcion.precio_anual_cop)}` : ''}
+                      </p>
+                    </div>
+                    <span className="font-semibold text-foreground">{opcion ? fmtCOP(opcion.precio_anual_cop) : '—'}</span>
+                  </label>
+                </fieldset>
+                <p className="text-xs text-muted-foreground">
+                  Si durante la vigencia superas el tope de trabajadores de tu plan, deberás pasar a un plan superior.
+                </p>
+                </>
+              )}
+
               <div className="flex gap-3 items-end">
-                <div>
-                  <label htmlFor="plan-meses" className="block text-xs font-medium text-muted-foreground uppercase mb-1">Meses</label>
-                  <select
-                    id="plan-meses"
-                    value={meses}
-                    onChange={e => setMeses(Number(e.target.value))}
-                    className="border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-                  >
-                    {[1, 3, 6, 12].map(m => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                </div>
                 <div className="flex-1 text-sm">
                   <p className="text-xs text-muted-foreground uppercase mb-1">Total</p>
-                  <p className="font-semibold text-foreground">{opcion ? fmtCOP(opcion.precio_mensual_cop * meses) : '—'}</p>
+                  <p className="font-semibold text-foreground">
+                    {opcion ? fmtCOP(opcion.precio_cambio_cop ?? (meses === 12 ? opcion.precio_anual_cop : opcion.precio_mensual_cop)) : '—'}
+                  </p>
                 </div>
                 <button
                   onClick={handleGenerar}

@@ -19,6 +19,8 @@ export function useActualizarEmpresa() {
       empresasApi.actualizarMiEmpresa(datos),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['mi-empresa'] });
+      // El admin pudo encender/apagar los grupos o cambiar cómo los llama: que se vea de inmediato.
+      qc.invalidateQueries({ queryKey: ['opciones-grupos'] });
       // Cambiar tipo_liquidacion recalcula el período en el backend (cierra el
       // abierto y abre uno nuevo con el ciclo correcto) — sin esto, todos los
       // que ya tenían 'periodos' en caché siguen viendo el período/tipo viejo

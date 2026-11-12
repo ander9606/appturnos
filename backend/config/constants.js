@@ -55,6 +55,12 @@ const MAX_OFERTAS_ACTIVAS_POR_EMPRESA = 500;
 const DIAS_GRACIA_ASIGNACIONES_COLGADAS = 2;
 
 /**
+ * Días que una empresa sigue operando después de vencida su suscripción. Pasado el plazo, las rutas de
+ * gestión con verificarSuscripcion devuelven 402 (el marcaje de los trabajadores nunca se bloquea).
+ */
+const DIAS_GRACIA_SUSCRIPCION = 2;
+
+/**
  * Horas antes de hora_inicio a partir de las cuales ya no se puede cambiar
  * fecha/hora_inicio/hora_fin_estimada/lugar de una oferta (ver
  * OfertasService.actualizar) — deja tiempo real para que el trabajador vea
@@ -63,6 +69,28 @@ const DIAS_GRACIA_ASIGNACIONES_COLGADAS = 2;
  * si ya hay alguien en_progreso/completado en ese turno.
  */
 const HORAS_CORTE_EDICION_OFERTA = 2;
+
+/**
+ * Compensación mínima de un turno fallido (fuerza mayor): la mitad de la tarifa_dia del
+ * puesto, por trabajador. El gestor puede subirla, no bajarla de ahí. Se valida en
+ * OfertasService.marcarFallida; se refleja en api-client (COMPENSACION_FALLIDO_MINIMA) y en
+ * el modal web — mantenerlos iguales.
+ */
+const COMPENSACION_FALLIDO_MINIMA = 0.5;
+
+/**
+ * Interruptor de la cláusula UNDÉCIMA — FUERZA MAYOR del contrato diario. APAGADO por defecto: la cláusula está lista
+ * pero oculta hasta que se revise en lo legal. Con CLAUSULA_FUERZA_MAYOR=1 en el entorno, los contratos que se CREEN
+ * desde entonces la llevan (contratos_diarios.clausula_fuerza_mayor = 1); los creados antes no cambian, estén o no
+ * firmados, y el PDF de uno que ya la lleva sigue mostrándola aunque después se apague (un contrato no se altera).
+ */
+const CLAUSULA_FUERZA_MAYOR_ACTIVA = process.env.CLAUSULA_FUERZA_MAYOR === '1';
+
+/**
+ * Horas que una propuesta de compensación puede quedar sin respuesta del trabajador antes de avisarle al gestor
+ * (una sola vez). Mientras tanto el turno está en espera: no suma ni resta (ver asignaciones.liquidacion.model.js).
+ */
+const HORAS_ALERTA_COMPENSACION_SIN_RESPUESTA = 48;
 
 // Fuente de verdad en TS: packages/api-client/src/turnos.ts → ESTADOS_ASIGNACION
 // Si añades un estado aquí, actualiza también ese array, el ESTADO_CONFIG en
@@ -242,7 +270,11 @@ module.exports = {
   ESTADOS_OFERTA,
   MAX_OFERTAS_ACTIVAS_POR_EMPRESA,
   DIAS_GRACIA_ASIGNACIONES_COLGADAS,
+  DIAS_GRACIA_SUSCRIPCION,
   HORAS_CORTE_EDICION_OFERTA,
+  COMPENSACION_FALLIDO_MINIMA,
+  HORAS_ALERTA_COMPENSACION_SIN_RESPUESTA,
+  CLAUSULA_FUERZA_MAYOR_ACTIVA,
   ESTADOS_ASIGNACION,
   ESTADOS_PERIODO,
   RECARGOS,

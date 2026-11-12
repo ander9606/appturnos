@@ -6,6 +6,7 @@ import { fmtCOP } from '@/shared/lib/format';
 import { useAsistencia, usePersonas, useResumen } from '../hooks/useReportes';
 import type { CargoTurnos, Rango } from '../types';
 import { ListasCalificados, PromedioEstrella, TarjetaCalificaciones } from './Calificaciones';
+import { PorGrupo } from './PorGrupo';
 import { Anillo, Mini, ParaMirar, TarjetaCosto, TarjetasJornada, Titulo, nombreDe } from './ReportesUI';
 
 const MAX_FILAS_CARGO = 8;
@@ -99,6 +100,8 @@ export function SeccionTurnos({ rango }: { rango: Rango }) {
           <Mini label="No se presentaron" value={String(t.no_presentados)} sub={t.convocados ? `de ${t.convocados} convocados` : 'Sin convocados'} />
         </div>
       </div>
+
+      <PorGrupo rango={rango} />
 
       <ParaMirar insights={[...t.insights, ...pt.insights]} />
 

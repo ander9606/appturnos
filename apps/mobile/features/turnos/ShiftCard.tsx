@@ -11,6 +11,7 @@ import { View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Asignacion } from '@api-client';
 import { Badge } from '@/components/ui/Badge';
+import { GrupoBadge } from '@/features/grupos/GrupoBadge';
 import { getEstadoConfig, fmtRange, fmtTime } from './turnosUtils';
 import { bogotaToday } from '@/lib/formatters';
 
@@ -39,7 +40,7 @@ export function ShiftCard({ asignacion, onPress, showDate = false }: ShiftCardPr
         shadowRadius: 8,
       }}
       accessibilityRole={onPress ? 'button' : 'none'}
-      accessibilityLabel={`${asignacion.oferta_titulo}, ${config.label}`}
+      accessibilityLabel={`${asignacion.oferta_titulo}${asignacion.grupo_nombre ? `, ${asignacion.grupo_nombre}` : ''}, ${config.label}`}
     >
       {/* ── Accent bar ──────────────────────────────────────────────── */}
       <View
@@ -65,6 +66,7 @@ export function ShiftCard({ asignacion, onPress, showDate = false }: ShiftCardPr
             <Text className="text-base font-semibold text-foreground" numberOfLines={1}>
               {asignacion.oferta_titulo}
             </Text>
+            <GrupoBadge nombre={asignacion.grupo_nombre} />
             <View className="flex-row items-center gap-2 flex-wrap">
               {showDate && (
                 <Text className="text-xs text-muted-foreground">
@@ -92,7 +94,7 @@ export function ShiftCard({ asignacion, onPress, showDate = false }: ShiftCardPr
             <View className="flex-row items-center gap-1 flex-1">
               <Ionicons name="location-outline" size={12} color={COLORS.mutedForeground} />
               <Text className="text-sm text-muted-foreground" numberOfLines={1}>
-                {asignacion.lugar}
+                {asignacion.lugar_alias || asignacion.lugar}
               </Text>
             </View>
           )}

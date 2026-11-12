@@ -6,6 +6,7 @@ const { param, query } = require('express-validator');
 const { validar, rangoFechasMax } = require('../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
 const { ROLES } = require('../../config/constants');
+const requiereGruposTurno = require('../../middleware/requiereGruposTurno');
 const ctrl = require('./reportes.controller');
 
 const router = express.Router();
@@ -54,6 +55,19 @@ router.get('/asistencia', verificarRol(VER), reglasRango, validar, ctrl.asistenc
 
 // GET /api/reportes/costos
 router.get('/costos', verificarRol(VER), reglasRango, validar, ctrl.costos);
+
+// GET /api/reportes/grupos — costo, asistencia y cobertura por grupo. Solo si la empresa usa grupos de turnos.
+router.get(
+  '/grupos',
+  verificarRol(VER),
+  requiereGruposTurno,
+  [query('desde').isISO8601().withMessage('desde requerida (YYYY-MM-DD)'),
+   query('hasta').isISO8601().withMessage('hasta requerida (YYYY-MM-DD)')
+     .custom((hasta, { req }) => hasta >= req.query.desde).withMessage('hasta no puede ser anterior a desde'),
+   rangoFechasMax(366)],
+  validar,
+  ctrl.grupos
+);
 
 // GET /api/reportes/trabajador/:id
 router.get(

@@ -17,6 +17,7 @@ import { InfoOfertaCard } from '@/features/turnos/oferta/InfoOfertaCard';
 import { DescripcionOferta } from '@/features/turnos/oferta/DescripcionOferta';
 import { PuestosCard } from '@/features/turnos/oferta/PuestosCard';
 import { AplicarOfertaCta } from '@/features/turnos/oferta/AplicarOfertaCta';
+import { AvisoFuerzaMayor } from '@/features/turnos/oferta/AvisoFuerzaMayor';
 import { PostulantesCard } from '@/features/turnos/oferta/PostulantesCard';
 import { BarraAccionesGestor } from '@/features/turnos/oferta/BarraAccionesGestor';
 
@@ -134,6 +135,9 @@ export default function OfertaDetailScreen() {
             selectedPuesto={selectedPuesto}
             onSelect={setSelectedPuestoId}
           />
+
+          {/* ── Aviso al trabajador: fuerza mayor (compensación) vs. labor realizada (según contrato) ── */}
+          {isWorker && <AvisoFuerzaMayor />}
 
           {/* ── CTA trabajador: Aplicar ──────────────────────────── */}
           {isWorker && (

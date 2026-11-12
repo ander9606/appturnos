@@ -2,7 +2,7 @@ import { api } from './client';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-export type PlanEmpresa = 'basico' | 'profesional' | 'empresarial';
+export type PlanEmpresa = 'basico' | 'profesional' | 'empresarial' | 'ilimitado';
 
 /** Fila de la tabla `planes` — precios editables por super_admin (COP/mes). */
 export interface PlanConfig {
@@ -229,6 +229,14 @@ export const adminApi = {
   /** Borrado permanente. 409 si tiene nómina liquidada o trabajadores compartidos con otra empresa. */
   async eliminarEmpresa(id: number): Promise<void> {
     await api.delete(`/api/admin/empresas/${id}`);
+  },
+
+  /** Fija a mano el plan y la fecha de fin (vigente_hasta YYYY-MM-DD; null = indefinida). */
+  async gestionarSuscripcion(
+    id: number,
+    datos: { plan?: PlanEmpresa; vigente_hasta: string | null; origen?: SuscripcionOrigen },
+  ): Promise<EmpresaAdmin> {
+    return api.patch<EmpresaAdmin>(`/api/admin/empresas/${id}/suscripcion`, datos);
   },
 
   async generarLinkPago(id: number, datos: { plan: PlanEmpresa; meses?: number }): Promise<LinkPagoResponse> {

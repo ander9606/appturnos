@@ -2,6 +2,10 @@
 
 const crypto = require('crypto');
 const { pool } = require('../../config/database');
+const { DIAS_GRACIA_SUSCRIPCION } = require('../../config/constants');
+
+// Días respecto al vencimiento en que se avisa: antes, el día, durante la gracia y al terminar (sin repetir).
+const DIAS_AVISO_SUSCRIPCION = [...new Set([7, 3, 1, 0, -1, -DIAS_GRACIA_SUSCRIPCION])];
 const { ahoraColombiaSQL } = require('../../utils/fechaColombia');
 const { cifrar, descifrar } = require('../../utils/firmaCrypto');
 
@@ -21,30 +25,39 @@ const COLUMNAS_PUBLICAS = `id, nombre, slug, ciudad, plan, actividad,
 const COLUMNAS_ADMIN = `id, nombre, slug, nit, representante_nombre, representante_cedula, firma_representante_b64,
   ciudad, plan, actividad,
   logo_url, descripcion, telefono, email_empresa, direccion, acepta_postulaciones,
-  tipo_liquidacion, tipo_contrato, sumar_nocturnas_festivo, regla_domingo_habitual, created_at`;
+  tipo_liquidacion, tipo_contrato, sumar_nocturnas_festivo, regla_domingo_habitual,
+  usa_grupos_turno, etiqueta_grupo, created_at`;
 
 const EmpresasModel = {
   /**
    * Empresas con suscripción propia (no logiq360) que vencen en 7, 3 o 0 días, o vencieron hace 3, con el email de su
    * admin_empresa: [{ id, nombre, plan, suscripcion_vigente_hasta, dias_restantes, email, admin_nombre }]. Máximo 100.
    */
+  /**
+   * Empresas con aviso de renovación hoy, cada una con `destinatarios`: todos sus gestores activos
+   * con correo (admin_empresa, jefe_turnos, jefe_nomina y nomina), no solo el admin.
+   */
   async listarConRenovacionPendiente() {
     const [empresas] = await pool.query(
       `SELECT e.id, e.nombre, e.plan, e.suscripcion_vigente_hasta,
-              DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) AS dias_restantes,
-              u.email, u.nombre AS admin_nombre
+              DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) AS dias_restantes
          FROM empresas e
-         JOIN usuarios u ON u.empresa_id = e.id
-                        AND u.rol = 'admin_empresa'
-                        AND u.activo = 1
         WHERE e.activo = 1
           AND e.suscripcion_origen != 'logiq360'
           AND e.suscripcion_vigente_hasta IS NOT NULL
           AND e.suscripcion_cancelada_at IS NULL
-          AND DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) IN (7, 3, 0, -3)
+          AND DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) IN (${DIAS_AVISO_SUSCRIPCION.join(', ')})
         LIMIT 100`
     );
-    return empresas;
+    if (empresas.length === 0) return empresas;
+
+    const [gestores] = await pool.query(
+      `SELECT empresa_id, email, nombre FROM usuarios
+        WHERE empresa_id IN (?) AND rol IN ('admin_empresa','jefe_turnos','jefe_nomina','nomina')
+          AND activo = 1 AND email IS NOT NULL AND email != ''`,
+      [empresas.map((e) => e.id)]
+    );
+    return empresas.map((e) => ({ ...e, destinatarios: gestores.filter((g) => g.empresa_id === e.id) }));
   },
 
   async listarDirectorio({ busqueda, ciudad, limit, offset }) {
@@ -174,7 +187,7 @@ const EmpresasModel = {
    * escribe cifrada y con auditoría, vía actualizarFirmaConAuditoria.
    */
   async actualizarPorAdmin(empresaId, datos) {
-    const CAMPOS = ['nombre', 'nit', 'representante_nombre', 'representante_cedula', 'ciudad', 'descripcion', 'actividad', 'logo_url', 'telefono', 'email_empresa', 'direccion', 'acepta_postulaciones', 'tipo_liquidacion', 'tipo_contrato', 'sumar_nocturnas_festivo', 'regla_domingo_habitual'];
+    const CAMPOS = ['nombre', 'nit', 'representante_nombre', 'representante_cedula', 'ciudad', 'descripcion', 'actividad', 'logo_url', 'telefono', 'email_empresa', 'direccion', 'acepta_postulaciones', 'tipo_liquidacion', 'tipo_contrato', 'sumar_nocturnas_festivo', 'regla_domingo_habitual', 'usa_grupos_turno', 'etiqueta_grupo'];
     const sets = [];
     const params = [];
     for (const campo of CAMPOS) {
@@ -278,6 +291,23 @@ const EmpresasModel = {
       [empresaId]
     );
     return empresa;
+  },
+
+  /**
+   * Opciones de grupos de turnos de la empresa (la enciende su admin_empresa). Sin empresa
+   * (trabajador multi-empresa sin empresa activa) o inexistente: apagado y sin etiqueta.
+   */
+  async opcionesGruposTurno(empresaId) {
+    const [[empresa]] = await pool.query(
+      'SELECT usa_grupos_turno, etiqueta_grupo FROM empresas WHERE id = ? AND activo = 1 LIMIT 1',
+      [empresaId ?? 0]
+    );
+    return { usa_grupos_turno: Boolean(empresa?.usa_grupos_turno), etiqueta_grupo: empresa?.etiqueta_grupo ?? null };
+  },
+
+  /** ¿La empresa activa tiene encendida la función de grupos de turnos? */
+  async usaGruposTurno(empresaId) {
+    return (await this.opcionesGruposTurno(empresaId)).usa_grupos_turno;
   },
 
   /** Opciones de la empresa que cambian cómo se clasifica y se paga un día trabajado. */

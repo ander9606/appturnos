@@ -1,6 +1,6 @@
 import { SkeletonTable } from '@/shared/components/Skeleton';
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
 import { Plus, ChevronRight, XCircle, DollarSign, AlertTriangle, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/modules/auth/authStore';
@@ -13,6 +13,12 @@ import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { StatCard } from '@/shared/components/StatCard';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { LugarInput } from '../components/LugarInput';
+import { LugarAlias } from '../components/LugarAlias';
+import { GrupoSelector } from '@/modules/grupos/components/GrupoSelector';
+import { aElegido, lugarAlElegirGrupo, lugarEsDelGrupo } from '@/modules/grupos/grupoUtils';
+import { useGrupo } from '@/modules/grupos/hooks/useGrupos';
+import type { GrupoElegido } from '@/modules/grupos/types';
+import { GrupoBadge } from '@/modules/grupos/components/GrupoBadge';
 import { TrabajadorPickerModal, type DestinatarioSeleccionado } from '../components/TrabajadorPickerModal';
 import { ZonasMarcajeInput, type ZonaMarcaje } from '../components/ZonasMarcajeInput';
 import { LiquidacionTurnosView } from '../components/LiquidacionTurnosView';
@@ -51,6 +57,21 @@ export function TurnosPage() {
   const [vista, setVista] = useState<'ofertas' | 'pagos'>('ofertas');
   const [estado, setEstado] = useState<EstadoOferta | undefined>(undefined);
   const [showCrear, setShowCrear] = useState(false);
+  // "Agregar turno" desde un grupo llega con ?grupo=ID: el formulario abre con el grupo (y su lugar) ya elegidos.
+  const [params, setParams] = useSearchParams();
+  const grupoParam = Number(params.get('grupo')) || null;
+  const grupoPrevio = useGrupo(grupoParam).data?.data;
+  const abiertoPorGrupo = useRef(false);
+  useEffect(() => {
+    if (grupoPrevio && grupoPrevio.estado === 'activo' && !abiertoPorGrupo.current) {
+      abiertoPorGrupo.current = true;
+      setShowCrear(true);
+    }
+  }, [grupoPrevio]);
+  const cerrarCrear = () => {
+    setShowCrear(false);
+    if (grupoParam) setParams({}, { replace: true });
+  };
 
   const { data, isLoading, isError, error, refetch } = useOfertas({ estado, limit: 100 });
   const ofertas: Oferta[] = data?.data?.data ?? [];
@@ -151,7 +172,7 @@ export function TurnosPage() {
                 <th className="text-left px-4 py-3 font-medium">Fecha</th>
                 <th className="text-left px-4 py-3 font-medium">Hora</th>
                 <th className="text-left px-4 py-3 font-medium">Lugar</th>
-                <th className="text-right px-4 py-3 font-medium">Puestos</th>
+                <th className="text-right px-4 py-3 font-medium" title="Plazas cubiertas / plazas totales">Plazas</th>
                 <th className="text-left px-4 py-3 font-medium">Estado</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -164,10 +185,13 @@ export function TurnosPage() {
                 const esPasado = o.fecha < today && o.estado !== 'completada';
                 return (
                   <tr key={o.id} className={`border-t border-border/60 hover:bg-muted transition-opacity ${esPasado ? 'opacity-50' : ''}`}>
-                    <td className={`px-4 py-3 font-medium ${esPasado ? 'text-muted-foreground' : 'text-foreground'}`}>{o.titulo}</td>
+                    <td className={`px-4 py-3 font-medium ${esPasado ? 'text-muted-foreground' : 'text-foreground'}`}>
+                      {o.titulo}
+                      {o.grupo_nombre && <div className="mt-1 font-normal"><GrupoBadge nombre={o.grupo_nombre} /></div>}
+                    </td>
                     <td className="px-4 py-3 text-muted-foreground">{fmtDate(o.fecha)}</td>
                     <td className="px-4 py-3 text-muted-foreground">{o.hora_inicio}{o.hora_fin_estimada ? ` – ${o.hora_fin_estimada}` : ''}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{o.lugar ?? '—'}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{o.lugar_alias || o.lugar || '—'}</td>
                     <td className="px-4 py-3 text-right text-muted-foreground">{totalAsignados}/{totalPlazas}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -176,7 +200,7 @@ export function TurnosPage() {
                         </span>
                         {pendientes > 0 && (
                           <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning">
-                            {pendientes} pendiente{pendientes !== 1 ? 's' : ''}
+                            {pendientes} postulante{pendientes !== 1 ? 's' : ''} por revisar
                           </span>
                         )}
                         {o.necesita_completar && (
@@ -184,7 +208,7 @@ export function TurnosPage() {
                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning"
                             title="El turno ya terminó y todos quedaron resueltos, pero nadie lo marcó como completado"
                           >
-                            <AlertTriangle size={11} /> Falta completar
+                            <AlertTriangle size={11} /> Falta marcar completado
                           </span>
                         )}
                       </div>
@@ -223,7 +247,7 @@ export function TurnosPage() {
       </>
       )}
 
-      {showCrear && <NuevaOfertaModal onClose={() => setShowCrear(false)} />}
+      {showCrear && <NuevaOfertaModal grupoInicial={grupoPrevio?.estado === 'activo' ? aElegido(grupoPrevio) : null} onClose={cerrarCrear} />}
 
       {confirmState && (
         <ConfirmModal
@@ -238,20 +262,35 @@ export function TurnosPage() {
   );
 }
 
-function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
+function NuevaOfertaModal({ onClose, grupoInicial = null }: { onClose: () => void; grupoInicial?: GrupoElegido | null }) {
   const crear = useCrearOferta();
   const navigate = useNavigate();
   const [form, setForm] = useState({
     titulo: '', fecha: '', hora_inicio: '', hora_fin_estimada: '',
-    descripcion: '', lugar: '',
+    descripcion: '', lugar: grupoInicial?.lugar ?? '',
   });
-  const [latitud, setLatitud] = useState<number | null>(null);
-  const [longitud, setLongitud] = useState<number | null>(null);
+  const [latitud, setLatitud] = useState<number | null>(grupoInicial?.lugar ? grupoInicial.latitud : null);
+  const [longitud, setLongitud] = useState<number | null>(grupoInicial?.lugar ? grupoInicial.longitud : null);
   const [paraQuien, setParaQuien] = useState<ParaQuienOferta>('turnos');
   const [visibilidad, setVisibilidad] = useState<VisibilidadOferta>('abierta');
   const [destinatarios, setDestinatarios] = useState<DestinatarioSeleccionado[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [zonas, setZonas] = useState<ZonaMarcaje[]>([]);
+  const [grupo, setGrupo] = useState<GrupoElegido | null>(grupoInicial);
+  // El nombre corto del lugar del grupo (si el lugar viene de él) también se toma.
+  const [lugarAlias, setLugarAlias] = useState(grupoInicial?.lugar ? (grupoInicial.lugar_alias ?? '') : '');
+
+  // Al elegir un grupo, el lugar del turno toma el del grupo (valor por defecto) si aún no tiene uno propio.
+  const elegirGrupo = (g: GrupoElegido | null) => {
+    const lugarDelGrupo = lugarAlElegirGrupo({ lugar: form.lugar }, grupo, g);
+    if (lugarDelGrupo) {
+      setForm(f => ({ ...f, lugar: lugarDelGrupo.lugar }));
+      setLugarAlias(lugarDelGrupo.lugar_alias);
+      setLatitud(lugarDelGrupo.latitud);
+      setLongitud(lugarDelGrupo.longitud);
+    }
+    setGrupo(g);
+  };
 
   const dirigidaSinPersonas = visibilidad === 'dirigida' && destinatarios.length === 0;
 
@@ -268,11 +307,13 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
     }
     const res = await crear.mutateAsync({
       titulo: form.titulo,
+      ...(grupo ? { grupo_id: grupo.id } : {}),
       fecha: form.fecha,
       hora_inicio: form.hora_inicio,
       hora_fin_estimada: form.hora_fin_estimada || undefined,
       descripcion: form.descripcion || undefined,
       lugar: form.lugar || undefined,
+      lugar_alias: form.lugar && lugarAlias.trim() ? lugarAlias.trim() : undefined,
       latitud: latitud ?? undefined,
       longitud: longitud ?? undefined,
       para_quien: paraQuien,
@@ -299,6 +340,8 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
           <label className="block text-sm font-medium text-foreground mb-1">Título *</label>
           <input required type="text" {...field('titulo')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
         </div>
+        {/* Grupo de turnos (solo si la empresa los usa): al elegirlo, el lugar del turno se prellena con el suyo */}
+        <GrupoSelector grupo={grupo} fecha={form.fecha || undefined} onChange={elegirGrupo} />
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Fecha *</label>
@@ -320,11 +363,17 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
             latitud={latitud}
             longitud={longitud}
             onChange={(lugar, lat, lng) => {
+              // Elegir otro lugar (con coordenadas: buscador, biblioteca, GPS o mapa) deja sin efecto el nombre corto del anterior.
+              if (lat != null && lugar !== form.lugar) setLugarAlias('');
               setForm(f => ({ ...f, lugar }));
               setLatitud(lat);
               setLongitud(lng);
             }}
           />
+          <LugarAlias lugar={form.lugar} latitud={latitud} longitud={longitud} alias={lugarAlias} onChange={setLugarAlias} />
+          {lugarEsDelGrupo({ lugar: form.lugar, latitud, longitud }, grupo) && (
+            <p className="text-xs text-muted-foreground mt-1">{`Tomado de «${grupo!.nombre}». Puedes cambiarlo.`}</p>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">Zonas de marcaje válidas (opcional)</label>

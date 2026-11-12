@@ -5,7 +5,8 @@ const IntegracionModel = require('../integracion/integracion.model');
 const PeriodosService = require('../nomina/periodos/periodos.service');
 const RegistrosService = require('../nomina/registros/registros.service');
 const AppError = require('../../utils/AppError');
-const { PlanesModel, precioPlanCop } = require('../suscripciones/planes.model');
+const { DIAS_GRACIA_SUSCRIPCION } = require('../../config/constants');
+const { PlanesModel, precioPlanCop, montoSuscripcionCop, MESES_ANUAL } = require('../suscripciones/planes.model');
 const logger = require('../../utils/logger');
 
 /** Fuente de verdad de "es logiq360": conexión activa con api_key, no una etiqueta manual. */
@@ -35,6 +36,11 @@ const EmpresasService = {
     const empresa = await EmpresasModel.obtenerParaAdmin(empresaId);
     if (!empresa) throw new AppError('Empresa no encontrada', 404);
     return empresa;
+  },
+
+  /** Opciones de grupos de turnos (encendido y cómo la empresa los llama): las leen todos los roles. */
+  async opcionesGruposTurno(empresaId) {
+    return EmpresasModel.opcionesGruposTurno(empresaId);
   },
 
   /** Auditoría legal de cambios a la firma del representante — solo admin_empresa (ver routes). */
@@ -120,18 +126,20 @@ const EmpresasService = {
     const hoy = new Date();
     const vence = e.suscripcion_vigente_hasta ? new Date(e.suscripcion_vigente_hasta) : null;
     const limite = vence ? new Date(vence) : null;
-    if (limite) limite.setDate(limite.getDate() + 3);
+    if (limite) limite.setDate(limite.getDate() + DIAS_GRACIA_SUSCRIPCION);
     const activa = esLogiq360 || !vence || limite >= hoy;
     const diasRestantes = vence ? Math.ceil((vence - hoy) / 86400000) : null;
     const [planes, activos] = await Promise.all([
       PlanesModel.listar(), EmpresasModel.contarTrabajadoresActivos(empresaId),
     ]);
     const actual = planes.find((p) => p.codigo === e.plan);
+    const cambios = esLogiq360 ? {} : await require('../webhooks/wompi.service').cotizarCambiosPlan(empresaId, planes, activos);
     return {
       activa,
       plan: e.plan,
       vigente_hasta: e.suscripcion_vigente_hasta,
       dias_restantes: diasRestantes,
+      dias_gracia: DIAS_GRACIA_SUSCRIPCION,
       origen: esLogiq360 ? 'logiq360' : 'directo',
       logiq360_conectado: esLogiq360,
       // Canceló la renovación pero sigue teniendo acceso hasta vigente_hasta (ya pagado).
@@ -147,6 +155,9 @@ const EmpresasService = {
         incluidos: p.incluidos,
         precio_adicional_cop: p.precio_adicional_cop,
         precio_mensual_cop: precioPlanCop(p, activos),
+        precio_anual_cop: montoSuscripcionCop(p, activos, MESES_ANUAL),
+        // Si sube de plan en plena vigencia: solo la diferencia, sin mover el vencimiento. null = paga el plan completo.
+        precio_cambio_cop: cambios[p.codigo] ?? null,
         disponible: p.max_trabajadores == null || activos <= p.max_trabajadores,
       })),
     };
