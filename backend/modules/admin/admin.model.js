@@ -504,6 +504,22 @@ const AdminModel = {
     );
     return fila || null;
   },
+
+  /**
+   * Modalidad (1 = mensual, 12 = anual) del pago Wompi procesado más reciente de la empresa,
+   * o null si nunca tuvo uno — se usa para adivinar la modalidad cuando suscripcion_meses
+   * quedó NULL (empresas activadas a mano o pagadas antes de que existiera esa columna).
+   * meses = 0 (cambio de plan a mitad de vigencia) no cuenta como modalidad propia.
+   */
+  async obtenerUltimoMesesPagado(empresaId) {
+    const [[fila]] = await pool.query(
+      `SELECT meses FROM wompi_eventos
+        WHERE empresa_id = ? AND estado = 'procesado' AND meses > 0
+        ORDER BY procesado_at DESC LIMIT 1`,
+      [empresaId]
+    );
+    return fila ? fila.meses : null;
+  },
 };
 
 module.exports = AdminModel;

@@ -42,7 +42,11 @@ export const adminApi = {
   descargarCuentaCobroWompi: (id: number) =>
     api.get(`/admin/wompi-eventos/${id}/cuenta-cobro`, { responseType: 'blob' }).then(r => r.data as Blob),
 
-  /** Cuenta de cobro del período vigente actual de la empresa, sin depender de un evento Wompi puntual. */
-  descargarCuentaCobroEmpresa: (empresaId: number) =>
-    api.get(`/admin/empresas/${empresaId}/cuenta-cobro`, { responseType: 'blob' }).then(r => r.data as Blob),
+  /**
+   * Cuenta de cobro del período vigente actual de la empresa, sin depender de un evento
+   * Wompi puntual. `meses` (1 o 12) corrige a mano la modalidad cuando la autodetectada
+   * (suscripcion_meses o el último pago Wompi) está mal — omitido, se autodetecta.
+   */
+  descargarCuentaCobroEmpresa: (empresaId: number, meses?: 1 | 12) =>
+    api.get(`/admin/empresas/${empresaId}/cuenta-cobro`, { responseType: 'blob', params: meses ? { meses } : undefined }).then(r => r.data as Blob),
 };

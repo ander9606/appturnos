@@ -252,19 +252,26 @@ const AdminService = {
    * Cuenta de cobro del período vigente actual, sin depender de que exista un
    * evento Wompi puntual (empresas activadas a mano, por logiq360 antes de
    * desconectarse, o pagadas antes de que existiera el tracking de eventos).
-   * El período se calcula hacia atrás desde suscripcion_vigente_hasta, usando
-   * suscripcion_meses (1 si no se conoce). El monto usa lo que ya paga por mes
-   * (suscripcion_valor_mes_cop) y, si nunca se registró, el precio vigente hoy
-   * para sus trabajadores activos.
+   * El período se calcula hacia atrás desde suscripcion_vigente_hasta, con la
+   * modalidad (1 = mensual, 12 = anual) que diga `mesesOverride` si el
+   * super_admin la corrige a mano; si no, suscripcion_meses y, si tampoco se
+   * conoce, la del último pago Wompi procesado de la empresa (1 si nunca pagó
+   * por ahí tampoco). El monto usa lo que ya paga por mes
+   * (suscripcion_valor_mes_cop) solo cuando la modalidad no se corrigió a
+   * mano — si se corrigió, ese valor quedó calculado para OTRA modalidad y no
+   * sirve, así que se recalcula con el precio vigente para sus trabajadores activos.
    */
-  async generarCuentaCobroActual(empresaId) {
+  async generarCuentaCobroActual(empresaId, { meses: mesesOverride } = {}) {
     const emp = await AdminModel.obtenerEmpresaParaCuentaCobro(empresaId);
     if (!emp) throw new AppError('Empresa no encontrada', 404);
     if (!emp.suscripcion_vigente_hasta) {
       throw new AppError('Esta empresa no tiene una fecha de fin de plan definida', 409);
     }
 
-    const meses = emp.suscripcion_meses || 1;
+    const meses = mesesOverride
+      || emp.suscripcion_meses
+      || await AdminModel.obtenerUltimoMesesPagado(empresaId)
+      || 1;
     // suscripcion_vigente_hasta es una fecha de calendario pura (columna DATE), sin hora —
     // se opera y se formatea siempre en UTC. Si se interpretara con zona horaria local
     // (America/Bogotá, UTC-5) el día mostrado quedaría un día atrás.
@@ -272,7 +279,9 @@ const AdminService = {
     const inicio = new Date(fin);
     inicio.setUTCMonth(inicio.getUTCMonth() - meses);
 
-    let montoCop = emp.suscripcion_valor_mes_cop != null ? emp.suscripcion_valor_mes_cop * meses : null;
+    let montoCop = !mesesOverride && emp.suscripcion_valor_mes_cop != null
+      ? emp.suscripcion_valor_mes_cop * meses
+      : null;
     if (montoCop == null) {
       const [planes, activos] = await Promise.all([
         PlanesModel.listar(), EmpresasModel.contarTrabajadoresActivos(empresaId),

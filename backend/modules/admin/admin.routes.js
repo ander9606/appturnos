@@ -137,7 +137,12 @@ router.get(
   promoverTokenDeQuery,
   verificarToken,
   verificarRol(SOLO_SUPER),
-  [param('id').isInt({ min: 1 }).toInt()],
+  [
+    param('id').isInt({ min: 1 }).toInt(),
+    // Corrección manual de modalidad cuando la autodetectada (suscripcion_meses o el
+    // último pago Wompi) está mal — ver generarCuentaCobroActual.
+    query('meses').optional().isIn(['1', '12']).withMessage('meses debe ser 1 (mensual) o 12 (anual)'),
+  ],
   validar,
   ctrl.descargarCuentaCobroEmpresa
 );

@@ -64,6 +64,7 @@ export function EmpresaDetailPage() {
   const pagos: WompiEvento[] = pagosData?.data?.data ?? [];
   const [descargandoPagoId, setDescargandoPagoId] = useState<number | null>(null);
   const [descargandoActual, setDescargandoActual] = useState(false);
+  const [modalidadActual, setModalidadActual] = useState<'' | '1' | '12'>('');
   const { confirmState, confirm, close } = useConfirm();
 
   // Link de pago
@@ -115,7 +116,7 @@ export function EmpresaDetailPage() {
   async function handleDescargarCuentaCobroActual() {
     setDescargandoActual(true);
     try {
-      const blob = await adminApi.descargarCuentaCobroEmpresa(empresaId);
+      const blob = await adminApi.descargarCuentaCobroEmpresa(empresaId, modalidadActual ? Number(modalidadActual) as 1 | 12 : undefined);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -245,13 +246,25 @@ export function EmpresaDetailPage() {
             />
           </dl>
           {empresa.suscripcion_vigente_hasta && (
-            <button
-              onClick={handleDescargarCuentaCobroActual}
-              disabled={descargandoActual}
-              className="mt-4 w-full text-xs font-medium px-3 py-2 rounded-lg border border-border text-muted-foreground hover:border-foreground hover:text-foreground disabled:opacity-50 transition-colors"
-            >
-              {descargandoActual ? 'Descargando…' : 'Cuenta de cobro del plan actual'}
-            </button>
+            <div className="mt-4 flex gap-2">
+              <select
+                value={modalidadActual}
+                onChange={e => setModalidadActual(e.target.value as '' | '1' | '12')}
+                title="Modalidad del período — vacío = autodetectar"
+                className="text-xs border border-border rounded-lg px-2 bg-background text-foreground"
+              >
+                <option value="">Autodetectar</option>
+                <option value="1">Mensual</option>
+                <option value="12">Anual</option>
+              </select>
+              <button
+                onClick={handleDescargarCuentaCobroActual}
+                disabled={descargandoActual}
+                className="flex-1 text-xs font-medium px-3 py-2 rounded-lg border border-border text-muted-foreground hover:border-foreground hover:text-foreground disabled:opacity-50 transition-colors"
+              >
+                {descargandoActual ? 'Descargando…' : 'Cuenta de cobro del plan actual'}
+              </button>
+            </div>
           )}
         </div>
       </div>
