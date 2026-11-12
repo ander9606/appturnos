@@ -33,6 +33,7 @@ import {
   useWompiEventos,
 } from '@/features/admin/useAdmin';
 import { descargarCuentaCobroWompi } from '@/features/admin/descargarCuentaCobroWompi';
+import { descargarCuentaCobroEmpresa } from '@/features/admin/descargarCuentaCobroEmpresa';
 import { formatCOP, toISODate } from '@/lib/formatters';
 import { confirm } from '@/lib/confirmDialog';
 import { showToast } from '@/lib/toast';
@@ -114,6 +115,7 @@ export default function EmpresaDetailScreen() {
   const { data: pagosData } = useWompiEventos({ empresaId, limit: 10 }, isSuperAdmin && !!empresaId);
   const [pickerFin, setPickerFin] = useState(false);
   const [descargandoPagoId, setDescargandoPagoId] = useState<number | null>(null);
+  const [descargandoActual, setDescargandoActual] = useState(false);
 
   const handleDescargarCuentaCobro = async (pagoId: number) => {
     setDescargandoPagoId(pagoId);
@@ -123,6 +125,17 @@ export default function EmpresaDetailScreen() {
       showAlert('No se pudo abrir la cuenta de cobro', 'Intenta de nuevo.');
     } finally {
       setDescargandoPagoId(null);
+    }
+  };
+
+  const handleDescargarCuentaCobroActual = async () => {
+    setDescargandoActual(true);
+    try {
+      await descargarCuentaCobroEmpresa(empresaId);
+    } catch {
+      showAlert('No se pudo abrir la cuenta de cobro', 'Intenta de nuevo.');
+    } finally {
+      setDescargandoActual(false);
     }
   };
 
@@ -401,6 +414,18 @@ export default function EmpresaDetailScreen() {
               <Text className="text-sm font-semibold text-info">Cambiar fecha de fin del plan</Text>
             )}
           </Pressable>
+          {empresa.suscripcion_vigente_hasta && (
+            <Pressable
+              onPress={handleDescargarCuentaCobroActual}
+              disabled={descargandoActual}
+              accessibilityRole="button"
+              className="flex-row items-center justify-center gap-2 h-10 rounded-xl border border-border mb-2 active:opacity-70"
+            >
+              {descargandoActual ? <Spinner size="small" color={COLORS.mutedForeground} /> : (
+                <Text className="text-sm font-semibold text-muted-foreground">Cuenta de cobro del plan actual</Text>
+              )}
+            </Pressable>
+          )}
           {pickerFin && (
             <DateTimePicker
               mode="date"

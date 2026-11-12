@@ -130,6 +130,18 @@ router.put(
   ctrl.actualizarEmpresa
 );
 
+// GET /api/admin/empresas/:id/cuenta-cobro — cuenta de cobro del período vigente
+// actual, sin depender de un evento Wompi puntual (ver generarCuentaCobroActual).
+router.get(
+  '/empresas/:id/cuenta-cobro',
+  promoverTokenDeQuery,
+  verificarToken,
+  verificarRol(SOLO_SUPER),
+  [param('id').isInt({ min: 1 }).toInt()],
+  validar,
+  ctrl.descargarCuentaCobroEmpresa
+);
+
 // POST /api/admin/empresas/:id/link-pago
 router.post(
   '/empresas/:id/link-pago',

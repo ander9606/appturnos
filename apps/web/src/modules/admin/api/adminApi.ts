@@ -41,4 +41,8 @@ export const adminApi = {
   /** PDF de la cuenta de cobro (persona natural) de un pago ya procesado. */
   descargarCuentaCobroWompi: (id: number) =>
     api.get(`/admin/wompi-eventos/${id}/cuenta-cobro`, { responseType: 'blob' }).then(r => r.data as Blob),
+
+  /** Cuenta de cobro del período vigente actual de la empresa, sin depender de un evento Wompi puntual. */
+  descargarCuentaCobroEmpresa: (empresaId: number) =>
+    api.get(`/admin/empresas/${empresaId}/cuenta-cobro`, { responseType: 'blob' }).then(r => r.data as Blob),
 };
