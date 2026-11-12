@@ -446,9 +446,12 @@ const AdminModel = {
 
   // ── Wompi eventos ─────────────────────────────────────────────────────────
 
-  async listarWompiEventos({ estado, limit, offset }) {
-    const where = estado ? 'WHERE we.estado = ?' : '';
-    const params = estado ? [estado, limit, offset] : [limit, offset];
+  async listarWompiEventos({ estado, empresaId, limit, offset }) {
+    const condiciones = [];
+    const whereParams = [];
+    if (estado) { condiciones.push('we.estado = ?'); whereParams.push(estado); }
+    if (empresaId) { condiciones.push('we.empresa_id = ?'); whereParams.push(empresaId); }
+    const where = condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : '';
     const [rows] = await pool.query(
       `SELECT we.id, we.transaction_id, we.referencia, we.empresa_id, e.nombre AS empresa_nombre,
               we.plan, we.meses, we.estado, we.intentos, we.error_detalle, we.created_at, we.procesado_at,
@@ -458,11 +461,11 @@ const AdminModel = {
          ${where}
         ORDER BY we.created_at DESC
         LIMIT ? OFFSET ?`,
-      params
+      [...whereParams, limit, offset]
     );
     const [[{ total }]] = await pool.query(
-      `SELECT COUNT(*) AS total FROM wompi_eventos ${where.replace('we.estado', 'estado')}`,
-      estado ? [estado] : []
+      `SELECT COUNT(*) AS total FROM wompi_eventos we ${where}`,
+      whereParams
     );
     // DECIMAL llega como string desde mysql2.
     const data = rows.map((r) => ({ ...r, monto_cop: r.monto_cop == null ? null : Number(r.monto_cop) }));

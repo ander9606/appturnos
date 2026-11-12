@@ -102,7 +102,7 @@ export function useActualizarPlan() {
   });
 }
 
-export function useWompiEventos(params?: { estado?: string; page?: number }) {
+export function useWompiEventos(params?: { estado?: string; empresa_id?: number; page?: number; limit?: number }) {
   return useQuery({
     queryKey: ['admin', 'wompi-eventos', params],
     queryFn: () => adminApi.listarWompiEventos(params),

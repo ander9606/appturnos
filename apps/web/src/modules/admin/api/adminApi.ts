@@ -32,7 +32,7 @@ export const adminApi = {
   actualizarPlan: (codigo: Plan, data: ActualizarPlanPayload) =>
     api.put<{ data: PlanConfig[] }>(`/admin/planes/${codigo}`, data).then(r => r.data),
 
-  listarWompiEventos: (params?: { estado?: string; page?: number; limit?: number }) =>
+  listarWompiEventos: (params?: { estado?: string; empresa_id?: number; page?: number; limit?: number }) =>
     api.get('/admin/wompi-eventos', { params }).then((r: any) => r.data),
 
   reintentarWompiEvento: (id: number) =>

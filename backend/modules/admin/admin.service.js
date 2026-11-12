@@ -211,9 +211,9 @@ const AdminService = {
 
   // ── Wompi eventos ─────────────────────────────────────────────────────────
 
-  async listarWompiEventos({ estado, page = 1, limit = 30 } = {}) {
+  async listarWompiEventos({ estado, empresaId, page = 1, limit = 30 } = {}) {
     const offset = (page - 1) * limit;
-    const { data, total } = await AdminModel.listarWompiEventos({ estado, limit, offset });
+    const { data, total } = await AdminModel.listarWompiEventos({ estado, empresaId, limit, offset });
     return { data, total, page, limit, pages: Math.ceil(total / limit) };
   },
 

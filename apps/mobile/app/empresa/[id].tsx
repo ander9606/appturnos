@@ -30,11 +30,13 @@ import {
   useEliminarEmpresa,
   useGenerarLinkPago,
   useGestionarSuscripcion,
+  useWompiEventos,
 } from '@/features/admin/useAdmin';
+import { descargarCuentaCobroWompi } from '@/features/admin/descargarCuentaCobroWompi';
 import { formatCOP, toISODate } from '@/lib/formatters';
 import { confirm } from '@/lib/confirmDialog';
 import { showToast } from '@/lib/toast';
-import type { PlanEmpresa, EmpresaAdmin, LinkPagoResponse } from '@api-client';
+import type { PlanEmpresa, EmpresaAdmin, LinkPagoResponse, WompiEvento } from '@api-client';
 
 const OPCIONES_MESES = [1, 12];
 
@@ -109,7 +111,20 @@ export default function EmpresaDetailScreen() {
   const { mutateAsync: eliminarEmpresa, isPending: eliminando } = useEliminarEmpresa();
   const { mutateAsync: generarLink, isPending: generandoLink } = useGenerarLinkPago(empresaId);
   const { mutateAsync: gestionarSusc, isPending: guardandoFin } = useGestionarSuscripcion(empresaId);
+  const { data: pagosData } = useWompiEventos({ empresaId, limit: 10 }, isSuperAdmin && !!empresaId);
   const [pickerFin, setPickerFin] = useState(false);
+  const [descargandoPagoId, setDescargandoPagoId] = useState<number | null>(null);
+
+  const handleDescargarCuentaCobro = async (pagoId: number) => {
+    setDescargandoPagoId(pagoId);
+    try {
+      await descargarCuentaCobroWompi(pagoId);
+    } catch {
+      showAlert('No se pudo abrir la cuenta de cobro', 'Intenta de nuevo.');
+    } finally {
+      setDescargandoPagoId(null);
+    }
+  };
 
   const [mesesLink, setMesesLink] = useState(1);
   const [linkGenerado, setLinkGenerado] = useState<LinkPagoResponse | null>(null);
@@ -412,6 +427,40 @@ export default function EmpresaDetailScreen() {
             />
           )}
         </View>
+
+        {/* ── Pagos y cuentas de cobro ───────────────────────────────── */}
+        {!!pagosData?.data.length && (
+          <View className="mx-4 bg-card border border-border rounded-2xl px-4 py-2 mb-4">
+            <Text className="text-sm font-bold text-foreground py-2 border-b border-border mb-1">
+              🧾 Pagos recientes
+            </Text>
+            {pagosData.data.map((pago: WompiEvento) => (
+              <View key={pago.id} className="flex-row items-center justify-between py-2.5 border-b border-border last:border-b-0">
+                <View className="flex-1 pr-2">
+                  <Text className="text-sm text-foreground">
+                    {pago.plan ?? '—'}{pago.meses != null ? ` · ${pago.meses === 0 ? 'cambio de plan' : `${pago.meses} mes${pago.meses !== 1 ? 'es' : ''}`}` : ''}
+                  </Text>
+                  <Text className="text-xs text-muted-foreground">
+                    {pago.monto_cop != null ? formatCOP(pago.monto_cop) : '—'} · {pago.estado}
+                  </Text>
+                </View>
+                {pago.estado === 'procesado' && (
+                  <Pressable
+                    onPress={() => handleDescargarCuentaCobro(pago.id)}
+                    disabled={descargandoPagoId === pago.id}
+                    className="h-8 px-3 rounded-lg items-center justify-center border border-border active:opacity-70"
+                  >
+                    {descargandoPagoId === pago.id ? (
+                      <Spinner size="small" color={COLORS.mutedForeground} />
+                    ) : (
+                      <Text className="text-xs font-semibold text-muted-foreground">Cuenta de cobro</Text>
+                    )}
+                  </Pressable>
+                )}
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* ── Generar link de pago ─────────────────────────────────────── */}
         <View className="mx-4 bg-card border border-border rounded-2xl p-4 gap-3 mb-4">
