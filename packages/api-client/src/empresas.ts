@@ -23,6 +23,8 @@ export interface Suscripcion {
   dias_restantes: number | null;
   origen: 'logiq360' | 'directo';
   logiq360_conectado: boolean;
+  /** Canceló la renovación — sigue con acceso hasta vigente_hasta (ya pagado), pero no se le cobra ni avisa de nuevo. */
+  cancelada: boolean;
   trabajadores_activos: number;
   /** Tope del plan actual; null = sin tope. */
   max_trabajadores: number | null;
@@ -125,6 +127,16 @@ export const empresasApi = {
    */
   generarLinkPago(payload: { meses?: number; plan?: PlanEmpresa } = {}): Promise<{ url: string; referencia: string; plan: PlanEmpresa; monto_cop: number; expira_at: string }> {
     return api.post('/api/empresas/suscripcion/pagar', payload);
+  },
+
+  /** Deja de renovar: no cobra de nuevo ni manda más recordatorios, pero el acceso ya pagado sigue hasta que venza. */
+  cancelarSuscripcion(): Promise<void> {
+    return api.post('/api/empresas/suscripcion/cancelar');
+  },
+
+  /** Revierte cancelarSuscripcion — solo tiene efecto antes de que venza la suscripción. */
+  reactivarSuscripcion(): Promise<void> {
+    return api.post('/api/empresas/suscripcion/reactivar');
   },
 
   /** Reclasifica (horas nocturnas/festivo/extra) los días ya registrados del período abierto con la config de recargos actual. */

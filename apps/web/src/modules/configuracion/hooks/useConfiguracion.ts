@@ -50,6 +50,28 @@ export function usePagarSuscripcion() {
     onError: (err: unknown) => toast.error(getErrMsg(err)),
   });
 }
+export function useCancelarSuscripcion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: configuracionApi.cancelarSuscripcion,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['config', 'suscripcion'] });
+      toast.success('Dejamos de renovar tu plan. Tu acceso sigue activo hasta que termine el período ya pagado.');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+export function useReactivarSuscripcion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: configuracionApi.reactivarSuscripcion,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['config', 'suscripcion'] });
+      toast.success('Tu plan volverá a renovarse normalmente');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
 
 export function usePuntos() {
   return useQuery({ queryKey: ['config', 'puntos'], queryFn: configuracionApi.getPuntos, staleTime: 60_000 });

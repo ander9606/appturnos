@@ -84,7 +84,7 @@ export default function TerminosScreen() {
 
 const TERMINOS_TEXT = `TÉRMINOS Y CONDICIONES DE USO — ZATURNO
 
-Fecha de vigencia: 23 de septiembre de 2026
+Fecha de vigencia: 12 de noviembre de 2026
 
 1. ACEPTACIÓN
 Al usar la aplicación Zaturno aceptas estos términos en su totalidad. Si no estás de acuerdo, no uses la aplicación.
@@ -112,21 +112,32 @@ El tratamiento de datos personales se rige por la Ley 1581 de 2012 (habeas data)
 
 Puedes eliminar tu cuenta en cualquier momento desde Perfil → Eliminar cuenta. Conservamos de forma anonimizada el historial de turnos trabajados, contratos y pagos por obligación legal de nómina — el detalle completo está en la política de privacidad.
 
-4. USO ACEPTABLE
+4. PLANES Y PAGOS
+Zaturno se paga por período (mensual, trimestral, semestral o anual) mediante un link de pago de Wompi que tú mismo generas desde Mi plan — no guardamos tarjetas ni cobramos de forma automática. Las empresas nuevas tienen 30 días gratis para probar la plataforma.
+
+Si tu período vence sin que lo renueves, tienes 3 días de gracia antes de que se bloqueen las acciones de escritura; tu historial no se borra.
+
+Puedes cancelar la renovación de tu plan en cualquier momento desde Mi plan, con un solo botón: dejas de recibir recordatorios y no se te cobra de nuevo, pero mantienes acceso hasta el final del período ya pagado. Puedes reactivarla antes de esa fecha si cambias de opinión.
+
+Un cambio de precio de plan solo aplica a renovaciones futuras — nunca a un período que ya pagaste.
+
+Las empresas con una integración activa de logiq360 no pagan la suscripción directamente a Zaturno; su acceso depende de esa integración.
+
+5. USO ACEPTABLE
 No puedes usar Zaturno para actividades ilegales, suplantar identidades o interferir con el servicio. El acceso es personal e intransferible.
 
-5. PROPIEDAD INTELECTUAL
+6. PROPIEDAD INTELECTUAL
 Todo el software, diseño y contenido de Zaturno es propiedad de sus desarrolladores. No se otorgan licencias de uso más allá de lo necesario para operar la aplicación.
 
-6. LIMITACIÓN DE RESPONSABILIDAD
+7. LIMITACIÓN DE RESPONSABILIDAD
 Zaturno no es responsable por pérdidas de datos causadas por fallas en el dispositivo del usuario, conectividad interrumpida o uso indebido de credenciales.
 
-7. MODIFICACIONES
+8. MODIFICACIONES
 Podemos actualizar estos términos en cualquier momento. Te notificaremos con al menos 7 días de anticipación para cambios materiales.
 
-8. LEY APLICABLE
+9. LEY APLICABLE
 Estos términos se rigen por la legislación colombiana. Cualquier controversia se someterá a los jueces competentes de Colombia.
 
-9. CONTACTO
+10. CONTACTO
 soporte@zaturno.app
 `;

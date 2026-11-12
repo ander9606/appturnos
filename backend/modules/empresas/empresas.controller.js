@@ -83,6 +83,16 @@ async function obtenerSuscripcion(req, res) {
   res.json({ success: true, data });
 }
 
+async function cancelarSuscripcion(req, res) {
+  await EmpresasService.cancelarSuscripcion(req.empresa_id);
+  res.json({ success: true, data: null, message: 'Dejamos de renovar tu plan. Tu acceso sigue activo hasta que termine el período ya pagado.' });
+}
+
+async function reactivarSuscripcion(req, res) {
+  await EmpresasService.reactivarSuscripcion(req.empresa_id);
+  res.json({ success: true, data: null, message: 'Tu plan volverá a renovarse normalmente' });
+}
+
 /**
  * Descarga el PDF de reglas de cálculo de pagos — solo admin_empresa (ver
  * routes). Documento estático generado con
@@ -96,5 +106,6 @@ function reglasPago(req, res) {
 }
 
 module.exports = {
-  directorio, detalle, miEmpresa, actualizarMiEmpresa, historialFirma, reprocesarRecargos, generarLinkPago, obtenerSuscripcion, reglasPago,
+  directorio, detalle, miEmpresa, actualizarMiEmpresa, historialFirma, reprocesarRecargos, generarLinkPago, obtenerSuscripcion,
+  cancelarSuscripcion, reactivarSuscripcion, reglasPago,
 };

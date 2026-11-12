@@ -8,7 +8,7 @@ import {
   usePuntos, useCreatePunto, useUpdatePunto, useDeletePunto,
   useCargos, useCreateCargo, useUpdateCargo, useDeleteCargo,
   useGestores, useCreateGestor, useUpdateGestor, useToggleGestor, useDeleteGestor,
-  useSuscripcion, usePagarSuscripcion, useReprocesarRecargos,
+  useSuscripcion, usePagarSuscripcion, useCancelarSuscripcion, useReactivarSuscripcion, useReprocesarRecargos,
 } from '../hooks/useConfiguracion';
 import { useAuthStore } from '@/modules/auth/authStore';
 import { LugarInput } from '@/modules/turnos/components/LugarInput';
@@ -964,6 +964,9 @@ function describirPlan(p: PlanOpcion): string {
 function PlanTab() {
   const { data, isLoading, isError, error, refetch } = useSuscripcion();
   const pagar = usePagarSuscripcion();
+  const cancelar = useCancelarSuscripcion();
+  const reactivar = useReactivarSuscripcion();
+  const { confirmState, confirm, close } = useConfirm();
   const [meses, setMeses] = useState(1);
   const [planElegido, setPlanElegido] = useState<PlanCodigo | null>(null);
   const [link, setLink] = useState<LinkPago | null>(null);
@@ -1000,6 +1003,15 @@ function PlanTab() {
     setLink(res.data);
   };
 
+  const handleCancelar = () => confirm({
+    title: 'Cancelar mi plan',
+    detail: s.vigente_hasta
+      ? `No se te cobrará de nuevo. Mantienes acceso hasta el ${fmtDate(s.vigente_hasta)}, cuando vence tu período ya pagado.`
+      : 'No se te cobrará de nuevo.',
+    confirmLabel: 'Sí, cancelar',
+    onConfirm: () => { cancelar.mutate(); close(); },
+  });
+
   return (
     <div className="max-w-2xl flex flex-col gap-6">
       <div className="bg-card border border-border rounded-2xl p-6">
@@ -1034,6 +1046,21 @@ function PlanTab() {
             </>
           )}
         </div>
+
+        {s.cancelada && (
+          <div className="mt-4 bg-warning-light border border-warning/30 rounded-xl px-4 py-3 flex items-center gap-3 text-sm">
+            <span className="text-warning flex-1">
+              No se renovará — pierdes el acceso {s.vigente_hasta ? `el ${fmtDate(s.vigente_hasta)}` : 'al vencer'}.
+            </span>
+            <button
+              onClick={() => reactivar.mutate()}
+              disabled={reactivar.isPending}
+              className="text-sm font-semibold text-primary hover:underline disabled:opacity-50"
+            >
+              {reactivar.isPending ? 'Reactivando…' : 'Reactivar'}
+            </button>
+          </div>
+        )}
 
         {/* Uso del plan: trabajadores activos frente al tope. */}
         <div className="mt-5">
@@ -1173,6 +1200,26 @@ function PlanTab() {
             </div>
           )}
         </div>
+      )}
+
+      {s.origen !== 'logiq360' && s.vigente_hasta && !s.cancelada && (
+        <button
+          onClick={handleCancelar}
+          disabled={cancelar.isPending}
+          className="self-center text-xs font-medium text-muted-foreground hover:text-foreground underline"
+        >
+          {cancelar.isPending ? 'Cancelando…' : 'Cancelar mi plan'}
+        </button>
+      )}
+
+      {confirmState && (
+        <ConfirmModal
+          title={confirmState.title}
+          detail={confirmState.detail}
+          confirmLabel={confirmState.confirmLabel ?? 'Confirmar'}
+          onConfirm={confirmState.onConfirm}
+          onCancel={close}
+        />
       )}
     </div>
   );
