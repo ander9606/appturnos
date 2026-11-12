@@ -3,7 +3,10 @@
 jest.mock('../modules/admin/admin.model');
 jest.mock('../modules/empresas/empresas.model');
 jest.mock('../modules/suscripciones/planes.model');
-jest.mock('../utils/facturaPdf', () => ({ generarFacturaPdf: jest.fn().mockResolvedValue(Buffer.from('pdf')) }));
+jest.mock('../utils/facturaPdf', () => ({
+  generarFacturaPdf: jest.fn().mockResolvedValue(Buffer.from('pdf')),
+  emisorDesdeEnv: jest.fn().mockReturnValue({ nombre: 'Operador', documento: 'CC 1', email: 'op@ejemplo.co', firmaB64: null }),
+}));
 
 const AdminModel = require('../modules/admin/admin.model');
 const EmpresasModel = require('../modules/empresas/empresas.model');
@@ -13,7 +16,7 @@ const { generarFacturaPdf } = require('../utils/facturaPdf');
 
 const empresa = (overrides) => ({
   id: 8, nombre: 'Logística Demo S.A.S', nit: '900111222', email: 'admin@logistica.co',
-  plan: 'profesional', suscripcion_vigente_hasta: '2026-12-15',
+  plan: 'profesional', suscripcion_vigente_hasta: '2026-12-15', suscripcion_origen: 'wompi',
   suscripcion_valor_mes_cop: null, suscripcion_meses: null,
   ...overrides,
 });
@@ -96,5 +99,25 @@ describe('AdminService.generarCuentaCobroActual', () => {
     expect(AdminModel.obtenerUltimoMesesPagado).not.toHaveBeenCalled();
     expect(montoSuscripcionCop).toHaveBeenCalledWith({ codigo: 'profesional', max_trabajadores: 30 }, 12, 12);
     expect(generarFacturaPdf).toHaveBeenCalledWith(expect.objectContaining({ montoCop: 1700000 }));
+  });
+
+  test('empresa activada a mano (no wompi): no afirma un canal de pago que no ocurrió', async () => {
+    AdminModel.obtenerEmpresaParaCuentaCobro.mockResolvedValue(
+      empresa({ suscripcion_origen: 'manual', suscripcion_valor_mes_cop: 169000, suscripcion_meses: 1 })
+    );
+
+    await AdminService.generarCuentaCobroActual(8);
+
+    expect(generarFacturaPdf).toHaveBeenCalledWith(expect.objectContaining({ medioPago: undefined }));
+  });
+
+  test('empresa con el último pago por Wompi: sí afirma el canal', async () => {
+    AdminModel.obtenerEmpresaParaCuentaCobro.mockResolvedValue(
+      empresa({ suscripcion_origen: 'wompi', suscripcion_valor_mes_cop: 169000, suscripcion_meses: 1 })
+    );
+
+    await AdminService.generarCuentaCobroActual(8);
+
+    expect(generarFacturaPdf).toHaveBeenCalledWith(expect.objectContaining({ medioPago: 'Wompi' }));
   });
 });
