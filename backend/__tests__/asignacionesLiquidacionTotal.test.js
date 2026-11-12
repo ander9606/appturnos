@@ -25,6 +25,19 @@ describe('AsignacionesLiquidacionModel.totalLiquidacion', () => {
     expect(sql).toContain("t.tipo != 'nomina'");
     expect(sql).toContain("a.estado = 'fallido' OR COALESCE(cd.firmado_trabajador, 0) = 1");
     expect(sql).toContain("d.estado = 'aceptado'");
+    // un turno completado con compensación aún pendiente de autorización no cuenta,
+    // aunque ya tenga el contrato diario firmado (liquidacion() lo deja en
+    // turnos_pendientes_autorizacion y no lo suma a pago_total)
+    expect(sql).toContain("NOT (a.estado = 'completado' AND a.compensacion_decision = 'pendiente')");
+  });
+
+  test('no suma un turno completado con compensación pendiente aunque esté firmado', async () => {
+    // Regresión: antes del fix, firmado_trabajador=1 bastaba para sumarlo aunque
+    // compensacion_decision siguiera 'pendiente' — liquidacion() lo excluye.
+    pool.query.mockResolvedValue([[{ total: 0 }]]);
+    await Model.totalLiquidacion(7, {});
+    const [sql] = pool.query.mock.calls[0];
+    expect(sql).toContain("NOT (a.estado = 'completado' AND a.compensacion_decision = 'pendiente')");
   });
 
   test('sin rango no agrega filtros de fecha', async () => {

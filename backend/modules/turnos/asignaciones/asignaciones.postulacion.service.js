@@ -8,9 +8,29 @@ const NotificacionesService = require('../../notificaciones/notificaciones.servi
 const NotificacionesModel = require('../../notificaciones/notificaciones.model');
 const IntegracionService = require('../../integracion/integracion.service');
 const CoberturaService = require('../../integracion/cobertura.service');
+const CostoLaborService = require('../../integracion/costo-labor.service');
+const { ajustarContratoYCuenta } = require('./fallido.postproceso');
 const AppError = require('../../../utils/AppError');
 const logger = require('../../../utils/logger');
 const { fmtFechaCorta } = require('./asignaciones.helpers');
+const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
+const { HORAS_ALERTA_COMPENSACION_SIN_RESPUESTA } = require('../../../config/constants');
+
+/**
+ * Valida que la asignación sea del trabajador y tenga una propuesta de compensación pendiente.
+ * Devuelve la asignación con detalles (con la empresa real de la fila).
+ */
+async function propuestaPendienteDelTrabajador(empresaId, id, usuarioId) {
+  const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, id);
+  if (!asignacion) throw new AppError('Asignación no encontrada', 404);
+  if (asignacion.usuario_id !== usuarioId) {
+    throw new AppError('Esta asignación no te pertenece', 403);
+  }
+  if (asignacion.estado !== 'completado' || asignacion.compensacion_decision !== 'pendiente') {
+    throw new AppError('Este turno no tiene una propuesta de compensación pendiente', 409);
+  }
+  return asignacion;
+}
 
 /** JOIN best-effort para la notificación — si falla, se loguea en vez de fallar en silencio. */
 function obtenerDetallesParaNotificar(empresaId, id) {
@@ -144,6 +164,104 @@ module.exports = {
    * declina y libera el cupo para siempre. A diferencia de cancelar(), acá
    * quien actúa es el trabajador dueño de la asignación, no un gestor.
    */
+  /**
+   * El trabajador da por enterado su turno fallido (fuerza mayor) y la compensación. Solo es un
+   * "enterado": el pago no depende de esto. Idempotente. Solo el dueño de la asignación.
+   */
+  async aceptarFallido(empresaId, id, usuarioId) {
+    const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, id);
+    if (!asignacion) throw new AppError('Asignación no encontrada', 404);
+    if (asignacion.usuario_id !== usuarioId) {
+      throw new AppError('Esta asignación no te pertenece', 403);
+    }
+    if (asignacion.estado !== 'fallido') {
+      throw new AppError('Este turno no fue dado por fallido', 409);
+    }
+    // JWT empresa_id es null/desactualizado para marketplace — usar el de la fila.
+    await AsignacionesModel.aceptarFallido(asignacion.empresa_id, id);
+    return AsignacionesModel.obtenerConDetalles(asignacion.empresa_id, id);
+  },
+
+  /**
+   * El trabajador AUTORIZA bajarle el pago de un turno que ya trabajó: recién ahora el turno pasa a 'fallido' con la
+   * compensación propuesta. Anula la firma del contrato, ajusta la cuenta de cobro, corrige el costo reportado a
+   * logiq360 y avisa a los gestores. Idempotente ante un doble toque (409 si ya no está pendiente).
+   */
+  async autorizarCompensacion(empresaId, id, usuarioId) {
+    const asignacion = await propuestaPendienteDelTrabajador(empresaId, id, usuarioId);
+    const dbEmpresaId = asignacion.empresa_id;
+
+    const aplicada = await AsignacionesModel.autorizarCompensacion(dbEmpresaId, id);
+    if (!aplicada) throw new AppError('Este turno no tiene una propuesta de compensación pendiente', 409);
+
+    await ajustarContratoYCuenta(dbEmpresaId, id, asignacion.trabajador_id);
+    // El costo reportado a logiq360 ya incluía este turno con su pago anterior: reenvío marcado como corrección.
+    await CostoLaborService.verificarYEmitir(dbEmpresaId, asignacion.oferta_id, { correccion: true }).catch(() => {});
+
+    const gestoresIds = await NotificacionesModel.idsGestoresTurnos(dbEmpresaId);
+    if (gestoresIds.length > 0) {
+      await NotificacionesService.notificarVarios(gestoresIds, {
+        empresaId: dbEmpresaId,
+        tipo: 'asignacion.compensacion_decision',
+        titulo: 'Compensación autorizada',
+        mensaje: `${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido} autorizó la compensación de "${asignacion.oferta_titulo}": su turno quedó como fallido.`,
+        data: { oferta_id: asignacion.oferta_id, asignacion_id: id },
+      });
+    }
+    return AsignacionesModel.obtenerConDetalles(dbEmpresaId, id);
+  },
+
+  /**
+   * El trabajador NO autoriza: el turno sigue completado y se le paga según su contrato. El gestor queda avisado
+   * para que resuelva (la app no cambia el pago por su cuenta).
+   */
+  async rechazarCompensacion(empresaId, id, usuarioId) {
+    const asignacion = await propuestaPendienteDelTrabajador(empresaId, id, usuarioId);
+    const dbEmpresaId = asignacion.empresa_id;
+
+    const registrada = await AsignacionesModel.rechazarCompensacion(dbEmpresaId, id);
+    if (!registrada) throw new AppError('Este turno no tiene una propuesta de compensación pendiente', 409);
+
+    const gestoresIds = await NotificacionesModel.idsGestoresTurnos(dbEmpresaId);
+    if (gestoresIds.length > 0) {
+      await NotificacionesService.notificarVarios(gestoresIds, {
+        empresaId: dbEmpresaId,
+        tipo: 'asignacion.compensacion_decision',
+        titulo: 'Compensación no autorizada',
+        mensaje: `${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido} no autorizó cambiar su pago de "${asignacion.oferta_titulo}". Se le paga según su contrato.`,
+        data: { oferta_id: asignacion.oferta_id, asignacion_id: id },
+      });
+    }
+    return AsignacionesModel.obtenerConDetalles(dbEmpresaId, id);
+  },
+
+  /**
+   * Avisa al gestor (una sola vez por propuesta) de las propuestas de compensación que el trabajador lleva
+   * HORAS_ALERTA_COMPENSACION_SIN_RESPUESTA sin responder. Mientras no responda el turno está en espera: no suma ni
+   * resta en la liquidación. Lo llama turnos.worker.js. @returns {Promise<number>} cuántas alertas envió.
+   */
+  async alertarCompensacionesSinResponder() {
+    const limite = ahoraColombiaSQL(-HORAS_ALERTA_COMPENSACION_SIN_RESPUESTA * 3_600_000);
+    const filas = await AsignacionesModel.listarCompensacionesSinResponder(limite);
+    let alertadas = 0;
+    for (const f of filas) {
+      // Primero se reclama el aviso: si otra instancia (o un ciclo anterior) ya lo tomó, no se repite.
+      if (!(await AsignacionesModel.reclamarAlertaCompensacion(f.id))) continue;
+      const gestoresIds = await NotificacionesModel.idsGestoresTurnos(f.empresa_id);
+      if (gestoresIds.length > 0) {
+        await NotificacionesService.notificarVarios(gestoresIds, {
+          empresaId: f.empresa_id,
+          tipo: 'asignacion.compensacion_sin_respuesta',
+          titulo: 'Compensación sin respuesta',
+          mensaje: `${f.trabajador_nombre} ${f.trabajador_apellido} lleva más de ${HORAS_ALERTA_COMPENSACION_SIN_RESPUESTA} h sin responder la propuesta de compensación de "${f.oferta_titulo}". Mientras no responda, ese turno queda en espera: no suma ni resta en la liquidación.`,
+          data: { oferta_id: f.oferta_id, asignacion_id: f.id },
+        });
+      }
+      alertadas++;
+    }
+    return alertadas;
+  },
+
   async reconfirmar(empresaId, id, usuarioId, acepta) {
     // obtenerConDetalles maneja empresaId null (trabajador_turnos multi-empresa);
     // obtenerPorId no. Trae usuario_id ya resuelto para el chequeo de pertenencia.

@@ -145,6 +145,18 @@ describe('acumulado por evento', () => {
     expect(g.sinFirmar).toBe(1);
   });
 
+  test('un turno con la compensación sin responder (en espera) no suma, no cuenta como sin firmar y no cambia al responder', () => {
+    const lista = (decision: unknown) => agruparMisTurnos([
+      p(50000, { oferta_fecha: '2030-01-01' }),
+      p(90000, { contrato_firmado: 0, compensacion_decision: decision, oferta_fecha: '2030-01-02' }),
+      p(70000, { compensacion_decision: decision, oferta_fecha: '2030-01-03' }),
+    ] as never)[0];
+    const espera = lista('pendiente');
+    expect(espera).toMatchObject({ acumulado: 50000, porFirmar: 0, sinFirmar: 0, terminados: 3 });
+    expect(lista('autorizada')).toMatchObject({ acumulado: 120000, porFirmar: 90000 - 0, sinFirmar: 1 }); // vuelve a contar
+    expect(lista('rechazada')).toMatchObject({ acumulado: 120000, sinFirmar: 1 });
+  });
+
   test('un evento sin nada terminado acumula cero', () => {
     const [g] = agruparMisTurnos([a({ estado: 'confirmado', pago_total: 70000 })]);
     expect(g).toMatchObject({ acumulado: 0, porFirmar: 0 });

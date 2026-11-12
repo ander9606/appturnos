@@ -157,7 +157,7 @@ describe('registros.worker (horas extra en jornada activa)', () => {
 });
 
 describe('suscripcion.worker (avisos de renovación)', () => {
-  const SQL_RENOVACIONES = "SELECT e.id, e.nombre, e.plan, e.suscripcion_vigente_hasta, DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) AS dias_restantes FROM empresas e WHERE e.activo = 1 AND e.suscripcion_origen != 'logiq360' AND e.suscripcion_vigente_hasta IS NOT NULL AND DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) IN (7, 3, 1, 0, -1, -2) LIMIT 100";
+  const SQL_RENOVACIONES = "SELECT e.id, e.nombre, e.plan, e.suscripcion_vigente_hasta, DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) AS dias_restantes FROM empresas e WHERE e.activo = 1 AND e.suscripcion_origen != 'logiq360' AND e.suscripcion_vigente_hasta IS NOT NULL AND e.suscripcion_cancelada_at IS NULL AND DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) IN (7, 3, 1, 0, -1, -2) LIMIT 100";
   const empresa = (dias) => ({ id: 7, nombre: 'ACME', plan: 'basico', dias_restantes: dias });
   const MARTA = { empresa_id: 7, email: 'a@acme.co', nombre: 'Marta' };
   const RODRIGO = { empresa_id: 7, email: 'r@acme.co', nombre: 'Rodrigo' };

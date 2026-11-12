@@ -19,6 +19,10 @@ export const configuracionApi = {
   getReglasPago: () => api.get('/empresas/reglas-pago', { responseType: 'blob' }),
   pagarSuscripcion: (data: { meses: number; plan?: PlanCodigo }) =>
     api.post<{ data: LinkPago }>('/empresas/suscripcion/pagar', data).then(r => r.data),
+  /** Deja de renovar: no cobra de nuevo ni manda más recordatorios, pero el acceso ya pagado sigue hasta que venza. */
+  cancelarSuscripcion: () => api.post('/empresas/suscripcion/cancelar').then(r => r.data),
+  /** Revierte cancelarSuscripcion — solo tiene efecto antes de que venza la suscripción. */
+  reactivarSuscripcion: () => api.post('/empresas/suscripcion/reactivar').then(r => r.data),
 
   // Puntos de marcaje
   getPuntos: () => api.get<{ data: PuntoMarcaje[] }>('/puntos-marcaje').then(r => r.data),

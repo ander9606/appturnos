@@ -142,6 +142,8 @@ const EmpresasService = {
       dias_gracia: DIAS_GRACIA_SUSCRIPCION,
       origen: esLogiq360 ? 'logiq360' : 'directo',
       logiq360_conectado: esLogiq360,
+      // Canceló la renovación pero sigue teniendo acceso hasta vigente_hasta (ya pagado).
+      cancelada: !!e.suscripcion_cancelada_at,
       trabajadores_activos: activos,
       max_trabajadores: actual?.max_trabajadores ?? null,
       // Para la sección "Ampliar plan": precio que pagaría hoy con sus activos
@@ -159,6 +161,32 @@ const EmpresasService = {
         disponible: p.max_trabajadores == null || activos <= p.max_trabajadores,
       })),
     };
+  },
+
+  /**
+   * Deja de renovar: no se cobra de nuevo ni se mandan más recordatorios
+   * (suscripcion.worker.js la excluye), pero el acceso ya pagado sigue
+   * hasta suscripcion_vigente_hasta — no se toca esa fecha ni se bloquea nada aquí.
+   */
+  async cancelarSuscripcion(empresaId) {
+    const e = await EmpresasModel.obtenerEstadoSuscripcion(empresaId);
+    if (!e) throw new AppError('Empresa no encontrada', 404);
+    if (await tieneIntegracionLogiq360Activa(empresaId)) {
+      throw new AppError('Esta empresa gestiona su suscripción a través de logiq360', 409);
+    }
+    if (!e.suscripcion_vigente_hasta) {
+      throw new AppError('Tu plan no tiene renovación que cancelar — escríbenos a soporte si necesitas ayuda', 409);
+    }
+    if (e.suscripcion_cancelada_at) throw new AppError('Ya habías cancelado la renovación', 409);
+    await EmpresasModel.cancelarSuscripcion(empresaId);
+  },
+
+  /** Revierte cancelarSuscripcion — solo tiene efecto antes de que venza suscripcion_vigente_hasta. */
+  async reactivarSuscripcion(empresaId) {
+    const e = await EmpresasModel.obtenerEstadoSuscripcion(empresaId);
+    if (!e) throw new AppError('Empresa no encontrada', 404);
+    if (!e.suscripcion_cancelada_at) throw new AppError('Tu suscripción no está cancelada', 409);
+    await EmpresasModel.reactivarSuscripcion(empresaId);
   },
 };
 

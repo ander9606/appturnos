@@ -35,6 +35,19 @@ export interface TurnoDeGrupo {
   estado: string;
   plazas: number;
   plazas_cubiertas: number;
+  /** Trabajadores con compensación por turno fallido (fuerza mayor). Con el turno cancelado y > 0, es un «turno fallido». */
+  fallidos?: number;
+}
+
+/** Costos de un grupo (espejo de `CostosGrupo` del api-client): para pagar, sin firmar, en espera, por hacer y proyectado. */
+export interface CostosGrupo {
+  real: { total: number; tarifas: number; bonos: number; descuentos: number; turnos_pagados: number };
+  sin_firmar: { cantidad: number; monto: number };
+  en_espera: { cantidad: number };
+  estimado: { total: number; turnos: number };
+  proyectado: number;
+  trabajadores: number;
+  horas: number;
 }
 
 export interface GrupoTurnoDetalle extends GrupoTurno {

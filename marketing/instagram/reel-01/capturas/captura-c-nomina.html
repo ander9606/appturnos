@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="es"><head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Captura C - Liquidación de Nómina</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #F8FAFC;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      background: white;
+      display: flex;
+      flex-direction: column;
+    }
+    .status-bar {
+      height: 44px;
+      padding: 0 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #0F172A;
+      font-size: 14px;
+      font-weight: 500;
+      background: white;
+    }
+    .header {
+      padding: 20px 20px 16px;
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      color: white;
+    }
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .period-selector {
+      padding: 6px 12px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+    .summary-card {
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 16px;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .summary-row:last-child {
+      margin-bottom: 0;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255,255,255,0.2);
+    }
+    .summary-label {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    .summary-value {
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .summary-value.total {
+      font-size: 24px;
+    }
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #64748B;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+    .worker-card {
+      background: white;
+      border: 2px solid #E2E8F0;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      transition: all 0.2s;
+    }
+    .worker-card:hover {
+      border-color: #CBD5E1;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .worker-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 12px;
+    }
+    .worker-info {
+      flex: 1;
+    }
+    .worker-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0F172A;
+      margin-bottom: 2px;
+    }
+    .worker-role {
+      font-size: 13px;
+      color: #64748B;
+    }
+    .worker-total {
+      text-align: right;
+    }
+    .worker-total .amount {
+      font-size: 20px;
+      font-weight: 800;
+      color: #059669;
+    }
+    .worker-total .label {
+      font-size: 11px;
+      color: #64748B;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .breakdown {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding-top: 12px;
+      border-top: 1px solid #F1F5F9;
+    }
+    .breakdown-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+    }
+    .breakdown-item .label {
+      color: #64748B;
+    }
+    .breakdown-item .value {
+      font-weight: 600;
+      color: #0F172A;
+    }
+    .breakdown-item .value.highlight {
+      color: #059669;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      background: #FEF3C7;
+      color: #92400E;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 6px;
+      margin-left: 6px;
+    }
+    .floating-btn {
+      position: fixed;
+      bottom: 24px;
+      right: 20px;
+      width: 60px;
+      height: 60px;
+      background: #FF5A3C;
+      border-radius: 50%;
+      box-shadow: 0 4px 16px rgba(255, 90, 60, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="phone-screen">
+    <!-- Status bar -->
+    <div class="status-bar">
+      <span>9:41</span>
+      <div style="display: flex; gap: 6px; align-items: center;">
+        <svg width="17" height="12" viewBox="0 0 17 12" fill="currentColor">
+          <rect opacity="0.4" width="17" height="12" rx="2.5"/>
+          <rect width="13" height="12" rx="2"/>
+        </svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="currentColor">
+          <path d="M0 5.5h3M5 5.5h3M10 5.5h5M2 2v7M7 1v9M12 0v11"/>
+        </svg>
+        <svg width="25" height="12" viewBox="0 0 25 12" fill="currentColor">
+          <rect opacity="0.4" x="0.5" y="0.5" width="21" height="11" rx="2.5" stroke="currentColor"/>
+          <rect x="2" y="2" width="17" height="8" rx="1"/>
+          <rect x="23" y="4" width="1.5" height="4" rx="0.5" opacity="0.4"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-top">
+        <h1>Nómina</h1>
+        <div class="period-selector">Nov 1-15</div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-row">
+          <span class="summary-label">Salario base</span>
+          <span class="summary-value">$4,850,000</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">Recargos</span>
+          <span class="summary-value">+$1,240,500</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">Deducciones</span>
+          <span class="summary-value">-$420,000</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">Total a pagar</span>
+          <span class="summary-value total">$5,670,500</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <div class="section-title">Detalle por trabajador (8)</div>
+
+      <!-- Trabajador 1 -->
+      <div class="worker-card">
+        <div class="worker-header">
+          <div class="worker-info">
+            <div class="worker-name">Carlos Mendoza</div>
+            <div class="worker-role">Mesero</div>
+          </div>
+          <div class="worker-total">
+            <div class="amount">$892,400</div>
+            <div class="label">Total</div>
+          </div>
+        </div>
+        <div class="breakdown">
+          <div class="breakdown-item">
+            <span class="label">Horas base</span>
+            <span class="value">88h</span>
+          </div>
+          <div class="breakdown-item">
+            <span class="label">Nocturnas</span>
+            <span class="value highlight">16h</span>
+          </div>
+          <div class="breakdown-item">
+            <span class="label">Festivos</span>
+            <span class="value highlight">8h</span>
+          </div>
+          <div class="breakdown-item">
+            <span class="label">Dominicales</span>
+            <span class="value highlight">8h</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trabajador 2 -->
+      <div class="worker-card">
+        <div class="worker-header">
+          <div class="worker-info">
+            <div class="worker-name">María González</div>
+            <div class="worker-role">Mesera <span class="badge">+ RECARGOS</span></div>
+          </div>
+          <div class="worker-total">
+            <div class="amount">$1,124,750</div>
+            <div class="label">Total</div>
+          </div>
+        </div>
+        <div class="breakdown">
+          <div class="breakdown-item">
+            <span class="label">Horas base</span>
+            <span class="value">96h</span>
+          </div>
+          <div class="breakdown-item">
+            <span class="label">Nocturnas</span>
+            <span class="value highlight">24h</span>
+          </div>
+          <div class="breakdown-item">
+            <span class="label">Festivos</span>
+            <span class="value highlight">16h</span>
+          </div>
+          <div class="breakdown-item">
+            <span class="label">Dom. noct.</span>
+            <span class="value highlight">8h</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trabajador 3 -->
+      <div class="worker-card">
+        <div class="worker-header">
+          <div class="worker-info">
+            <div class="worker-name">Juan Rodríguez</div>
+            <div class="worker-role">Cajero</div>
+          </div>
+          <div class="worker-total">
+            <div class="amount">$756,200</div>
+            <div class="label">Total</div>
+          </div>
+        </div>
+        <div class="breakdown">
+          <div class="breakdown-item">
+            <span class="label">Horas base</span>
+            <span class="value">92h</span>
+          </div>
+          <div class="breakdown-item">
+            <span class="label">Nocturnas</span>
+            <span class="value highlight">8h</span>
+          </div>
+          <div class="breakdown-item">
+            <span class="label">Festivos</span>
+            <span class="value highlight">-</span>
+          </div>
+          <div class="breakdown-item">
+            <span class="label">Dominicales</span>
+            <span class="value highlight">8h</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="height: 80px;"></div>
+    </div>
+
+    <!-- Floating action button -->
+    <button class="floating-btn">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+    </button>
+  </div>
+</body>
+</html>

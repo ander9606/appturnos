@@ -3,6 +3,7 @@
 const PDFDocument = require('pdfkit');
 const { piePdfMarca } = require('./marcaPdf');
 const { dibujarFirma } = require('./firmaPdf');
+const { COMPENSACION_FALLIDO_MINIMA } = require('../config/constants');
 
 const MESES = [
   'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
@@ -148,6 +149,17 @@ function construirClausulas(contrato) {
       `al inicio de este documento. Cualquier cambio de dirección debe informarse por escrito a la otra parte.`],
   ];
 
+  // Solo los contratos creados con la cláusula (contratos_diarios.clausula_fuerza_mayor = 1): el PDF se genera
+  // al descargarlo, así que sin esta marca aparecería también en contratos anteriores o ya firmados.
+  if (Number(contrato.clausula_fuerza_mayor) === 1) {
+    const porcentaje = Math.round(COMPENSACION_FALLIDO_MINIMA * 100);
+    clausulas.push(['UNDÉCIMA — FUERZA MAYOR',
+      `Si por fuerza mayor (corte de luz, emergencia u otra causa ajena a las partes) el turno se cancela después ` +
+      `de que EL CONTRATISTA haya iniciado la labor y esta no se realiza, EL CONTRATISTA recibirá una compensación ` +
+      `de al menos el ${porcentaje} % del valor del día indicado en la tabla de datos del turno. Si la labor se ` +
+      `realiza, EL CONTRATANTE la pagará conforme a lo previsto en la cláusula TERCERA.`]);
+  }
+
   return { preambulo, clausulas };
 }
 
@@ -237,4 +249,4 @@ function generarContratoPdf(contrato, stream) {
   doc.end();
 }
 
-module.exports = { generarContratoPdf, construirFilasTurno };
+module.exports = { generarContratoPdf, construirFilasTurno, construirClausulas };

@@ -3,6 +3,7 @@
 const ReportesModel = require('./reportes.model');
 const TrabajadoresModel = require('../trabajadores/trabajadores.model');
 const AppError = require('../../utils/AppError');
+const { armarReporteGrupos } = require('./reportes.grupos');
 const { generarInsightsTurnos, generarInsightsNomina, generarInsightsPersonas, UMBRALES } = require('./reportes.insights');
 const { valorHora, desglosarPagoNomina, calcularSalarioBasePeriodo, diasComerciales } = require('../../utils/laboralUtils');
 
@@ -253,6 +254,15 @@ const ReportesService = {
       turnos: { jornadas: formatearJornadas(jTurnos), cargos, calificaciones: { mejores, peores }, insights: insights.turnos },
       nomina: verPagos ? { jornadas: jNomina && formatearJornadas(jNomina), horas, insights: insights.nomina } : null,
     };
+  },
+
+  /** Turnos del rango por grupo: costo, asistencia y cobertura de cada uno, y cuánto pesa en el costo de turnos. */
+  async porGrupo(empresaId, { desde, hasta }) {
+    const [asistencia, cobertura] = await Promise.all([
+      ReportesModel.asistenciaPorGrupo(empresaId, desde, hasta),
+      ReportesModel.coberturaPorGrupo(empresaId, desde, hasta),
+    ]);
+    return { rango: { desde, hasta }, ...armarReporteGrupos(asistencia, cobertura) };
   },
 
   /** Historial individual de un trabajador: turnos + registros de nómina. */

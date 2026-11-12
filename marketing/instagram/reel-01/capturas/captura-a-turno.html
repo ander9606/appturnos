@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="es"><head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Captura A - Publicar Turno</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #F8FAFC;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .status-bar {
+      height: 44px;
+      padding: 0 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .header {
+      padding: 16px 20px;
+      color: white;
+    }
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .header p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    .content {
+      flex: 1;
+      background: white;
+      border-radius: 30px 30px 0 0;
+      padding: 24px 20px;
+      overflow-y: auto;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 8px;
+    }
+    .input-field {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #E2E8F0;
+      border-radius: 12px;
+      font-size: 16px;
+      color: #0F172A;
+      transition: all 0.2s;
+    }
+    .input-field:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .chip {
+      display: inline-block;
+      padding: 6px 12px;
+      background: #F1F5F9;
+      color: #475569;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-right: 8px;
+      margin-bottom: 8px;
+    }
+    .chip.selected {
+      background: #667eea;
+      color: white;
+    }
+    .btn-primary {
+      width: 100%;
+      padding: 16px;
+      background: #FF5A3C;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 12px;
+      box-shadow: 0 4px 12px rgba(255, 90, 60, 0.3);
+    }
+    .divider {
+      height: 1px;
+      background: #E2E8F0;
+      margin: 20px 0;
+    }
+    .info-box {
+      background: #FEF3C7;
+      border: 1px solid #FDE047;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: start;
+      gap: 10px;
+    }
+    .info-box svg {
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .info-box p {
+      font-size: 13px;
+      color: #78350f;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="phone-screen">
+    <!-- Status bar -->
+    <div class="status-bar">
+      <span>9:41</span>
+      <div style="display: flex; gap: 6px; align-items: center;">
+        <svg width="17" height="12" viewBox="0 0 17 12" fill="white">
+          <rect opacity="0.4" width="17" height="12" rx="2.5"/>
+          <rect width="13" height="12" rx="2"/>
+        </svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="white">
+          <path d="M0 5.5h3M5 5.5h3M10 5.5h5M2 2v7M7 1v9M12 0v11"/>
+        </svg>
+        <svg width="25" height="12" viewBox="0 0 25 12" fill="white">
+          <rect opacity="0.4" x="0.5" y="0.5" width="21" height="11" rx="2.5" stroke="white"/>
+          <rect x="2" y="2" width="17" height="8" rx="1" fill="white"/>
+          <rect x="23" y="4" width="1.5" height="4" rx="0.5" fill="white" opacity="0.4"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+      <h1>Publicar Turno</h1>
+      <p>Completa los datos para publicar el turno</p>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <div class="info-box">
+        <svg width="20" height="20" fill="#F59E0B">
+          <circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path d="M10 6v4M10 13h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <p>Los trabajadores recibirán una notificación y podrán postularse al turno</p>
+      </div>
+
+      <div class="form-group">
+        <label>Cargo</label>
+        <input type="text" class="input-field" value="Mesero" readonly>
+      </div>
+
+      <div class="form-group">
+        <label>Ubicación</label>
+        <input type="text" class="input-field" value="Restaurante Centro" readonly>
+      </div>
+
+      <div class="row">
+        <div class="form-group">
+          <label>Fecha</label>
+          <input type="text" class="input-field" value="15 Nov 2024" readonly>
+        </div>
+        <div class="form-group">
+          <label>Vacantes</label>
+          <input type="text" class="input-field" value="3" readonly>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="form-group">
+          <label>Hora inicio</label>
+          <input type="text" class="input-field" value="18:00" readonly>
+        </div>
+        <div class="form-group">
+          <label>Hora fin</label>
+          <input type="text" class="input-field" value="23:00" readonly>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="form-group">
+        <label>Tipo de turno</label>
+        <div>
+          <span class="chip selected">Regular</span>
+          <span class="chip">Festivo</span>
+          <span class="chip">Nocturno</span>
+        </div>
+      </div>
+
+      <button class="btn-primary">
+        Publicar Turno
+      </button>
+    </div>
+  </div>
+</body>
+</html>

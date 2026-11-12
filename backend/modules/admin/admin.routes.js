@@ -5,6 +5,7 @@ const { body, param, query } = require('express-validator');
 
 const { validar } = require('../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
+const promoverTokenDeQuery = require('../../middleware/promoverTokenDeQuery');
 const { ROLES } = require('../../config/constants');
 const ctrl = require('./admin.controller');
 const { CODIGOS_PLAN } = require('../suscripciones/planes.model');
@@ -192,7 +193,10 @@ router.get(
   '/wompi-eventos',
   verificarToken,
   verificarRol(SOLO_SUPER),
-  [query('estado').optional().isIn(['recibido', 'procesado', 'error', 'ignorado', 'rechazado'])],
+  [
+    query('estado').optional().isIn(['recibido', 'procesado', 'error', 'ignorado', 'rechazado']),
+    query('empresa_id').optional().isInt({ min: 1 }).toInt(),
+  ],
   validar,
   ctrl.listarWompiEventos
 );
@@ -205,6 +209,19 @@ router.post(
   [param('id').isInt({ min: 1 }).toInt()],
   validar,
   ctrl.reintentarWompiEvento
+);
+
+// GET /api/admin/wompi-eventos/:id/cuenta-cobro — PDF de la cuenta de cobro de un
+// pago procesado. promoverTokenDeQuery antes de verificarToken: mobile la abre con
+// WebBrowser.openBrowserAsync, que no manda headers propios (igual que reglas-pago).
+router.get(
+  '/wompi-eventos/:id/cuenta-cobro',
+  promoverTokenDeQuery,
+  verificarToken,
+  verificarRol(SOLO_SUPER),
+  [param('id').isInt({ min: 1 }).toInt()],
+  validar,
+  ctrl.descargarCuentaCobroWompi
 );
 
 module.exports = router;

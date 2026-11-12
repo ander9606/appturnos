@@ -211,15 +211,40 @@ const AdminService = {
 
   // ── Wompi eventos ─────────────────────────────────────────────────────────
 
-  async listarWompiEventos({ estado, page = 1, limit = 30 } = {}) {
+  async listarWompiEventos({ estado, empresaId, page = 1, limit = 30 } = {}) {
     const offset = (page - 1) * limit;
-    const { data, total } = await AdminModel.listarWompiEventos({ estado, limit, offset });
+    const { data, total } = await AdminModel.listarWompiEventos({ estado, empresaId, limit, offset });
     return { data, total, page, limit, pages: Math.ceil(total / limit) };
   },
 
   async reintentarWompiEvento(id) {
     const WompiService = require('../webhooks/wompi.service');
     return WompiService.reintentarEvento(id);
+  },
+
+  /** PDF de la cuenta de cobro (persona natural) de un pago ya procesado — para que el super_admin la descargue cuando la necesite. */
+  async generarCuentaCobroWompi(id) {
+    const ev = await AdminModel.obtenerWompiEvento(id);
+    if (!ev) throw new AppError('Evento no encontrado', 404);
+    if (ev.estado !== 'procesado') throw new AppError('Este evento no tiene un pago procesado para cobrar', 409);
+
+    const { generarFacturaPdf } = require('../../utils/facturaPdf');
+    const numero = `ZT-${String(ev.id).padStart(6, '0')}`;
+    const pdf = await generarFacturaPdf({
+      numero,
+      fecha: new Date(ev.procesado_at ?? ev.created_at).toLocaleDateString('es-CO', { timeZone: 'America/Bogota' }),
+      emisor: {
+        nombre: process.env.FACTURA_EMISOR_NOMBRE,
+        documento: process.env.FACTURA_EMISOR_DOCUMENTO,
+        email: process.env.FACTURA_EMISOR_EMAIL,
+      },
+      cliente: { nombre: ev.empresa_nombre, nit: ev.empresa_nit, email: ev.empresa_email },
+      concepto: ev.meses === 0
+        ? `Cambio a plan ${ev.plan} — diferencia por el resto de la vigencia`
+        : `Suscripción Zaturno plan ${ev.plan} — ${ev.meses} mes${ev.meses !== 1 ? 'es' : ''}`,
+      montoCop: ev.monto_cop,
+    });
+    return { pdf, numero };
   },
 
   // ── Reportes ──────────────────────────────────────────────────────────────

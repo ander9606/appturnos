@@ -171,11 +171,21 @@ export default function CuentaCobroScreen() {
             <View style={s.summaryBox}>
               <Ionicons name="information-circle" size={18} color={DOCUMENT_COLORS.infoIcon} style={{ marginTop: 1 }} />
               <Text style={s.summaryText}>
+                {cuenta.valor_total < 0 ? (
+                  <>
+                    {firmado ? 'Firmaste una' : 'Vas a firmar una'} cuenta de ajuste por{' '}
+                    <Text style={s.summaryEmphasized}>{formatCOP(cuenta.valor_total)}</Text>: un turno del período{' '}
+                    <Text style={s.summaryEmphasized}>{fmtLegal(cuenta.fecha_inicio)}</Text> al{' '}
+                    <Text style={s.summaryEmphasized}>{fmtLegal(cuenta.fecha_fin)}</Text> se dio por fallido (fuerza mayor) con una
+                    compensación menor a lo que ya se te había cobrado, y la diferencia se descuenta.
+                  </>
+                ) : (<>
                 {firmado ? 'Firmaste una' : 'Vas a firmar una'} cuenta de cobro por{' '}
                 <Text style={s.summaryEmphasized}>{cuenta.total_turnos} turno{cuenta.total_turnos !== 1 ? 's' : ''}</Text>{' '}
                 del período <Text style={s.summaryEmphasized}>{fmtLegal(cuenta.fecha_inicio)}</Text> al{' '}
                 <Text style={s.summaryEmphasized}>{fmtLegal(cuenta.fecha_fin)}</Text>, por{' '}
                 <Text style={s.summaryEmphasized}>{formatCOP(cuenta.valor_total)}</Text>.
+                </>)}
               </Text>
             </View>
           )}

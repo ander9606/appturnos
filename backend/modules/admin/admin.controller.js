@@ -137,9 +137,10 @@ const AdminController = {
   // GET /api/admin/wompi-eventos
   async listarWompiEventos(req, res, next) {
     try {
-      const { estado, page, limit } = req.query;
+      const { estado, empresa_id, page, limit } = req.query;
       const resultado = await AdminService.listarWompiEventos({
         estado: estado || undefined,
+        empresaId: empresa_id ? Number(empresa_id) : undefined,
         page: Number(page) || 1,
         limit: Math.min(Number(limit) || 30, 100),
       });
@@ -152,6 +153,18 @@ const AdminController = {
     try {
       const resultado = await AdminService.reintentarWompiEvento(Number(req.params.id));
       res.json({ success: true, data: resultado, message: 'Evento reintentado con éxito' });
+    } catch (err) { next(err); }
+  },
+
+  // GET /api/admin/wompi-eventos/:id/cuenta-cobro
+  async descargarCuentaCobroWompi(req, res, next) {
+    try {
+      const { pdf, numero } = await AdminService.generarCuentaCobroWompi(Number(req.params.id));
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="${numero}.pdf"`,
+      });
+      res.send(pdf);
     } catch (err) { next(err); }
   },
 

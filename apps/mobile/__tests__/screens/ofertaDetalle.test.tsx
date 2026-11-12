@@ -267,6 +267,16 @@ describe('información principal', () => {
     expect(screen.queryByText(/nadie lo marcó como completado/)).toBeNull();
   });
 
+  test('el aviso de fuerza mayor (compensación / pago según contrato) lo ve el trabajador, no el gestor', () => {
+    mockRol = 'trabajador_turnos';
+    const { unmount } = montar();
+    expect(screen.getByText('Si el turno se cancela por fuerza mayor')).toBeTruthy();
+    unmount();
+    mockRol = 'admin_empresa';
+    montar();
+    expect(screen.queryByText('Si el turno se cancela por fuerza mayor')).toBeNull();
+  });
+
   test('la franja de color distingue un evento pasado', () => {
     const colorFranja = () => {
       const franja = screen.UNSAFE_getAllByType(View)
@@ -853,8 +863,26 @@ describe('barra de acciones del gestor', () => {
       expect(mockRouter.back).toHaveBeenCalledTimes(1);
     });
 
-    test('no aparece si la oferta ya no se puede cancelar', () => {
-      conOferta({ estado: 'completada', asignaciones: [{ id: 100, estado: 'en_progreso' }] });
+    test('aparece también con la oferta ya completada (se completa sola al marcar salida el último)', () => {
+      conOferta({ estado: 'completada', asignaciones: [{ id: 100, estado: 'completado' }] });
+      montar();
+      expect(texto('Turno fallido (fuerza mayor)')).toBeTruthy();
+    });
+
+    test('aparece si quien ya marcó salida (completado) es el único con ingreso', () => {
+      conOferta({ asignaciones: [{ id: 100, estado: 'completado' }] });
+      montar();
+      expect(texto('Turno fallido (fuerza mayor)')).toBeTruthy();
+    });
+
+    test('no aparece si la oferta ya está cancelada', () => {
+      conOferta({ estado: 'cancelada', asignaciones: [{ id: 100, estado: 'completado' }] });
+      montar();
+      expect(screen.queryByText('Turno fallido (fuerza mayor)')).toBeNull();
+    });
+
+    test('no aparece si nadie ha marcado ingreso (equivale a cancelar la oferta)', () => {
+      conOferta({ asignaciones: [{ id: 100, estado: 'confirmado' }] });
       montar();
       expect(screen.queryByText('Turno fallido (fuerza mayor)')).toBeNull();
     });

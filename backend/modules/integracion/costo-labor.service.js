@@ -31,6 +31,8 @@ const CostoLaborService = {
    * oferta como `completada`.
    *
    * Idempotencia: una oferta ya en estado `completada` no vuelve a emitir.
+   * Única excepción: `correccion: true` (OfertasService.marcarFallida sobre una oferta que ya estaba
+   * completada y reportada) — emite el costo vigente marcado como corrección.
    * Best-effort: si algo falla, se loguea pero no interrumpe el flujo
    * principal (típicamente el egreso del trabajador).
    *
@@ -40,7 +42,7 @@ const CostoLaborService = {
    * - Si todas las asignaciones confirmadas terminaron canceladas/no presentadas
    *   (cero `completado`), no se emite — no hay costo a reportar.
    */
-  async verificarYEmitir(empresaId, ofertaId) {
+  async verificarYEmitir(empresaId, ofertaId, { correccion = false } = {}) {
     try {
       const oferta = await OfertasModel.obtenerPorId(empresaId, ofertaId);
       if (!oferta) return;
@@ -84,6 +86,10 @@ const CostoLaborService = {
         total_pagado: totalPagado,
         total_trabajadores: completados.length,
         resumen,
+        // Re-envío después de que el costo ya se había reportado (turno completado que luego se dio por
+        // fallido): el total es el vigente y reemplaza al anterior, no se suma. Solo viaja cuando es true,
+        // así el payload de los demás casos queda idéntico.
+        ...(correccion ? { correccion: true } : {}),
       });
 
       // Marca la oferta como completada — actúa también como flag de idempotencia.

@@ -49,6 +49,11 @@ let mockEtiqueta = 'Grupo';
 jest.mock('@/features/empresas/useOpcionesGrupos', () => ({
   useOpcionesGrupos: () => ({ usa: mockUsa, etiqueta: mockEtiqueta, etiquetaPlural: `${mockEtiqueta}s`, isLoading: false }),
 }));
+// Los costos tienen su propia prueba (CostosGrupo.test.tsx): aquí solo importa que el detalle los muestre.
+jest.mock('@/features/grupos/CostosGrupo', () => {
+  const { Text } = require('react-native');
+  return { CostosGrupo: ({ grupoId }: { grupoId: number }) => <Text testID="costos">{`costos ${grupoId}`}</Text> };
+});
 const mockUseGrupos = jest.fn();
 const mockUseGrupo = jest.fn();
 const mockCambiar = jest.fn();
@@ -272,6 +277,12 @@ describe('detalle de un grupo', () => {
     render(<GrupoDetalleScreen />);
     await elegir('editar');
     expect(opciones().map((o) => o.key)).toContain('editar');
+  });
+
+  test('el detalle muestra los costos del grupo', () => {
+    detalle();
+    render(<GrupoDetalleScreen />);
+    expect(screen.getByTestId('costos').props.children).toBe('costos 3');
   });
 
   test('las acciones secundarias están en un menú, no como botones apilados', () => {

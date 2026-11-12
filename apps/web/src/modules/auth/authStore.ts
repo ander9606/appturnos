@@ -10,6 +10,7 @@ interface Usuario {
   email: string;
   rol: Rol;
   empresa_id: number;
+  terminos_aceptados_at: string | null;
 }
 
 interface AuthStore {
@@ -18,6 +19,7 @@ interface AuthStore {
   refreshToken: string | null;
   login: (usuario: Usuario, accessToken: string, refreshToken: string) => void;
   setTokens: (accessToken: string, refreshToken: string) => void;
+  actualizarUsuario: (datos: Partial<Usuario>) => void;
   clearAuth: () => void;
 }
 
@@ -29,6 +31,7 @@ export const useAuthStore = create<AuthStore>()(
       refreshToken: null,
       login: (usuario, accessToken, refreshToken) => set({ usuario, accessToken, refreshToken }),
       setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
+      actualizarUsuario: (datos) => set((s) => ({ usuario: s.usuario && { ...s.usuario, ...datos } })),
       clearAuth: () => set({ usuario: null, accessToken: null, refreshToken: null }),
     }),
     { name: 'zaturno-auth' }

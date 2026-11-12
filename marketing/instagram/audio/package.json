@@ -1,0 +1,11 @@
+﻿{
+  "type": "module",
+  "dependencies": {
+    "elevenlabs": "latest",
+    "dotenv": "^16.0.0"
+  },
+  "scripts": {
+    "listar-voces": "node listar-voces.js",
+    "configurar": "node configurar.js"
+  }
+}

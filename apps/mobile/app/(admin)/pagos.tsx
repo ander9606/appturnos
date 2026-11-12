@@ -21,6 +21,7 @@ import { useRouter } from 'expo-router';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useWompiEventos, useReintentarWompiEvento } from '@/features/admin/useAdmin';
+import { descargarCuentaCobroWompi } from '@/features/admin/descargarCuentaCobroWompi';
 import { formatCOP } from '@/lib/formatters';
 import { confirm } from '@/lib/confirmDialog';
 import type { WompiEstado, WompiEvento } from '@api-client';
@@ -73,6 +74,18 @@ function EventoCard({ evento, onReintentar, reintentando }: {
 }) {
   const color = ESTADO_COLOR[evento.estado];
   const monto = evento.monto_cop;
+  const [descargando, setDescargando] = useState(false);
+
+  const handleDescargar = async () => {
+    setDescargando(true);
+    try {
+      await descargarCuentaCobroWompi(evento.id);
+    } catch {
+      showAlert('No se pudo abrir la cuenta de cobro', 'Intenta de nuevo.');
+    } finally {
+      setDescargando(false);
+    }
+  };
 
   return (
     <View className="mx-4 mb-3 bg-card border border-border rounded-2xl p-4 gap-2">
@@ -118,6 +131,20 @@ function EventoCard({ evento, onReintentar, reintentando }: {
             <Spinner size="small" color={COLORS.danger} />
           ) : (
             <Text className="text-xs font-bold text-danger">🔄 Reintentar (intento {evento.intentos})</Text>
+          )}
+        </Pressable>
+      )}
+
+      {evento.estado === 'procesado' && (
+        <Pressable
+          onPress={handleDescargar}
+          disabled={descargando}
+          className="mt-1 h-9 rounded-xl items-center justify-center border border-border active:opacity-70"
+        >
+          {descargando ? (
+            <Spinner size="small" color={COLORS.mutedForeground} />
+          ) : (
+            <Text className="text-xs font-semibold text-muted-foreground">📄 Cuenta de cobro</Text>
           )}
         </Pressable>
       )}

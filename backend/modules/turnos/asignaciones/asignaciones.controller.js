@@ -78,6 +78,21 @@ async function reconfirmar(req, res) {
   res.json({ success: true, data, message: acepta ? 'Participación reconfirmada' : 'Asignación declinada' });
 }
 
+async function aceptarFallido(req, res) {
+  const data = await AsignacionesService.aceptarFallido(req.empresa_id, Number(req.params.id), req.usuario.sub);
+  res.json({ success: true, data, message: 'Turno fallido aceptado' });
+}
+
+async function autorizarCompensacion(req, res) {
+  const data = await AsignacionesService.autorizarCompensacion(req.empresa_id, Number(req.params.id), req.usuario.sub);
+  res.json({ success: true, data, message: 'Compensación autorizada' });
+}
+
+async function rechazarCompensacion(req, res) {
+  const data = await AsignacionesService.rechazarCompensacion(req.empresa_id, Number(req.params.id), req.usuario.sub);
+  res.json({ success: true, data, message: 'Compensación no autorizada' });
+}
+
 async function misTurnos(req, res) {
   const data = await AsignacionesService.misTurnos(req.empresa_id, req.usuario.sub);
   res.json({ success: true, data, message: 'Mis turnos y postulaciones' });
@@ -144,6 +159,6 @@ async function descartarSospechoso(req, res) {
 }
 
 module.exports = {
-  listar, obtener, confirmar, rechazar, cancelar, cancelarPropia, ingreso, egreso, reconfirmar, misTurnos, corregir,
+  listar, obtener, confirmar, rechazar, cancelar, cancelarPropia, ingreso, egreso, reconfirmar, aceptarFallido, autorizarCompensacion, rechazarCompensacion, misTurnos, corregir,
   noPresentado, calificar, liquidacion, liquidacionTotal, descartarSospechoso, agregarBono,
 };

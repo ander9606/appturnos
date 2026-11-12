@@ -80,6 +80,17 @@ async function notificarPoolRetrasado() {
   }
 }
 
+/**
+ * Avisa al gestor de las propuestas de compensación (fuerza mayor) que el trabajador lleva demasiado tiempo sin
+ * responder. Una sola vez por propuesta (la marca se reclama en el modelo).
+ */
+async function alertarCompensacionesSinResponder() {
+  const alertadas = await AsignacionesService.alertarCompensacionesSinResponder();
+  if (alertadas > 0) {
+    logger.info(`[turnos-worker] ${alertadas} propuesta(s) de compensación sin respuesta avisada(s) al gestor`);
+  }
+}
+
 function resolverYCerrarVencidas() {
   // Resolver primero: una vez que las asignaciones colgadas quedan en
   // completado/no_presentado, cerrarOfertasVencidas() ya puede cerrar la
@@ -94,11 +105,13 @@ function iniciarWorker() {
   // mostrando "abierta" hasta 30 min después de cada reinicio/deploy.
   resolverYCerrarVencidas();
   notificarPoolRetrasado().catch((err) => logger.error('[turnos-worker]', err.message));
+  alertarCompensacionesSinResponder().catch((err) => logger.error('[turnos-worker]', err.message));
 
   const timer = setInterval(() => {
     verificarPersonalIncompleto().catch((err) =>
       logger.error('[turnos-worker]', err.message)
     );
+    alertarCompensacionesSinResponder().catch((err) => logger.error('[turnos-worker]', err.message));
     notificarPoolRetrasado().catch((err) => logger.error('[turnos-worker]', err.message));
     resolverYCerrarVencidas();
   }, INTERVALO_MS);
@@ -107,4 +120,7 @@ function iniciarWorker() {
   return timer;
 }
 
-module.exports = { iniciarWorker, resolverAsignacionesVencidas, verificarPersonalIncompleto, notificarPoolRetrasado };
+module.exports = {
+  iniciarWorker, resolverAsignacionesVencidas, verificarPersonalIncompleto, notificarPoolRetrasado,
+  alertarCompensacionesSinResponder,
+};

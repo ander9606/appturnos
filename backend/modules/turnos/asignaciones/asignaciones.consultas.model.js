@@ -140,12 +140,13 @@ module.exports = {
     const [filas] = await pool.query(
       `SELECT a.id, a.estado, a.trabajador_id, t.usuario_id,
               t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
+              a.pago_total, a.bono_monto,
               p.tarifa_dia
        FROM asignaciones_turno a
        JOIN trabajadores t ON t.id = a.trabajador_id
        JOIN oferta_puestos p ON p.id = a.puesto_id
        WHERE a.empresa_id = ? AND a.oferta_id = ?
-         AND a.estado NOT IN ('completado', 'cancelado')`,
+         AND a.estado != 'cancelado'`,
       [empresaId, ofertaId]
     );
     return filas;
@@ -258,6 +259,8 @@ module.exports = {
       `SELECT a.id, a.empresa_id, a.oferta_id, a.puesto_id, a.trabajador_id, a.estado,
               a.horas_trabajadas, a.pago_total, a.pago_extra,
               a.bono_monto, a.bono_motivo,
+              a.compensacion_motivo, a.fallido_aceptado_at,
+              a.compensacion_propuesta, a.compensacion_decision, a.compensacion_decision_at,
               a.hora_ingreso_real, a.hora_egreso_real, a.firma_digital,
               a.latitud_ingreso, a.longitud_ingreso,
               a.latitud_egreso, a.longitud_egreso,
@@ -302,6 +305,8 @@ module.exports = {
       `SELECT a.id, a.empresa_id, a.oferta_id, a.puesto_id, a.trabajador_id, a.estado,
               a.horas_trabajadas, a.pago_total, a.pago_extra,
               a.bono_monto, a.bono_motivo,
+              a.compensacion_motivo, a.fallido_aceptado_at,
+              a.compensacion_propuesta, a.compensacion_decision, a.compensacion_decision_at,
               a.hora_ingreso_real, a.hora_egreso_real, a.firma_digital,
               a.latitud_ingreso, a.longitud_ingreso,
               a.latitud_egreso, a.longitud_egreso,

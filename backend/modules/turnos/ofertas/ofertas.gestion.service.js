@@ -12,10 +12,12 @@ const NotificacionesService = require('../../notificaciones/notificaciones.servi
 const NotificacionesModel = require('../../notificaciones/notificaciones.model');
 const CostoLaborService = require('../../integracion/costo-labor.service');
 const PeriodosTurnosService = require('../periodos/periodos-turnos.service');
+const { ajustarContratoYCuenta } = require('../asignaciones/fallido.postproceso');
 const GeocodingService = require('../../geocoding/geocoding.service');
 const AppError = require('../../../utils/AppError');
 const {
   ROLES, MAX_OFERTAS_ACTIVAS_POR_EMPRESA, DIAS_GRACIA_ASIGNACIONES_COLGADAS, HORAS_CORTE_EDICION_OFERTA,
+  COMPENSACION_FALLIDO_MINIMA,
 } = require('../../../config/constants');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 const logger = require('../../../utils/logger');
@@ -481,21 +483,42 @@ module.exports = {
     const oferta = await OfertasModel.obtenerPorId(empresaId, id);
     if (!oferta) throw new AppError('Oferta no encontrada', 404);
     if (oferta.estado === 'cancelada') return;
-    if (oferta.estado === 'completada') {
-      throw new AppError('No se puede marcar como fallida una oferta completada', 409);
-    }
+    // Una oferta 'completada' sí puede darse por fallida: al marcar salida el
+    // último trabajador el sistema la completa solo (CostoLaborService), y
+    // aun así el gestor puede necesitar compensar por fuerza mayor.
 
     const activas = await AsignacionesModel.listarActivasConTarifa(empresaId, id);
-    const enProgreso = activas.filter((a) => a.estado === 'en_progreso');
+    // 'completado' también compensa: quien ya cerró su turno (marcó salida)
+    // antes de que el gestor diera la oferta por fallida no debe quedar fuera.
+    const enProgreso = activas.filter((a) => a.estado === 'en_progreso' || a.estado === 'completado');
     const motivoFinal = (motivo || '').trim() || 'Fuerza mayor';
 
     const overrides = new Map((compensaciones || []).map((c) => [Number(c.asignacion_id), Number(c.monto)]));
-    const montos = enProgreso.map((a) => ({
-      asignacionId: a.id,
-      monto: overrides.has(a.id) ? overrides.get(a.id) : Number(a.tarifa_dia),
-    }));
+    // Piso: la compensación no puede bajar de la mitad de la tarifa del puesto (!(x >= min) también
+    // rechaza NaN). Se valida antes de tocar nada para que un monto bajo no deje el turno a medias.
+    for (const a of enProgreso) {
+      if (!overrides.has(a.id)) continue;
+      const minimo = Number(a.tarifa_dia) * COMPENSACION_FALLIDO_MINIMA;
+      if (!(overrides.get(a.id) >= minimo)) {
+        throw new AppError(
+          `La compensación de ${a.trabajador_nombre} ${a.trabajador_apellido} no puede ser menor a $${minimo.toLocaleString('es-CO')} (la mitad de la tarifa del turno).`,
+          422
+        );
+      }
+    }
+    const montoDe = (a) => (overrides.has(a.id) ? overrides.get(a.id) : Number(a.tarifa_dia));
+    const pagoActual = (a) => Number(a.pago_total || 0);
+    const pagoNuevo = (a) => montoDe(a) + Number(a.bono_monto || 0);
+    // Quien ya trabajó (completado) y quedaría con MENOS pago NO se cambia solo: se le baja el pago por trabajo
+    // hecho, y eso necesita su autorización. Queda una propuesta que el trabajador autoriza o no
+    // (AsignacionesService.autorizarCompensacion); mientras tanto sigue completado y se le paga según su contrato.
+    const bajaElPago = (a) => a.estado === 'completado' && pagoNuevo(a) < pagoActual(a);
+    const montos = enProgreso.filter((a) => !bajaElPago(a)).map((a) => ({ asignacionId: a.id, monto: montoDe(a) }));
+    const propuestas = enProgreso.filter(bajaElPago).map((a) => ({ asignacionId: a.id, monto: montoDe(a) }));
 
-    const actualizados = await OfertasModel.marcarFallida(empresaId, id, montos, motivoFinal, usuarioId);
+    const actualizados = await OfertasModel.marcarFallida(
+      empresaId, id, montos, motivoFinal, usuarioId, ...(propuestas.length ? [propuestas] : [])
+    );
     const idsActualizados = new Set(actualizados);
 
     // Mismo detalle que verá luego en el turno: la frase pedida se mantiene
@@ -523,7 +546,20 @@ module.exports = {
       });
     }));
 
-    const otros = activas.filter((a) => a.estado !== 'en_progreso');
+    // Propuestas: se le avisa al trabajador que debe autorizar el cambio (nada se aplicó todavía).
+    await Promise.all(enProgreso.filter(bajaElPago).map((a) => {
+      if (!a.usuario_id) return null;
+      return NotificacionesService.notificar({
+        empresaId,
+        usuarioId: a.usuario_id,
+        tipo: 'asignacion.compensacion_propuesta',
+        titulo: 'Necesitamos tu autorización',
+        mensaje: `El turno "${oferta.titulo}" se canceló por ${detalleMotivo}. Se propone cambiar tu pago de $${pagoActual(a).toLocaleString('es-CO')} a $${pagoNuevo(a).toLocaleString('es-CO')} (compensación). Mientras no respondas, este turno queda en espera: no se suma a tu pago hasta que decidas. Si no lo autorizas, se te paga según tu contrato.`,
+        data: { oferta_id: id, asignacion_id: a.id },
+      });
+    }));
+
+    const otros = activas.filter((a) => a.estado !== 'en_progreso' && a.estado !== 'completado');
     const destinatariosOtros = otros.map((a) => a.usuario_id).filter(Boolean);
     if (destinatariosOtros.length) {
       await NotificacionesService.notificarVarios(destinatariosOtros, {
@@ -535,9 +571,20 @@ module.exports = {
       });
     }
 
+    // Quien ya había cerrado su turno (completado) tenía contrato y quizá cuenta de cobro con el valor
+    // anterior: se anula la firma del contrato (ese valor ya no rige) y, si el período está cerrado,
+    // se genera la cuenta complementaria o de ajuste con la compensación (ver CuentasCobroService).
+    // Best-effort: un fallo aquí no debe deshacer el turno fallido ya guardado.
+    const veniaCompletado = activas.filter((a) => a.estado === 'completado' && idsActualizados.has(a.id));
+    for (const a of veniaCompletado) {
+      await ajustarContratoYCuenta(empresaId, a.id, a.trabajador_id);
+    }
+
     // Igual que al cerrar un turno normal: la compensación es un costo de
     // mano de obra (logiq360) y debe caer dentro de un período de turnos.
-    await CostoLaborService.verificarYEmitir(empresaId, id).catch(() => {});
+    // Si la oferta ya estaba 'completada' su costo ya se había reportado a logiq360: este envío es una
+    // corrección con el total vigente (la compensación reemplaza al pago anterior), no un segundo costo.
+    await CostoLaborService.verificarYEmitir(empresaId, id, { correccion: oferta.estado === 'completada' }).catch(() => {});
     await PeriodosTurnosService.autoCrear(empresaId).catch(() => {});
   },
 

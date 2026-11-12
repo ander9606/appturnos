@@ -105,3 +105,27 @@ export interface CostosResponse {
   /** null para quien no ve pagos individuales. */
   nomina: { trabajadores: number; costo: number; detalle: { trabajador_id: number; nombre: string; apellido: string | null; total: number }[] } | null;
 }
+
+/** Un grupo (evento, obra…) con turnos en el período. */
+export interface GrupoReporte {
+  grupo_id: number;
+  nombre: string;
+  estado: 'activo' | 'cerrado';
+  turnos: number;
+  convocados: number;
+  completados: number;
+  no_presentados: number;
+  /** Lo pagado por turnos completados (con bonos): el mismo costo del resumen de Turnos. */
+  costo: number;
+  plazas: number;
+  cubiertas: number;
+  /** Parte del costo de turnos del período; null si no hubo costo. */
+  pct: number | null;
+}
+
+/** GET /api/reportes/grupos — solo existe para empresas que usan grupos de turnos (si no, 403). */
+export interface GruposReporteResponse {
+  costo_total: number;
+  sin_grupo: { completados: number; costo: number };
+  grupos: GrupoReporte[];
+}

@@ -68,6 +68,13 @@ router.post(
   ctrl.generarLinkPago
 );
 
+// POST /api/empresas/suscripcion/cancelar — deja de renovar (no cobra de nuevo ni
+// manda más recordatorios); el acceso ya pagado sigue hasta que venza. Ver empresas.service.js.
+router.post('/suscripcion/cancelar', verificarToken, verificarRol(SOLO_ADMIN), ctrl.cancelarSuscripcion);
+
+// POST /api/empresas/suscripcion/reactivar — revierte la cancelación antes de que venza.
+router.post('/suscripcion/reactivar', verificarToken, verificarRol(SOLO_ADMIN), ctrl.reactivarSuscripcion);
+
 // GET /api/empresas/me — admin_empresa ve su propia empresa (campos completos)
 // Debe ir ANTES de /:id para que Express no interprete "me" como un ID.
 router.get('/me', verificarToken, verificarRol(SOLO_ADMIN), ctrl.miEmpresa);

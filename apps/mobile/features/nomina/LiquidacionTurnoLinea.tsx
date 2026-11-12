@@ -25,7 +25,7 @@ export function LiquidacionTurnoLinea({ linea, primaryColor }: Props) {
           <Text className="text-xs font-medium text-foreground flex-1" numberOfLines={1}>
             {linea.oferta_titulo}
           </Text>
-          {!linea.firmado_trabajador && (
+          {!linea.firmado_trabajador && !linea.pendiente_autorizacion && (
             <Ionicons name="warning" size={11} color={COLORS.warningDark} />
           )}
         </View>
@@ -84,7 +84,19 @@ export function LiquidacionTurnoLinea({ linea, primaryColor }: Props) {
         </View>
       </View>
 
-      {!linea.firmado_trabajador && (
+      {linea.estado === 'fallido' && (
+        <Text className="text-[10px] text-warning font-semibold">
+          Turno fallido — compensación por {(linea.compensacion_motivo || 'fuerza mayor').toLowerCase()}
+        </Text>
+      )}
+
+      {linea.pendiente_autorizacion && (
+        <Text className="text-[10px] text-warning font-semibold">
+          En espera de que el trabajador autorice una compensación — no suma ni resta todavía
+        </Text>
+      )}
+
+      {!linea.firmado_trabajador && !linea.pendiente_autorizacion && (
         <Text className="text-[10px] text-warning font-medium">
           Contrato sin firmar — no cuenta en el total a pagar
         </Text>

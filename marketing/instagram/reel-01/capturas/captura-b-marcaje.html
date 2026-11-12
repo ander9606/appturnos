@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="es"><head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Captura B - Marcaje con Geocerca</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #F8FAFC;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .status-bar {
+      height: 44px;
+      padding: 0 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #0F172A;
+      font-size: 14px;
+      font-weight: 500;
+      background: white;
+      border-bottom: 1px solid #E2E8F0;
+    }
+    .map-container {
+      flex: 1;
+      background: #E5E7EB;
+      position: relative;
+      overflow: hidden;
+    }
+    /* Mapa simplificado con calles */
+    .map-bg {
+      width: 100%;
+      height: 100%;
+      background:
+        linear-gradient(90deg, #CBD5E1 1px, transparent 1px),
+        linear-gradient(#CBD5E1 1px, transparent 1px);
+      background-size: 80px 80px;
+      position: relative;
+    }
+    .street {
+      position: absolute;
+      background: #F1F5F9;
+      box-shadow: inset 0 0 0 2px #E2E8F0;
+    }
+    .street.h { height: 60px; width: 100%; }
+    .street.v { width: 60px; height: 100%; }
+
+    /* Geocerca (círculo verde) */
+    .geofence {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      background: rgba(5, 150, 105, 0.15);
+      border: 3px dashed #059669;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+      50% { transform: translate(-50%, -50%) scale(1.05); opacity: 1; }
+    }
+
+    /* Pin de ubicación del usuario */
+    .user-pin {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+    }
+    .user-dot {
+      width: 20px;
+      height: 20px;
+      background: #3B82F6;
+      border: 4px solid white;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      animation: ping 1.5s ease-in-out infinite;
+    }
+    @keyframes ping {
+      0% { box-shadow: 0 2px 8px rgba(0,0,0,0.3), 0 0 0 0 rgba(59, 130, 246, 0.7); }
+      50% { box-shadow: 0 2px 8px rgba(0,0,0,0.3), 0 0 0 20px rgba(59, 130, 246, 0); }
+      100% { box-shadow: 0 2px 8px rgba(0,0,0,0.3), 0 0 0 0 rgba(59, 130, 246, 0); }
+    }
+
+    /* Pin del lugar de trabajo */
+    .location-pin {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -100%);
+      z-index: 5;
+    }
+    .location-pin svg {
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    }
+
+    /* Panel inferior */
+    .bottom-panel {
+      background: white;
+      border-radius: 24px 24px 0 0;
+      padding: 24px 20px 32px;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+    }
+    .location-info {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .location-info h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #0F172A;
+      margin-bottom: 4px;
+    }
+    .location-info p {
+      font-size: 14px;
+      color: #64748B;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: #D1FAE5;
+      border: 1px solid #059669;
+      border-radius: 20px;
+      margin-bottom: 20px;
+    }
+    .status-badge .dot {
+      width: 8px;
+      height: 8px;
+      background: #059669;
+      border-radius: 50%;
+    }
+    .status-badge span {
+      font-size: 13px;
+      font-weight: 600;
+      color: #047857;
+    }
+    .btn-check-in {
+      width: 100%;
+      padding: 18px;
+      background: #059669;
+      color: white;
+      border: none;
+      border-radius: 16px;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(5, 150, 105, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .time-display {
+      text-align: center;
+      font-size: 15px;
+      color: #64748B;
+      margin-top: 12px;
+    }
+    .time-display strong {
+      color: #0F172A;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <div class="phone-screen">
+    <!-- Status bar -->
+    <div class="status-bar">
+      <span>9:41</span>
+      <div style="display: flex; gap: 6px; align-items: center;">
+        <svg width="17" height="12" viewBox="0 0 17 12" fill="currentColor">
+          <rect opacity="0.4" width="17" height="12" rx="2.5"/>
+          <rect width="13" height="12" rx="2"/>
+        </svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="currentColor">
+          <path d="M0 5.5h3M5 5.5h3M10 5.5h5M2 2v7M7 1v9M12 0v11"/>
+        </svg>
+        <svg width="25" height="12" viewBox="0 0 25 12" fill="currentColor">
+          <rect opacity="0.4" x="0.5" y="0.5" width="21" height="11" rx="2.5" stroke="currentColor"/>
+          <rect x="2" y="2" width="17" height="8" rx="1"/>
+          <rect x="23" y="4" width="1.5" height="4" rx="0.5" opacity="0.4"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Mapa -->
+    <div class="map-container">
+      <div class="map-bg">
+        <!-- Calles decorativas -->
+        <div class="street h" style="top: 30%;"></div>
+        <div class="street h" style="top: 70%;"></div>
+        <div class="street v" style="left: 35%;"></div>
+        <div class="street v" style="left: 65%;"></div>
+      </div>
+
+      <!-- Geocerca -->
+      <div class="geofence"></div>
+
+      <!-- Pin del lugar -->
+      <div class="location-pin">
+        <svg width="48" height="60" viewBox="0 0 48 60" fill="none">
+          <path d="M24 0C12.4 0 3 9.4 3 21c0 15.75 21 39 21 39s21-23.25 21-39C45 9.4 35.6 0 24 0z" fill="#FF5A3C"/>
+          <circle cx="24" cy="21" r="8" fill="white"/>
+        </svg>
+      </div>
+
+      <!-- Usuario (punto azul) -->
+      <div class="user-pin">
+        <div class="user-dot"></div>
+      </div>
+    </div>
+
+    <!-- Panel inferior -->
+    <div class="bottom-panel">
+      <div class="location-info">
+        <h2>Restaurante Centro</h2>
+        <p>Calle 72 #10-34, Bogotá</p>
+      </div>
+
+      <center>
+        <div class="status-badge">
+          <div class="dot"></div>
+          <span>Dentro del radio permitido</span>
+        </div>
+      </center>
+
+      <button class="btn-check-in">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M9 11l3 3L22 4"/>
+          <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+        </svg>
+        Marcar Ingreso
+      </button>
+
+      <div class="time-display">
+        Turno: <strong>18:00 - 23:00</strong>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

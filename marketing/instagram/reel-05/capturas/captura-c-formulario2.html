@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Información de pago — Zaturno</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+      background: #F8FAFC;
+      width: 390px;
+      height: 844px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Header */
+    .header {
+      background: white;
+      padding: 16px 20px;
+      border-bottom: 1px solid #F1F5F9;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .back-button {
+      font-size: 24px;
+      color: #6366F1;
+    }
+
+    .header-title {
+      flex: 1;
+    }
+
+    .header h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0F172A;
+    }
+
+    /* Step indicator */
+    .step-indicator {
+      padding: 20px;
+      background: white;
+    }
+
+    .steps {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .step {
+      flex: 1;
+      height: 4px;
+      background: #E2E8F0;
+      border-radius: 2px;
+    }
+
+    .step.active {
+      background: #6366F1;
+    }
+
+    .step-label {
+      font-size: 13px;
+      color: #64748B;
+      text-align: center;
+    }
+
+    /* Form container */
+    .form {
+      padding: 24px 20px;
+    }
+
+    .form-section {
+      margin-bottom: 24px;
+    }
+
+    .form-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #0F172A;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .form-label .required {
+      color: #EF4444;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #E2E8F0;
+      border-radius: 12px;
+      font-size: 15px;
+      color: #0F172A;
+      transition: all 0.2s;
+      background: white;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: #6366F1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    .form-input.filled {
+      border-color: #10B981;
+      background: #F0FDF4;
+    }
+
+    .form-select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2364748B' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 20px;
+      padding-right: 40px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 12px;
+    }
+
+    .input-group .form-input {
+      flex: 1;
+    }
+
+    /* Helper text */
+    .helper-text {
+      font-size: 12px;
+      color: #64748B;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .helper-text .icon {
+      font-size: 14px;
+    }
+
+    /* Info card */
+    .info-card {
+      background: #EFF6FF;
+      border: 1px solid #BFDBFE;
+      border-radius: 12px;
+      padding: 14px;
+      margin-top: 20px;
+      display: flex;
+      gap: 12px;
+    }
+
+    .info-card .icon {
+      font-size: 20px;
+    }
+
+    .info-card-content {
+      flex: 1;
+    }
+
+    .info-card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1E40AF;
+      margin-bottom: 4px;
+    }
+
+    .info-card-text {
+      font-size: 12px;
+      color: #3B82F6;
+      line-height: 1.4;
+    }
+
+    /* Next button */
+    .next-button {
+      position: absolute;
+      bottom: 24px;
+      left: 20px;
+      right: 20px;
+      padding: 16px;
+      background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+      color: white;
+      font-size: 16px;
+      font-weight: 700;
+      border: none;
+      border-radius: 14px;
+      box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="back-button">←</div>
+    <div class="header-title">
+      <h1>Nuevo trabajador</h1>
+    </div>
+  </div>
+
+  <!-- Step indicator -->
+  <div class="step-indicator">
+    <div class="steps">
+      <div class="step active"></div>
+      <div class="step active"></div>
+      <div class="step"></div>
+    </div>
+    <div class="step-label">Paso 2 de 3 · Seguridad social y pago</div>
+  </div>
+
+  <!-- Form -->
+  <div class="form">
+    <div class="form-section">
+      <label class="form-label">Salario base mensual <span class="required">*</span></label>
+      <input type="text" class="form-input filled" value="$1.750.905" readonly>
+      <div class="helper-text">
+        <span class="icon">💡</span>
+        <span>Salario mínimo legal vigente 2026</span>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <label class="form-label">EPS</label>
+      <select class="form-input form-select filled">
+        <option>Sura EPS</option>
+      </select>
+    </div>
+
+    <div class="form-section">
+      <label class="form-label">AFP (Fondo de pensiones)</label>
+      <select class="form-input form-select filled">
+        <option>Porvenir</option>
+      </select>
+    </div>
+
+    <div class="form-section">
+      <label class="form-label">Banco</label>
+      <select class="form-input form-select filled">
+        <option>Bancolombia</option>
+      </select>
+    </div>
+
+    <div class="form-section">
+      <div class="input-group">
+        <div style="flex: 1;">
+          <label class="form-label">Tipo de cuenta</label>
+          <select class="form-input form-select filled">
+            <option>Ahorros</option>
+          </select>
+        </div>
+        <div style="flex: 1.5;">
+          <label class="form-label">Número de cuenta</label>
+          <input type="text" class="form-input filled" value="123456789" readonly>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div class="icon">✅</div>
+      <div class="info-card-content">
+        <div class="info-card-title">Información completa</div>
+        <div class="info-card-text">El trabajador podrá recibir pagos de nómina en su cuenta bancaria</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Next button -->
+  <button class="next-button">Continuar</button>
+</body>
+</html>

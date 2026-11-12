@@ -827,10 +827,24 @@ const OfertasModel = {
    * UPDATE, su fila ya no está 'en_progreso' y el WHERE no la toca; el
    * caller no debe notificarle una compensación que nunca se aplicó.
    */
-  async marcarFallida(empresaId, id, compensaciones, motivo, usuarioId) {
+  async marcarFallida(empresaId, id, compensaciones, motivo, usuarioId, propuestas = []) {
     return enTransaccion(async (conn) => {
       const ahora = ahoraColombiaSQL();
       const actualizados = [];
+
+      // `propuestas`: quien ya trabajó y quedaría con MENOS pago no se cambia solo — queda una propuesta que
+      // el trabajador autoriza o no (ver AsignacionesService.autorizarCompensacion). Su turno sigue 'completado'
+      // y su pago intacto mientras tanto; por eso estas filas no van en `actualizados`.
+      for (const { asignacionId, monto } of propuestas) {
+        await conn.query(
+          `UPDATE asignaciones_turno
+           SET compensacion_propuesta = ?, compensacion_propuesta_por = ?, compensacion_propuesta_at = ?,
+               compensacion_pago_anterior = pago_total,
+               compensacion_decision = 'pendiente', compensacion_decision_at = NULL, compensacion_motivo = ?
+           WHERE id = ? AND empresa_id = ? AND oferta_id = ? AND estado = 'completado'`,
+          [monto, usuarioId, ahora, motivo, asignacionId, empresaId, id]
+        );
+      }
 
       for (const { asignacionId, monto } of compensaciones) {
         const [res] = await conn.query(
@@ -838,15 +852,15 @@ const OfertasModel = {
            JOIN oferta_puestos p ON p.id = a.puesto_id
            JOIN ofertas_turno o  ON o.id = a.oferta_id
            SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?),
-               a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real,
-                   LEAST(?, o.fin_ts)
-               ) / 60,
+               a.horas_trabajadas = IF(a.estado = 'completado', a.horas_trabajadas,
+                   TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, o.fin_ts)) / 60),
                a.estado = 'fallido',
+               a.pago_extra = 0,
                a.pago_total = ? + a.bono_monto,
                a.compensacion_motivo = ?,
                a.fallido_por = ?,
                a.fallido_at = ?
-           WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'`,
+           WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado IN ('en_progreso', 'completado')`,
           [ahora, ahora, monto, motivo, usuarioId, ahora, asignacionId, empresaId, id]
         );
         if (res.affectedRows > 0) actualizados.push(asignacionId);

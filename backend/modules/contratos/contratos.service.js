@@ -8,6 +8,16 @@ const CuentasCobroService = require('../cuentas-cobro/cuentas-cobro.service');
 const AppError = require('../../utils/AppError');
 const logger = require('../../utils/logger');
 
+/**
+ * Un turno dado por fallido (fuerza mayor) ya no tiene contrato vigente: su pago es una compensación y no
+ * hay nada que firmar. Si venía de un turno completado el contrato queda guardado (auditoría) pero con el
+ * valor anterior, así que no se muestra, no se descarga, no se firma y no se genera de nuevo.
+ */
+const MENSAJE_FALLIDO = 'Este turno se dio por fallido (fuerza mayor): ya no tiene contrato, su pago es una compensación.';
+function exigirNoFallido(estado) {
+  if (estado === 'fallido') throw new AppError(MENSAJE_FALLIDO, 409);
+}
+
 /** Solo los descuentos aceptados van en el contrato: son los que cambian el pago pactado. */
 async function adjuntarDescuentos(contrato) {
   contrato.descuentos = await DescuentosTurnoModel.listarPorAsignacion(
@@ -69,6 +79,7 @@ const ContratosService = {
     // ya soporta buscar sin acotar por empresa cuando es null.
     let contrato = await ContratosModel.obtenerPorAsignacion(empresaId, asignacionId);
     if (contrato) {
+      exigirNoFallido(contrato.asignacion_estado);
       verificarAcceso(contrato, usuario);
       return limpiarCamposSensibles(contrato, usuario);
     }
@@ -78,6 +89,7 @@ const ContratosService = {
     const AsignacionesModel = require('../turnos/asignaciones/asignaciones.model');
     const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, asignacionId);
     if (!asignacion) throw new AppError('Asignación no encontrada', 404);
+    exigirNoFallido(asignacion.estado);
 
     if (usuario.rol === ROLES.TRABAJADOR_TURNOS && asignacion.usuario_id !== usuario.sub) {
       throw new AppError('No tienes permiso para generar este contrato', 403);
@@ -103,6 +115,7 @@ const ContratosService = {
     const AsignacionesModel = require('../turnos/asignaciones/asignaciones.model');
     const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, asignacionId);
     if (!asignacion) throw new AppError('Asignación no encontrada', 404);
+    exigirNoFallido(asignacion.estado);
 
     // Validar salario mínimo
     validarSalarioMinimo(asignacion.tarifa_dia);
@@ -154,6 +167,7 @@ const ContratosService = {
     // ya soporta buscar sin acotar por empresa cuando es null.
     const contrato = await ContratosModel.obtenerPorAsignacion(empresaId, asignacionId);
     if (!contrato) throw new AppError('Contrato no encontrado', 404);
+    exigirNoFallido(contrato.asignacion_estado);
     verificarAcceso(contrato, usuario);
     limpiarCamposSensibles(contrato, usuario);
     return adjuntarDescuentos(contrato);
@@ -162,6 +176,7 @@ const ContratosService = {
   async obtener(empresaId, id, usuario) {
     const contrato = await ContratosModel.obtenerPorId(empresaId, id);
     if (!contrato) throw new AppError('Contrato no encontrado', 404);
+    exigirNoFallido(contrato.asignacion_estado);
     verificarAcceso(contrato, usuario);
     limpiarCamposSensibles(contrato, usuario);
     return adjuntarDescuentos(contrato);
@@ -174,6 +189,7 @@ const ContratosService = {
     if (contrato.trabajador_usuario_id !== usuario.sub) {
       throw new AppError('Solo el trabajador del contrato puede firmarlo', 403);
     }
+    exigirNoFallido(contrato.asignacion_estado);
     if (contrato.firmado_trabajador) {
       throw new AppError('El contrato ya está firmado', 409);
     }

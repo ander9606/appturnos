@@ -42,6 +42,9 @@ router.get(
 // GET /api/grupos-turno/:id — resumen + sus turnos por fecha
 router.get('/:id', verificarRol(VER), requiereGruposTurno, [idParam], validar, ctrl.obtener);
 
+// GET /api/grupos-turno/:id/costos — lo pagado, lo comprometido y lo frenado por contratos sin firmar
+router.get('/:id/costos', verificarRol(VER), requiereGruposTurno, [idParam], validar, ctrl.costos);
+
 // POST /api/grupos-turno
 router.post(
   '/',

@@ -1,8 +1,9 @@
 import { SkeletonList } from '@/shared/components/Skeleton';
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { RefreshCw, AlertCircle, CheckCircle2, Clock, MinusCircle, XCircle } from 'lucide-react';
+import { RefreshCw, AlertCircle, CheckCircle2, Clock, MinusCircle, XCircle, FileDown } from 'lucide-react';
 import { useWompiEventos, useReintentarWompiEvento } from '../hooks/useAdmin';
+import { adminApi } from '../api/adminApi';
 import { ErrorState } from '@/shared/components/ErrorState';
 import type { EstadoWompiEvento, WompiEvento } from '../types';
 
@@ -30,6 +31,23 @@ function EstadoBadge({ estado }: { estado: EstadoWompiEvento }) {
 
 function EventoRow({ ev, onReintentar, isPending }: { ev: WompiEvento; onReintentar: () => void; isPending: boolean }) {
   const [open, setOpen] = useState(false);
+  const [descargando, setDescargando] = useState(false);
+
+  const descargarCuentaCobro = async () => {
+    setDescargando(true);
+    try {
+      const blob = await adminApi.descargarCuentaCobroWompi(ev.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ZT-${String(ev.id).padStart(6, '0')}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setDescargando(false);
+    }
+  };
+
   return (
     <>
       <tr
@@ -63,6 +81,16 @@ function EventoRow({ ev, onReintentar, isPending }: { ev: WompiEvento; onReinten
             >
               <RefreshCw size={12} className={isPending ? 'animate-spin' : ''} />
               Reintentar
+            </button>
+          )}
+          {ev.estado === 'procesado' && (
+            <button
+              onClick={(e) => { e.stopPropagation(); descargarCuentaCobro(); }}
+              disabled={descargando}
+              className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-lg border border-border text-muted-foreground hover:border-foreground hover:text-foreground disabled:opacity-50"
+            >
+              <FileDown size={12} />
+              {descargando ? 'Descargando…' : 'Cuenta de cobro'}
             </button>
           )}
         </td>

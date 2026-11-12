@@ -180,6 +180,7 @@ export interface WompiEvento {
 
 export interface WompiEventosParams {
   estado?: WompiEstado;
+  empresaId?: number;
   page?: number;
   limit?: number;
 }
@@ -259,6 +260,7 @@ export const adminApi = {
   async listarWompiEventos(params: WompiEventosParams = {}): Promise<WompiEventosResponse> {
     const qs = new URLSearchParams();
     if (params.estado) qs.set('estado', params.estado);
+    if (params.empresaId) qs.set('empresa_id', String(params.empresaId));
     if (params.page) qs.set('page', String(params.page));
     if (params.limit) qs.set('limit', String(params.limit));
     const query = qs.toString() ? `?${qs.toString()}` : '';
