@@ -2,12 +2,13 @@ import { SkeletonDetail } from '@/shared/components/Skeleton';
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { ArrowLeft, Building2, Users, Briefcase, Calendar, DollarSign, ToggleLeft, ToggleRight, Copy, Check, CreditCard, Zap } from 'lucide-react';
-import { useEmpresa, useCambiarEstadoEmpresa, useGestionarSuscripcion, useGenerarLinkPago, usePlanes } from '../hooks/useAdmin';
+import { useEmpresa, useCambiarEstadoEmpresa, useGestionarSuscripcion, useGenerarLinkPago, usePlanes, useWompiEventos } from '../hooks/useAdmin';
+import { adminApi } from '../api/adminApi';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { fmtCOP } from '@/shared/lib/format';
-import { precioPlan, type Plan, type OrigenSuscripcion, type PlanConfig } from '../types';
+import { precioPlan, type Plan, type OrigenSuscripcion, type PlanConfig, type WompiEvento } from '../types';
 
 const PLAN_BADGE: Record<Plan, string> = {
   basico: 'bg-muted text-muted-foreground',
@@ -59,6 +60,9 @@ export function EmpresaDetailPage() {
   const cambiarEstado      = useCambiarEstadoEmpresa();
   const gestionarSusc      = useGestionarSuscripcion(empresaId);
   const generarLink        = useGenerarLinkPago(empresaId);
+  const { data: pagosData } = useWompiEventos({ empresa_id: empresaId, limit: 10 });
+  const pagos: WompiEvento[] = pagosData?.data?.data ?? [];
+  const [descargandoPagoId, setDescargandoPagoId] = useState<number | null>(null);
   const { confirmState, confirm, close } = useConfirm();
 
   // Link de pago
@@ -90,6 +94,21 @@ export function EmpresaDetailPage() {
     navigator.clipboard.writeText(linkUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function handleDescargarCuentaCobro(pagoId: number) {
+    setDescargandoPagoId(pagoId);
+    try {
+      const blob = await adminApi.descargarCuentaCobroWompi(pagoId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ZT-${String(pagoId).padStart(6, '0')}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setDescargandoPagoId(null);
+    }
   }
 
   function handleActivarManual() {
@@ -211,6 +230,41 @@ export function EmpresaDetailPage() {
           </dl>
         </div>
       </div>
+
+      {/* Pagos recientes */}
+      {pagos.length > 0 && (
+        <div className="bg-card border border-border rounded-2xl p-5">
+          <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-4">Pagos recientes</h2>
+          <div className="divide-y divide-border">
+            {pagos.map(pago => (
+              <div key={pago.id} className="flex items-center justify-between py-3 text-sm">
+                <div>
+                  <p className="font-medium text-foreground">
+                    {pago.plan ?? '—'}
+                    {pago.meses != null && (
+                      <span className="text-muted-foreground font-normal">
+                        {' '}· {pago.meses === 0 ? 'cambio de plan' : `${pago.meses} mes${pago.meses !== 1 ? 'es' : ''}`}
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {pago.monto_cop != null ? fmtCOP(pago.monto_cop) : '—'} · {pago.estado} · {fmtDate(pago.created_at)}
+                  </p>
+                </div>
+                {pago.estado === 'procesado' && (
+                  <button
+                    onClick={() => handleDescargarCuentaCobro(pago.id)}
+                    disabled={descargandoPagoId === pago.id}
+                    className="text-xs font-medium px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:border-foreground hover:text-foreground disabled:opacity-50 transition-colors"
+                  >
+                    {descargandoPagoId === pago.id ? 'Descargando…' : 'Cuenta de cobro'}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Acciones de suscripción */}
       <div className="grid grid-cols-2 gap-6">

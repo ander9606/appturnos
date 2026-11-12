@@ -137,9 +137,10 @@ const AdminController = {
   // GET /api/admin/wompi-eventos
   async listarWompiEventos(req, res, next) {
     try {
-      const { estado, page, limit } = req.query;
+      const { estado, empresa_id, page, limit } = req.query;
       const resultado = await AdminService.listarWompiEventos({
         estado: estado || undefined,
+        empresaId: empresa_id ? Number(empresa_id) : undefined,
         page: Number(page) || 1,
         limit: Math.min(Number(limit) || 30, 100),
       });

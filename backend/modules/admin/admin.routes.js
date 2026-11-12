@@ -193,7 +193,10 @@ router.get(
   '/wompi-eventos',
   verificarToken,
   verificarRol(SOLO_SUPER),
-  [query('estado').optional().isIn(['recibido', 'procesado', 'error', 'ignorado', 'rechazado'])],
+  [
+    query('estado').optional().isIn(['recibido', 'procesado', 'error', 'ignorado', 'rechazado']),
+    query('empresa_id').optional().isInt({ min: 1 }).toInt(),
+  ],
   validar,
   ctrl.listarWompiEventos
 );
