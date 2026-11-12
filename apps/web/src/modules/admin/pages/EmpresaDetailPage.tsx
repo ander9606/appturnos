@@ -63,6 +63,7 @@ export function EmpresaDetailPage() {
   const { data: pagosData } = useWompiEventos({ empresa_id: empresaId, limit: 10 });
   const pagos: WompiEvento[] = pagosData?.data?.data ?? [];
   const [descargandoPagoId, setDescargandoPagoId] = useState<number | null>(null);
+  const [descargandoActual, setDescargandoActual] = useState(false);
   const { confirmState, confirm, close } = useConfirm();
 
   // Link de pago
@@ -108,6 +109,21 @@ export function EmpresaDetailPage() {
       URL.revokeObjectURL(url);
     } finally {
       setDescargandoPagoId(null);
+    }
+  }
+
+  async function handleDescargarCuentaCobroActual() {
+    setDescargandoActual(true);
+    try {
+      const blob = await adminApi.descargarCuentaCobroEmpresa(empresaId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ZT-E${empresaId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setDescargandoActual(false);
     }
   }
 
@@ -228,6 +244,15 @@ export function EmpresaDetailPage() {
               value={empresa.suscripcion_vigente_hasta ? fmtDate(empresa.suscripcion_vigente_hasta) : 'Indefinido'}
             />
           </dl>
+          {empresa.suscripcion_vigente_hasta && (
+            <button
+              onClick={handleDescargarCuentaCobroActual}
+              disabled={descargandoActual}
+              className="mt-4 w-full text-xs font-medium px-3 py-2 rounded-lg border border-border text-muted-foreground hover:border-foreground hover:text-foreground disabled:opacity-50 transition-colors"
+            >
+              {descargandoActual ? 'Descargando…' : 'Cuenta de cobro del plan actual'}
+            </button>
+          )}
         </div>
       </div>
 

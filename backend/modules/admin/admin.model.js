@@ -489,6 +489,21 @@ const AdminModel = {
     if (!fila) return null;
     return { ...fila, monto_cop: fila.monto_cop == null ? null : Number(fila.monto_cop) };
   },
+
+  /** Datos de la empresa para armar una cuenta de cobro del plan actual (no ligada a un evento Wompi puntual). */
+  async obtenerEmpresaParaCuentaCobro(id) {
+    const [[fila]] = await pool.query(
+      `SELECT e.id, e.nombre, e.nit, e.plan, e.suscripcion_vigente_hasta,
+              e.suscripcion_valor_mes_cop, e.suscripcion_meses,
+              COALESCE(e.email_empresa, u.email) AS email
+         FROM empresas e
+         LEFT JOIN usuarios u ON u.empresa_id = e.id AND u.rol = 'admin_empresa' AND u.activo = 1
+        WHERE e.id = ? AND e.activo = 1
+        ORDER BY u.id LIMIT 1`,
+      [id]
+    );
+    return fila || null;
+  },
 };
 
 module.exports = AdminModel;

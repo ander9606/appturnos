@@ -10,7 +10,8 @@ const logger = require('../../utils/logger');
 const { enviarEmail } = require('../../utils/mailer');
 const { plantillaCorreo, esc, tablaDatos } = require('../../utils/plantillaCorreo');
 const { ROLES } = require('../../config/constants');
-const { PlanesModel, CODIGOS_PLAN } = require('../suscripciones/planes.model');
+const { PlanesModel, CODIGOS_PLAN, montoSuscripcionCop } = require('../suscripciones/planes.model');
+const EmpresasModel = require('../empresas/empresas.model');
 
 const DEFAULT_PAGE_SIZE = 20;
 const BCRYPT_ROUNDS = 11;
@@ -243,6 +244,59 @@ const AdminService = {
         ? `Cambio a plan ${ev.plan} — diferencia por el resto de la vigencia`
         : `Suscripción Zaturno plan ${ev.plan} — ${ev.meses} mes${ev.meses !== 1 ? 'es' : ''}`,
       montoCop: ev.monto_cop,
+    });
+    return { pdf, numero };
+  },
+
+  /**
+   * Cuenta de cobro del período vigente actual, sin depender de que exista un
+   * evento Wompi puntual (empresas activadas a mano, por logiq360 antes de
+   * desconectarse, o pagadas antes de que existiera el tracking de eventos).
+   * El período se calcula hacia atrás desde suscripcion_vigente_hasta, usando
+   * suscripcion_meses (1 si no se conoce). El monto usa lo que ya paga por mes
+   * (suscripcion_valor_mes_cop) y, si nunca se registró, el precio vigente hoy
+   * para sus trabajadores activos.
+   */
+  async generarCuentaCobroActual(empresaId) {
+    const emp = await AdminModel.obtenerEmpresaParaCuentaCobro(empresaId);
+    if (!emp) throw new AppError('Empresa no encontrada', 404);
+    if (!emp.suscripcion_vigente_hasta) {
+      throw new AppError('Esta empresa no tiene una fecha de fin de plan definida', 409);
+    }
+
+    const meses = emp.suscripcion_meses || 1;
+    // suscripcion_vigente_hasta es una fecha de calendario pura (columna DATE), sin hora —
+    // se opera y se formatea siempre en UTC. Si se interpretara con zona horaria local
+    // (America/Bogotá, UTC-5) el día mostrado quedaría un día atrás.
+    const fin = new Date(`${emp.suscripcion_vigente_hasta}T00:00:00Z`);
+    const inicio = new Date(fin);
+    inicio.setUTCMonth(inicio.getUTCMonth() - meses);
+
+    let montoCop = emp.suscripcion_valor_mes_cop != null ? emp.suscripcion_valor_mes_cop * meses : null;
+    if (montoCop == null) {
+      const [planes, activos] = await Promise.all([
+        PlanesModel.listar(), EmpresasModel.contarTrabajadoresActivos(empresaId),
+      ]);
+      const planConfig = planes.find((p) => p.codigo === emp.plan);
+      montoCop = planConfig ? montoSuscripcionCop(planConfig, activos, meses) : 0;
+    }
+
+    const fmtDia = (d) => d.toLocaleDateString('es-CO', { timeZone: 'UTC' });
+    const numero = `ZT-E${empresaId}-${fmtDia(fin).replace(/\//g, '')}`;
+    const { generarFacturaPdf } = require('../../utils/facturaPdf');
+    const pdf = await generarFacturaPdf({
+      numero,
+      // "fecha" sí es un instante real (hoy, al generar el PDF) — a diferencia de fin/inicio,
+      // aquí la zona horaria de Colombia es la correcta.
+      fecha: new Date().toLocaleDateString('es-CO', { timeZone: 'America/Bogota' }),
+      emisor: {
+        nombre: process.env.FACTURA_EMISOR_NOMBRE,
+        documento: process.env.FACTURA_EMISOR_DOCUMENTO,
+        email: process.env.FACTURA_EMISOR_EMAIL,
+      },
+      cliente: { nombre: emp.nombre, nit: emp.nit, email: emp.email },
+      concepto: `Suscripción Zaturno plan ${emp.plan} — del ${fmtDia(inicio)} al ${fmtDia(fin)}`,
+      montoCop,
     });
     return { pdf, numero };
   },
