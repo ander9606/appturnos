@@ -33,7 +33,7 @@ export function ElegirGrupoModal({ etiqueta, seleccionadoId, fecha, onSelect, on
   const dia = fecha || bogotaToday();
   // El período real de la empresa (semanal, quincenal o mensual); si el servidor no lo trae, la quincena como aproximación.
   const { data: periodos } = usePeriodos(undefined, false, { fechaDesde: dia, fechaHasta: dia });
-  const periodo = useMemo(() => periodoQueContiene(periodos?.data, dia) ?? periodoDeFecha(dia), [periodos, dia]);
+  const periodo = useMemo(() => periodoQueContiene(periodos?.data?.data, dia) ?? periodoDeFecha(dia), [periodos, dia]);
   const buscando = busqueda.trim() !== '';
   // Por defecto solo los grupos con turnos en el período: con cientos de grupos el resto es ruido. Buscar o «Ver todos» llega a cualquiera.
   const filtrados = useMemo(() => {
