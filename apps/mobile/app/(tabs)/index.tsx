@@ -31,9 +31,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useTheme }     from '@/lib/theme';
 import { useOpcionesGrupos } from '@/features/empresas/useOpcionesGrupos';
-import { useMisTurnos, useOfertas, useAsignacionesHoy, useCargos } from '@/features/turnos/useTurnos';
+import { useMisTurnos, useOfertas, useAsignacionesHoy, useCargos, useExisteAlgunaOferta } from '@/features/turnos/useTurnos';
 import { usePuntosMarcaje } from '@/features/turnos/usePuntosMarcaje';
-import { useTrabajadores } from '@/features/equipo/useEquipo';
+import { useTotalTrabajadores } from '@/features/equipo/useEquipo';
 import { useMisEmpresas } from '@/features/empresas/useTrabajadorEmpresa';
 import { usePeriodos, useNominaPerfil } from '@/features/nomina/useNomina';
 import { useCountNoLeidas } from '@/features/notificaciones/useNotificaciones';
@@ -129,7 +129,7 @@ export default function DashboardScreen() {
   const {
     data: equipoData,
     refetch: refetchEquipo,
-  } = useTrabajadores({ activo: true, enabled: isManager });
+  } = useTotalTrabajadores(true, isManager);
   const totalEquipo = isManager ? (equipoData?.pagination?.total ?? null) : null;
 
   const {
@@ -151,7 +151,7 @@ export default function DashboardScreen() {
   // ── Checklist de primeros pasos (solo admin_empresa) ─────────────────────
   const { data: cargosData }   = useCargos(isAdmin);
   const { data: puntosData }   = usePuntosMarcaje(isAdmin);
-  const { data: todasOfertas } = useOfertas({ limit: 1 }, { enabled: isAdmin });
+  const { data: todasOfertas } = useExisteAlgunaOferta(isAdmin);
 
   const noLeidas = useCountNoLeidas();
 
