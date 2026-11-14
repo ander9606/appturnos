@@ -4,8 +4,8 @@ import { useNavigate, useSearchParams } from 'react-router';
 import { Plus, ChevronRight, XCircle, DollarSign, AlertTriangle, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/modules/auth/authStore';
-import { useOfertas, useCrearOferta, useCancelarOferta, usePostulacionesPendientes, useLiquidacionTurnos } from '../hooks/useTurnos';
-import type { EstadoOferta, Oferta, VisibilidadOferta, ParaQuienOferta, LiquidacionTurnosTrabajador } from '../types';
+import { useOfertas, useCrearOferta, useCancelarOferta, usePostulacionesPendientes, useLiquidacionTurnosTotal } from '../hooks/useTurnos';
+import type { EstadoOferta, Oferta, VisibilidadOferta, ParaQuienOferta } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { Modal } from '@/shared/components/Modal';
@@ -86,8 +86,8 @@ export function TurnosPage() {
   }
   const totalPendientes = pendientesData?.data?.pagination?.total ?? 0;
 
-  const { data: liqData } = useLiquidacionTurnos({ fecha_inicio: inicioMesActual(), fecha_fin: today });
-  const totalAPagarMes = (liqData?.data ?? []).reduce((s: number, w: LiquidacionTurnosTrabajador) => s + Number(w.pago_total), 0);
+  const { data: totalData } = useLiquidacionTurnosTotal({ fecha_inicio: inicioMesActual(), fecha_fin: today });
+  const totalAPagarMes = Number(totalData?.data?.total ?? 0);
 
   return (
     <div>

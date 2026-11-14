@@ -13,7 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useTheme }     from '@/lib/theme';
-import { useMisTurnos, useOfertas, useAplicar, usePostulacionesPendientes, useLiquidacionTurnos } from '@/features/turnos/useTurnos';
+import { useMisTurnos, useOfertas, useAplicar, usePostulacionesPendientes, useLiquidacionTurnosTotal } from '@/features/turnos/useTurnos';
 import { usePeriodosEventual } from '@/features/turnos/useTurnosEventual';
 import { useNominaPerfil, usePeriodos } from '@/features/nomina/useNomina';
 import { TurnosExtraOptIn, esErrorTurnosExtraApagadas } from '@/features/nomina/TurnosExtraOptIn';
@@ -112,11 +112,10 @@ export default function TurnosScreen() {
   // aunque la empresa facture quincenal — el período real sale de periodos_nomina.
   const { data: periodoAbiertoResp } = usePeriodos('abierto', puedeGestionar);
   const periodoAbierto = periodoAbiertoResp?.data?.[0];
-  const { data: liquidacionPeriodo } = useLiquidacionTurnos(
+  const { data: totalAPagarPeriodo = 0 } = useLiquidacionTurnosTotal(
     { fecha_inicio: periodoAbierto?.fecha_inicio ?? today, fecha_fin: today },
     { enabled: puedeGestionar && periodoAbierto !== undefined },
   );
-  const totalAPagarPeriodo = (liquidacionPeriodo ?? []).reduce((s, w) => s + w.pago_total, 0);
 
   // Backend excluye 'nomina' de GET /ofertas.
   const {

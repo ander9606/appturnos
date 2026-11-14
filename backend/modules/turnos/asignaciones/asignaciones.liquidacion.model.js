@@ -205,4 +205,38 @@ module.exports = {
     }
     return Array.from(workers.values());
   },
+
+  /**
+   * Total a pagar del rango (suma de pago_total de liquidacion()), calculado en SQL.
+   * Los tableros solo necesitan esta cifra; traer la liquidación completa para
+   * sumarla en el cliente era lo que hacía lenta la pestaña Turnos.
+   * Mismas reglas que liquidacion(): mismos filtros, solo cuenta turnos firmados
+   * (o 'fallido'), excluye los en espera de autorización de compensación y
+   * resta los descuentos aceptados. Si cambias una, cambia la otra.
+   */
+  async totalLiquidacion(empresaId, { fechaInicio, fechaFin }) {
+    const where = ['a.empresa_id = ?', "a.estado IN ('completado', 'fallido')", "t.tipo != 'nomina'"];
+    const params = [empresaId];
+    if (fechaInicio) { where.push('o.fecha >= ?'); params.push(fechaInicio); }
+    if (fechaFin)    { where.push('o.fecha <= ?'); params.push(fechaFin); }
+
+    // COALESCE(compensacion_decision, ''): la columna es NULL en casi todos los turnos (nunca hubo
+    // propuesta); sin él, NOT (… AND NULL) es NULL y el WHERE descarta justo los turnos normales.
+    const [[fila]] = await pool.query(
+      `SELECT COALESCE(SUM(
+                COALESCE(a.pago_total, 0) - COALESCE(
+                  (SELECT SUM(d.monto) FROM descuentos_turno d
+                   WHERE d.asignacion_id = a.id AND d.estado = 'aceptado'), 0)
+              ), 0) AS total
+       FROM asignaciones_turno a
+       JOIN trabajadores t   ON t.id = a.trabajador_id
+       JOIN ofertas_turno o  ON o.id = a.oferta_id
+       LEFT JOIN contratos_diarios cd ON cd.asignacion_id = a.id
+       WHERE ${where.join(' AND ')}
+         AND (a.estado = 'fallido' OR COALESCE(cd.firmado_trabajador, 0) = 1)
+         AND NOT (a.estado = 'completado' AND COALESCE(a.compensacion_decision, '') = 'pendiente')`,
+      params
+    );
+    return Number(fila.total);
+  },
 };

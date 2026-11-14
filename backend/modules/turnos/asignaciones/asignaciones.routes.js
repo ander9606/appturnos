@@ -46,6 +46,18 @@ router.get(
   ctrl.liquidacion
 );
 
+// GET /api/turnos/asignaciones/liquidacion/total — solo la suma, sin el detalle.
+router.get(
+  '/liquidacion/total',
+  verificarRol(VER),
+  [
+    query('fecha_inicio').optional().isISO8601().withMessage('fecha_inicio inválida'),
+    query('fecha_fin').optional().isISO8601().withMessage('fecha_fin inválida'),
+  ],
+  validar,
+  ctrl.liquidacionTotal
+);
+
 // GET /api/turnos/asignaciones
 router.get(
   '/',
