@@ -20,6 +20,6 @@ export const TIPOS_DIA: { v: TipoDia; label: string; color: string }[] = [
 // de esa quincena (ver liquidacion.model.js, dias_sin_subsidio).
 export const TIPOS_DIA_SIN_HORARIO: TipoDia[] = ['compensatorio', 'descanso', 'incapacidad', 'licencia', 'vacacion'];
 
-// 'licencia' y 'vacacion' se marcan por rango — a diferencia de los demás
-// tipos, que son un día puntual.
-export const TIPOS_RANGO: TipoDia[] = ['licencia', 'vacacion'];
+// 'licencia', 'vacacion' e 'incapacidad' se marcan por rango — a diferencia
+// de los demás tipos, que son un día puntual.
+export const TIPOS_RANGO: TipoDia[] = ['licencia', 'vacacion', 'incapacidad'];

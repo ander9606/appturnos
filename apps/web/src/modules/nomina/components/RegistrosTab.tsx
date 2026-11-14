@@ -22,7 +22,7 @@ export function RegistrosTab({
   compensatorioDe: (r: Registro) => DescansoCompensatorio | undefined;
   onCorregir: (id: number) => void;
   onReasignar: (c: DescansoCompensatorio) => void;
-  onShowCrear: () => void;
+  onShowCrear: (trabajador?: { id: number; nombre: string }) => void;
   periodoInicio?: string;
   /** Horas por trabajador de la semana partida (período anterior), para el desglose por semana. */
   horasPrevias?: { lunes: string | null; porTrabajador: Map<number, number> };
@@ -91,7 +91,7 @@ export function RegistrosTab({
           )}
         </div>
         <button
-          onClick={onShowCrear}
+          onClick={() => onShowCrear()}
           className="flex items-center gap-1.5 bg-success hover:bg-success-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
         >
           <Plus size={14} /> Agregar registro
@@ -118,12 +118,22 @@ export function RegistrosTab({
             );
             return (
               <div key={g.trabajadorId} className="bg-card border border-border rounded-xl overflow-hidden">
-                <button
-                  onClick={() => toggleExpandido(g.trabajadorId)}
-                  className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted transition-colors"
-                >
-                  <span className="font-medium text-foreground">{g.nombre} {g.apellido}</span>
-                  <span className="flex items-center gap-3 text-xs text-muted-foreground">
+                <div className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted transition-colors">
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => toggleExpandido(g.trabajadorId)} className="font-medium text-foreground text-left">
+                      {g.nombre} {g.apellido}
+                    </button>
+                    {puedeGestionarNomina() && (
+                      <button
+                        onClick={() => onShowCrear({ id: g.trabajadorId, nombre: `${g.nombre} ${g.apellido}` })}
+                        title={`Agregar registro para ${g.nombre} ${g.apellido}`}
+                        className="flex items-center gap-1 text-xs font-medium text-success hover:text-success-600 border border-success/30 hover:border-success/50 rounded-lg px-2 py-0.5 transition-colors"
+                      >
+                        <Plus size={12} /> Agregar
+                      </button>
+                    )}
+                  </div>
+                  <button onClick={() => toggleExpandido(g.trabajadorId)} className="flex items-center gap-3 text-xs text-muted-foreground">
                     <span>{g.registros.length} día{g.registros.length !== 1 ? 's' : ''}</span>
                     <span>
                       Período: {fmtHrs(totalOrd)} hrs ord · {fmtHrs(totalExtra)} hrs extra
@@ -131,8 +141,8 @@ export function RegistrosTab({
                       {totalFestivo > 0 && ` · ${fmtHrs(totalFestivo)} hrs festivo`}
                     </span>
                     <ChevronDown size={16} className={`transition-transform ${abierto ? 'rotate-180' : ''}`} />
-                  </span>
-                </button>
+                  </button>
+                </div>
                 {abierto && (
                   <>
                   {semanas.length > 0 && (

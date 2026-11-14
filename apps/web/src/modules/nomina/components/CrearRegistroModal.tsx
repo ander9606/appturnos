@@ -6,18 +6,23 @@ import type { Trabajador, TipoDia } from '../types';
 import { Modal } from '@/shared/components/Modal';
 import { TIPO_DIA_OPTIONS, TIPOS_DIA_SIN_HORARIO } from '../constants';
 
-// 'licencia' y 'vacacion' se marcan por rango — a diferencia de los demás
-// tipos, que son un día puntual sin horario que registrar.
-const TIPOS_RANGO: TipoDia[] = ['licencia', 'vacacion'];
+// 'licencia', 'vacacion' e 'incapacidad' se marcan por rango — a diferencia
+// de los demás tipos, que son un día puntual sin horario que registrar.
+const TIPOS_RANGO: TipoDia[] = ['licencia', 'vacacion', 'incapacidad'];
 
-export function CrearRegistroModal({ periodoId, onClose }: { periodoId: number; onClose: () => void }) {
+export function CrearRegistroModal({ periodoId, trabajador, onClose }: {
+  periodoId: number;
+  /** Si viene de "Agregar" junto al nombre de un trabajador, se fija y se oculta el selector. */
+  trabajador?: { id: number; nombre: string };
+  onClose: () => void;
+}) {
   const crear = useCrearRegistro();
   const crearRango = useCrearRegistroRango();
   const { data: trabData } = useTrabajadoresNomina();
   const trabajadores: Trabajador[] = trabData?.data?.data ?? [];
   const hoy = new Date().toLocaleDateString('en-CA');
   const [form, setForm] = useState({
-    trabajador_id: '',
+    trabajador_id: trabajador ? String(trabajador.id) : '',
     tipo_dia: 'ordinario' as TipoDia,
     fecha: '',
     fecha_hasta: '',
@@ -70,8 +75,10 @@ export function CrearRegistroModal({ periodoId, onClose }: { periodoId: number; 
 
   return (
     <Modal onClose={onClose}>
-      <h2 className="text-lg font-semibold text-foreground mb-4">Agregar registro</h2>
+      <h2 className={`text-lg font-semibold text-foreground ${trabajador ? 'mb-1' : 'mb-4'}`}>Agregar registro</h2>
+      {trabajador && <p className="text-sm text-muted-foreground mb-4">{trabajador.nombre}</p>}
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {!trabajador && (
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">Trabajador *</label>
           <select
@@ -86,6 +93,7 @@ export function CrearRegistroModal({ periodoId, onClose }: { periodoId: number; 
             ))}
           </select>
         </div>
+        )}
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">Tipo día</label>
           <select

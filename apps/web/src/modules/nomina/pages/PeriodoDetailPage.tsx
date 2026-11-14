@@ -24,6 +24,7 @@ export function PeriodoDetailPage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<'liquidacion' | 'registros'>('liquidacion');
   const [corrigiendoId, setCorrigiendoId] = useState<number | null>(null);
+  const [crearPara, setCrearPara] = useState<{ id: number; nombre: string } | undefined>(undefined);
   const [showCrear, setShowCrear] = useState(false);
   const [descuentoTrabajador, setDescuentoTrabajador] = useState<{ id: number; nombre: string } | null>(null);
   const [reasignando, setReasignando] = useState<DescansoCompensatorio | null>(null);
@@ -154,7 +155,7 @@ export function PeriodoDetailPage() {
           compensatorioDe={compensatorioDe}
           onCorregir={setCorrigiendoId}
           onReasignar={setReasignando}
-          onShowCrear={() => setShowCrear(true)}
+          onShowCrear={(trabajador) => { setCrearPara(trabajador); setShowCrear(true); }}
         />
       )}
 
@@ -200,7 +201,8 @@ export function PeriodoDetailPage() {
       {showCrear && (
         <CrearRegistroModal
           periodoId={periodoId}
-          onClose={() => setShowCrear(false)}
+          trabajador={crearPara}
+          onClose={() => { setShowCrear(false); setCrearPara(undefined); }}
         />
       )}
 
