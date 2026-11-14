@@ -29,6 +29,23 @@ export function useTrabajadores(
   });
 }
 
+/**
+ * Solo el total de trabajadores (para badges/checklist, ej. el dashboard) —
+ * pide `limit: 1` así el backend no arma la fila completa (con el promedio de
+ * pago por turno, que es una subquery) para hasta 100 trabajadores que nunca
+ * se muestran. El total sale de un COUNT(*) aparte, no depende del limit.
+ * Clave propia (no EQUIPO_KEYS.lista) para no compartir caché con la lista
+ * completa del tab Equipo, que sí necesita todas las filas.
+ */
+export function useTotalTrabajadores(activo?: boolean, enabled = true) {
+  return useQuery({
+    queryKey: ['trabajadores', 'total', activo] as const,
+    queryFn: () => trabajadoresApi.listar({ activo, limit: 1 }),
+    staleTime: 60_000,
+    enabled,
+  });
+}
+
 export function useTrabajador(id: number) {
   return useQuery({
     queryKey: EQUIPO_KEYS.detalle(id),

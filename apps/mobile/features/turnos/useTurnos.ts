@@ -47,6 +47,21 @@ export function useOfertas(
 }
 
 /**
+ * ¿La empresa ya creó alguna oferta? Solo para el checklist de "primeros pasos"
+ * del dashboard — es un hecho monótono (una vez true, siempre true), así que no
+ * hace falta refrescarlo cada vez que se abre la pantalla: `useCrearOferta` lo
+ * invalida cuando de verdad cambia.
+ */
+export function useExisteAlgunaOferta(enabled = true) {
+  return useQuery({
+    queryKey: ['ofertas', 'existe-alguna'] as const,
+    queryFn:  () => turnosApi.listarOfertas({ limit: 1 }),
+    staleTime: Infinity,
+    enabled,
+  });
+}
+
+/**
  * Obtiene una asignación concreta.
  * - Trabajadores: busca en el caché de misTurnos (sin fetch extra).
  * - Gestores/Admin: llama al endpoint GET /asignaciones/:id directamente.
@@ -563,6 +578,8 @@ export function useCrearOferta() {
     mutationFn: (payload: CrearOfertaPayload) => turnosApi.crearOferta(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+      // useExisteAlgunaOferta no vence por tiempo — solo se refresca acá, cuando el hecho cambia de verdad.
+      qc.invalidateQueries({ queryKey: ['ofertas', 'existe-alguna'] });
       // Cambió el total y las fechas del grupo al que se agregó el turno.
       qc.invalidateQueries({ queryKey: GRUPOS_KEY });
     },
