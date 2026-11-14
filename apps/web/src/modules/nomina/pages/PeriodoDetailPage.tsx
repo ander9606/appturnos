@@ -174,6 +174,7 @@ export function PeriodoDetailPage() {
           onCorregir={setCorrigiendoId}
           onReasignar={setReasignando}
           onAbrirDescuentos={(id, nombre) => setDescuentoTrabajador({ id, nombre })}
+          onShowCrear={(trabajador) => { setCrearPara(trabajador); setShowCrear(true); }}
         />
       )}
 

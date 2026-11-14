@@ -15,7 +15,7 @@ import { RECARGO_EXTRA_DIURNA, RECARGO_EXTRA_NOCTURNA } from '@/shared/laboral';
 
 export function LiquidacionTab({
   periodoEstado, liqData, loading, error, onRetry, registros, descuentos,
-  compensatorioDe, onExport, onCorregir, onReasignar, onAbrirDescuentos, periodoInicio,
+  compensatorioDe, onExport, onCorregir, onReasignar, onAbrirDescuentos, onShowCrear, periodoInicio,
 }: {
   periodoEstado: EstadoPeriodo | undefined;
   periodoInicio?: string;
@@ -30,6 +30,7 @@ export function LiquidacionTab({
   onCorregir: (id: number) => void;
   onReasignar: (c: DescansoCompensatorio) => void;
   onAbrirDescuentos: (trabajadorId: number, nombre: string) => void;
+  onShowCrear: (trabajador?: { id: number; nombre: string }) => void;
 }) {
   const [expandidosLiq, setExpandidosLiq] = useState<Set<number>>(new Set());
   const descartarSospechoso = useDescartarSospechoso();
@@ -115,11 +116,11 @@ export function LiquidacionTab({
 
               return (
                 <div key={l.trabajador_id} className="bg-card border border-border rounded-xl overflow-hidden">
-                  <button
-                    onClick={() => toggleExpandidoLiq(l.trabajador_id)}
-                    className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted transition-colors"
-                  >
-                    <div>
+                  <div className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted transition-colors">
+                    <button
+                      onClick={() => toggleExpandidoLiq(l.trabajador_id)}
+                      className="flex-1 min-w-0 text-left"
+                    >
                       <p className="font-medium text-foreground">{l.nombre} {l.apellido}</p>
                       <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
                         {l.dias_registrados} día{l.dias_registrados !== 1 ? 's' : ''} trabajado{l.dias_registrados !== 1 ? 's' : ''}
@@ -129,12 +130,24 @@ export function LiquidacionTab({
                           </span>
                         )}
                       </p>
-                    </div>
-                    <span className="flex items-center gap-3">
+                    </button>
+                    {puedeGestionarNomina() && (
+                      <button
+                        onClick={() => onShowCrear({ id: l.trabajador_id, nombre: `${l.nombre} ${l.apellido}` })}
+                        title={`Agregar registro para ${l.nombre} ${l.apellido}`}
+                        className="flex items-center gap-1 text-xs font-medium text-success hover:text-success-600 border border-success/30 hover:border-success/50 rounded-lg px-2 py-0.5 transition-colors flex-shrink-0 mx-2"
+                      >
+                        <Plus size={12} /> Agregar
+                      </button>
+                    )}
+                    <button
+                      onClick={() => toggleExpandidoLiq(l.trabajador_id)}
+                      className="flex items-center gap-3 flex-shrink-0"
+                    >
                       <span className="font-semibold text-success">{fmtCOP(l.neto)}</span>
                       <ChevronDown size={16} className={`text-muted-foreground transition-transform ${abierto ? 'rotate-180' : ''}`} />
-                    </span>
-                  </button>
+                    </button>
+                  </div>
 
                   {abierto && (
                     <div className="border-t border-border">
