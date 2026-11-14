@@ -83,12 +83,17 @@ async function tryRefresh(): Promise<string | null> {
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
+// En red mala (2G/3G, wifi congestionado) un fetch sin límite puede quedarse
+// colgado mucho más que esto en vez de fallar rápido — el usuario ve un botón
+// "Aplicando…" que nunca vuelve. 15s alcanza para una red lenta real sin dejar
+// la UI esperando casi un minuto.
+const TIMEOUT_MS = 15_000;
+
 interface FetchOptions {
   /** Include Authorization header (default: true) */
   authenticated?: boolean;
   /** X-Empresa-Slug header for multi-tenant requests */
   empresaSlug?: string;
-  signal?: AbortSignal;
 }
 
 async function apiFetch<T>(
@@ -97,7 +102,7 @@ async function apiFetch<T>(
   body?: unknown,
   opts: FetchOptions = {},
 ): Promise<T> {
-  const { authenticated = true, empresaSlug, signal } = opts;
+  const { authenticated = true, empresaSlug } = opts;
 
   const buildHeaders = (token?: string): Record<string, string> => {
     const h: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -106,13 +111,26 @@ async function apiFetch<T>(
     return h;
   };
 
-  const doRequest = async (token?: string) =>
-    fetch(`${baseUrl}${path}`, {
-      method,
-      headers: buildHeaders(token),
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-      signal,
-    });
+  const doRequest = async (token?: string) => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      return await fetch(`${baseUrl}${path}`, {
+        method,
+        headers: buildHeaders(token),
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+        signal: controller.signal,
+      });
+    } catch (err) {
+      // "timed out" — isNetworkError() (apiErrorMessage.ts) ya reconocía esta frase (junto con
+      // "network request failed") antes de que hubiera ningún timeout real que la lanzara.
+      // Nunca se muestra tal cual: solo clasifica el error como "sin conexión" en la UI.
+      if (controller.signal.aborted) throw new Error('Request timed out');
+      throw err;
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
 
   // Attach current access token if auth required
   let token: string | null = null;

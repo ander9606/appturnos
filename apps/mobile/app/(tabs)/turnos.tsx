@@ -23,8 +23,10 @@ import { GestorTurnosView } from '@/features/turnos/GestorTurnosView';
 import { getDateRange, fmtRange, getEstadoConfig } from '@/features/turnos/turnosUtils';
 import { ResumenDiaMes, type ItemDia } from '@/features/turnos/ResumenDiaMes';
 import { bogotaToday } from '@/lib/formatters';
+import { showAlert } from '@/lib/alertDialog';
 import { Ionicons } from '@expo/vector-icons';
 import { getMonthGrid, mesDeHoy, type CalendarDay } from '@/lib/calendar';
+import { ApiError } from '@api-client';
 import type { Asignacion, Oferta } from '@api-client';
 import { OfertaCard } from '@/features/turnos/pestana/OfertaCard';
 import { colorOferta } from '@/features/turnos/pestana/turnosPestana';
@@ -217,7 +219,9 @@ export default function TurnosScreen() {
       yaAplicado={aplicadosIds.has(item.id)}
       turnosConfirmados={turnosConfirmados}
       aplicando={aplicarMutation.isPending}
-      onAplicar={(ofertaId, puestoId) => aplicarMutation.mutateAsync({ ofertaId, puestoId }).catch(() => undefined)}
+      onAplicar={(ofertaId, puestoId) => aplicarMutation.mutateAsync({ ofertaId, puestoId }).catch((err) => {
+        showAlert('Error', err instanceof ApiError ? err.message : 'No se pudo aplicar.');
+      })}
     />
   ), [aplicadosIds, aplicarMutation, turnosConfirmados, today]);
 
