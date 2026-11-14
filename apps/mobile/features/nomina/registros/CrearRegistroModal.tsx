@@ -222,7 +222,7 @@ export function CrearRegistroModal({
             )}
           </View>
 
-          {/* Hasta — solo para tipos de día que se marcan por rango (licencia/vacación) */}
+          {/* Hasta — solo para tipos de día que se marcan por rango (licencia/vacación/incapacidad) */}
           {esRango && (
             <View className="gap-1.5">
               <Text className="text-sm font-semibold text-foreground">Hasta</Text>
