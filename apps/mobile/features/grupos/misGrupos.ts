@@ -1,4 +1,4 @@
-import type { Asignacion, FaseGrupo } from '@api-client';
+import type { Asignacion, FaseGrupo, Oferta } from '@api-client';
 import { formatCOP } from '@/lib/formatters';
 import { ETIQUETA_GRUPO_DEFECTO, pluralizarEtiqueta } from '@/features/empresas/etiquetaGrupo';
 
@@ -109,6 +109,22 @@ export function resumenAvance(g: Pick<GrupoDeMisTurnos, 'total' | 'terminados' |
 
 /** Solo los eventos (grupos): los turnos sueltos, sin grupo, se ven en la pestaña Turnos. */
 export const soloConGrupo = (lista: GrupoDeMisTurnos[]): GrupoDeMisTurnos[] => lista.filter((g) => g.grupoId !== null);
+
+/** Suma la mejor tarifa certificada disponible por turno, agrupada por empresa y grupo. */
+export function potencialPorGrupo(ofertas: Oferta[]): Map<string, number> {
+  const montos = new Map<string, number>();
+  for (const oferta of ofertas) {
+    if (oferta.grupo_id == null) continue;
+    const tarifas = (oferta.puestos ?? [])
+      .filter((puesto) => puesto.plazas_cubiertas < puesto.plazas)
+      .map((puesto) => Number(puesto.tarifa_dia));
+    const mejorTarifa = Math.max(0, ...tarifas);
+    if (mejorTarifa === 0) continue;
+    const key = `${oferta.empresa_id}:${oferta.grupo_id}`;
+    montos.set(key, (montos.get(key) ?? 0) + mejorTarifa);
+  }
+  return montos;
+}
 
 /** Momento en que está el grupo para el trabajador: terminado si no le queda nada, en curso si ya empezó, o próximo. */
 export function faseDeMiGrupo(g: Pick<GrupoDeMisTurnos, 'porHacer' | 'fechaInicio'>, hoy: string): Extract<FaseGrupo, 'proximo' | 'en_curso' | 'terminado'> {
