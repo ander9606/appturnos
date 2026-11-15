@@ -159,10 +159,10 @@ export default function TurnosScreen() {
     return misTurnos.filter((a) => a.oferta_fecha === selectedDate);
   }, [misTurnos, selectedDate]);
 
-  /** IDs de ofertas a las que ya está postulado */
+  /** IDs de ofertas a las que ya está postulado. Cancelada no cuenta: el backend permite volver a postularse. */
   const aplicadosIds = useMemo(() => {
     const set = new Set<number>();
-    misTurnos?.forEach((a) => set.add(a.oferta_id));
+    misTurnos?.forEach((a) => { if (a.estado !== 'cancelado') set.add(a.oferta_id); });
     return set;
   }, [misTurnos]);
 

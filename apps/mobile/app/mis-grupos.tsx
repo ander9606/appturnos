@@ -35,8 +35,12 @@ export default function MisGruposScreen() {
       terminados: todos.filter((g) => faseDeMiGrupo(g, hoy) === 'terminado'),
     };
   }, [turnos.data]);
-  // Mismo criterio que la pestaña Turnos: una oferta con asignación propia ya no es "potencial" (no se puede repostular).
-  const aplicadosIds = useMemo(() => new Set((turnos.data ?? []).map((a) => a.oferta_id)), [turnos.data]);
+  // Mismo criterio que la pestaña Turnos: una oferta con asignación propia ya no es "potencial" (no se puede
+  // repostular) — salvo que la asignación esté cancelada: ahí el backend sí permite volver a postularse.
+  const aplicadosIds = useMemo(
+    () => new Set((turnos.data ?? []).filter((a) => a.estado !== 'cancelado').map((a) => a.oferta_id)),
+    [turnos.data],
+  );
   const potencial = useMemo(() => potencialPorGrupo(ofertas.data ?? [], aplicadosIds), [ofertas.data, aplicadosIds]);
   if (denied) return denied;
 

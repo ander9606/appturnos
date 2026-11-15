@@ -559,6 +559,13 @@ describe('postulación del trabajador', () => {
     expect(screen.queryByText('Retirar postulación')).toBeNull();
   });
 
+  test('si canceló, vuelve a ver el botón de aplicar (el backend permite repostularse)', () => {
+    mockMisTurnos = { data: [{ oferta_id: 5, puesto_id: 1, estado: 'cancelado' }] };
+    montar();
+    expect(texto('Aplicar como Mesero')).toBeTruthy();
+    expect(screen.queryByText(/Ya estás/)).toBeNull();
+  });
+
   test('una postulación a otra oferta no cuenta', () => {
     mockMisTurnos = { data: [{ oferta_id: 99, puesto_id: 1, estado: 'pendiente' }] };
     montar();
