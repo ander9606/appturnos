@@ -12,6 +12,7 @@ import { avisoSinFirmar, faseDeMiGrupo, porcentajeAvance, resumenAvance, type Gr
 
 type Props = {
   grupos: GrupoDeMisTurnos[];
+  potencialPorGrupo?: Map<string, number>;
   /** Qué mostrar cuando la lista está vacía (cambia según la pestaña). */
   vacio: React.ReactElement;
   /** Para refrescar tirando de la lista. */
@@ -27,7 +28,7 @@ function rango(g: GrupoDeMisTurnos): string {
  * con sus turnos terminados, lo que sigue y el aviso de contratos sin firmar. Se despliega al tocarla y muestra solo
  * los turnos del trabajador en ese evento.
  */
-export function MisGruposView({ grupos, vacio, refreshControl }: Props) {
+export function MisGruposView({ grupos, potencialPorGrupo, vacio, refreshControl }: Props) {
   const router = useRouter();
   const hoy = bogotaToday();
   const [abiertos, setAbiertos] = useState<string[]>([]);
@@ -46,6 +47,7 @@ export function MisGruposView({ grupos, vacio, refreshControl }: Props) {
         const nombre = g.nombre ?? 'Sin nombre';
         const aviso = avisoSinFirmar(g.sinFirmar, g.porFirmar);
         const pct = porcentajeAvance(g);
+        const potencial = potencialPorGrupo?.get(g.clave) ?? 0;
         return (
           <View className="bg-card border border-border rounded-2xl overflow-hidden">
             <Pressable
@@ -76,6 +78,12 @@ export function MisGruposView({ grupos, vacio, refreshControl }: Props) {
                 <View className="flex-row items-baseline justify-between border-t border-border pt-2.5">
                   <Text className="text-xs text-muted-foreground">Acumulado</Text>
                   <Text className="text-base font-bold text-foreground" accessibilityLabel={`Acumulado ${formatCOP(g.acumulado)}`}>{formatCOP(g.acumulado)}</Text>
+                </View>
+              ) : null}
+              {potencial > 0 ? (
+                <View className="flex-row items-baseline justify-between border-t border-border pt-2.5">
+                  <Text className="text-xs text-muted-foreground">Potencial en turnos abiertos</Text>
+                  <Text className="text-base font-bold text-success" accessibilityLabel={`Potencial hasta ${formatCOP(potencial)}`}>Hasta {formatCOP(potencial)}</Text>
                 </View>
               ) : null}
               {g.proximo ? <Text className="text-xs font-semibold text-primary-700">Próximo: {formatShortDate(g.proximo)}</Text> : null}

@@ -30,16 +30,18 @@ jest.mock('@/features/turnos/ShiftCard', () => {
 let mockDenied: React.ReactElement | null = null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let mockQuery: any;
-jest.mock('@/features/turnos/useTurnos', () => ({ useMisTurnos: () => mockQuery }));
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let mockOfertas: any;
+jest.mock('@/features/turnos/useTurnos', () => ({ useMisTurnos: () => mockQuery, useTodasLasOfertasDisponibles: () => mockOfertas }));
 
 let n = 0;
 const A = (o: Record<string, unknown> = {}) => ({
   id: ++n, empresa_id: 1, oferta_id: n, estado: 'confirmado', oferta_fecha: '2030-01-20', hora_inicio: '08:00:00',
   grupo_id: 3, grupo_nombre: 'Feria del Libro', grupo_etiqueta: 'Evento', contrato_firmado: 1, ...o,
 });
-const ok = (data: unknown[]) => ({ data, isLoading: false, isError: false, error: null, refetch: jest.fn(), isRefetching: false });
+const ok = (data: unknown) => ({ data, isLoading: false, isError: false, error: null, refetch: jest.fn(), isRefetching: false });
 
-beforeEach(() => { mockDenied = null; mockTitulo = undefined; mockQuery = ok([]); });
+beforeEach(() => { mockDenied = null; mockTitulo = undefined; mockQuery = ok([]); mockOfertas = ok([]); });
 
 test('muestra solo eventos, separados en «Por hacer» y «Terminados» con su cuenta', () => {
   mockQuery = ok([

@@ -1,5 +1,5 @@
-import type { Asignacion } from '@api-client';
-import { agruparMisTurnos, avisoSinFirmar, cobroDelTurno, nombresDeMisGrupos, resumenAvance, tieneGrupos } from '../misGrupos';
+import type { Asignacion, Oferta } from '@api-client';
+import { agruparMisTurnos, avisoSinFirmar, cobroDelTurno, nombresDeMisGrupos, potencialPorGrupo, resumenAvance, tieneGrupos } from '../misGrupos';
 import { formatCOP } from '@/lib/formatters';
 
 let n = 0;
@@ -166,5 +166,30 @@ describe('acumulado por evento', () => {
     expect(avisoSinFirmar(1, 80000)).toContain(`(${formatCOP(80000)})`);
     expect(avisoSinFirmar(2, 0)).not.toContain('$');
     expect(avisoSinFirmar(0, 80000)).toBeNull();
+  });
+});
+
+describe('potencialPorGrupo', () => {
+  const puesto = (tarifa_dia: number, plazas_cubiertas: number, plazas = 1) =>
+    ({ id: 1, cargo_id: 1, cargo_codigo: 'X', cargo_nombre: 'X', plazas, plazas_cubiertas, tarifa_dia, notas: null });
+  const oferta = (o: Partial<Oferta> & Record<string, unknown> = {}): Oferta => ({
+    id: 1, empresa_id: 1, grupo_id: 3, puestos: [puesto(100000, 0)], ...o,
+  }) as unknown as Oferta;
+
+  test('suma la mejor tarifa disponible por grupo, ignora ofertas sin grupo y puestos llenos', () => {
+    const montos = potencialPorGrupo([
+      oferta({ id: 1, grupo_id: 3, puestos: [puesto(100000, 0), puesto(150000, 2, 2)] }), // el segundo puesto ya está lleno
+      oferta({ id: 2, grupo_id: 3, puestos: [puesto(80000, 0)] }),
+      oferta({ id: 3, grupo_id: null }),
+    ]);
+    expect(montos.get('1:3')).toBe(100000 + 80000);
+  });
+
+  test('una oferta a la que ya está postulado no cuenta como potencial, aunque el puesto siga con cupo (no puede repostularse)', () => {
+    const montos = potencialPorGrupo(
+      [oferta({ id: 1, grupo_id: 3, puestos: [puesto(150000, 1, 5)] })], // plazas_cubiertas=1 < plazas=5: sigue "disponible"
+      new Set([1]),
+    );
+    expect(montos.size).toBe(0);
   });
 });

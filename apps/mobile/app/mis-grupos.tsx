@@ -11,8 +11,8 @@ import { COLORS } from '@/lib/designTokens';
 import { bogotaToday } from '@/lib/formatters';
 import { useTheme } from '@/lib/theme';
 import { MisGruposView } from '@/features/grupos/MisGruposView';
-import { agruparMisTurnos, faseDeMiGrupo, nombresDeMisGrupos, soloConGrupo } from '@/features/grupos/misGrupos';
-import { useMisTurnos } from '@/features/turnos/useTurnos';
+import { agruparMisTurnos, faseDeMiGrupo, nombresDeMisGrupos, potencialPorGrupo, soloConGrupo } from '@/features/grupos/misGrupos';
+import { useMisTurnos, useTodasLasOfertasDisponibles } from '@/features/turnos/useTurnos';
 
 type Pestana = 'pendientes' | 'terminados';
 
@@ -23,6 +23,7 @@ type Pestana = 'pendientes' | 'terminados';
 export default function MisGruposScreen() {
   const theme = useTheme();
   const turnos = useMisTurnos();
+  const ofertas = useTodasLasOfertasDisponibles();
   const [pestana, setPestana] = useState<Pestana>('pendientes');
   const denied = useRoleGuard(['trabajador_turnos']);
 
@@ -34,6 +35,9 @@ export default function MisGruposScreen() {
       terminados: todos.filter((g) => faseDeMiGrupo(g, hoy) === 'terminado'),
     };
   }, [turnos.data]);
+  // Mismo criterio que la pestaña Turnos: una oferta con asignación propia ya no es "potencial" (no se puede repostular).
+  const aplicadosIds = useMemo(() => new Set((turnos.data ?? []).map((a) => a.oferta_id)), [turnos.data]);
+  const potencial = useMemo(() => potencialPorGrupo(ofertas.data ?? [], aplicadosIds), [ofertas.data, aplicadosIds]);
   if (denied) return denied;
 
   // Cada empresa llama distinto a sus grupos: el título los nombra todos («Mis eventos y obras»).
@@ -51,7 +55,8 @@ export default function MisGruposScreen() {
     return (
       <MisGruposView
         grupos={lista}
-        refreshControl={<RefreshControl refreshing={turnos.isRefetching} onRefresh={() => turnos.refetch()} tintColor={theme.primary} colors={[theme.primary]} />}
+        potencialPorGrupo={potencial}
+        refreshControl={<RefreshControl refreshing={turnos.isRefetching || ofertas.isRefetching} onRefresh={() => { void Promise.all([turnos.refetch(), ofertas.refetch()]); }} tintColor={theme.primary} colors={[theme.primary]} />}
         vacio={sinNada ? (
           <EmptyState title={`Todavía no tienes ${plural}`} message={`Cuando te asignen turnos dentro de ${plural}, los verás aquí. Tus demás turnos están en la pestaña Turnos.`} />
         ) : pestana === 'pendientes' ? (
