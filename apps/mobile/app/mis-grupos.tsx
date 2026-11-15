@@ -12,7 +12,7 @@ import { bogotaToday } from '@/lib/formatters';
 import { useTheme } from '@/lib/theme';
 import { MisGruposView } from '@/features/grupos/MisGruposView';
 import { agruparMisTurnos, faseDeMiGrupo, nombresDeMisGrupos, potencialPorGrupo, soloConGrupo } from '@/features/grupos/misGrupos';
-import { useMisTurnos, useOfertas } from '@/features/turnos/useTurnos';
+import { useMisTurnos, useTodasLasOfertasDisponibles } from '@/features/turnos/useTurnos';
 
 type Pestana = 'pendientes' | 'terminados';
 
@@ -23,7 +23,7 @@ type Pestana = 'pendientes' | 'terminados';
 export default function MisGruposScreen() {
   const theme = useTheme();
   const turnos = useMisTurnos();
-  const ofertas = useOfertas({ disponibles: true, limit: 100 });
+  const ofertas = useTodasLasOfertasDisponibles();
   const [pestana, setPestana] = useState<Pestana>('pendientes');
   const denied = useRoleGuard(['trabajador_turnos']);
 
@@ -35,7 +35,9 @@ export default function MisGruposScreen() {
       terminados: todos.filter((g) => faseDeMiGrupo(g, hoy) === 'terminado'),
     };
   }, [turnos.data]);
-  const potencial = useMemo(() => potencialPorGrupo(ofertas.data?.data ?? []), [ofertas.data]);
+  // Mismo criterio que la pestaña Turnos: una oferta con asignación propia ya no es "potencial" (no se puede repostular).
+  const aplicadosIds = useMemo(() => new Set((turnos.data ?? []).map((a) => a.oferta_id)), [turnos.data]);
+  const potencial = useMemo(() => potencialPorGrupo(ofertas.data ?? [], aplicadosIds), [ofertas.data, aplicadosIds]);
   if (denied) return denied;
 
   // Cada empresa llama distinto a sus grupos: el título los nombra todos («Mis eventos y obras»).

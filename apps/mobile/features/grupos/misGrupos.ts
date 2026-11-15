@@ -110,11 +110,15 @@ export function resumenAvance(g: Pick<GrupoDeMisTurnos, 'total' | 'terminados' |
 /** Solo los eventos (grupos): los turnos sueltos, sin grupo, se ven en la pestaña Turnos. */
 export const soloConGrupo = (lista: GrupoDeMisTurnos[]): GrupoDeMisTurnos[] => lista.filter((g) => g.grupoId !== null);
 
-/** Suma la mejor tarifa certificada disponible por turno, agrupada por empresa y grupo. */
-export function potencialPorGrupo(ofertas: Oferta[]): Map<string, number> {
+/**
+ * Suma la mejor tarifa certificada disponible por turno, agrupada por empresa y grupo.
+ * `aplicadosIds` son las ofertas donde ya tiene una asignación (misma idea que en Turnos):
+ * el backend no deja postularse dos veces al mismo puesto, así que esas ya no son "potencial".
+ */
+export function potencialPorGrupo(ofertas: Oferta[], aplicadosIds: ReadonlySet<number> = new Set()): Map<string, number> {
   const montos = new Map<string, number>();
   for (const oferta of ofertas) {
-    if (oferta.grupo_id == null) continue;
+    if (oferta.grupo_id == null || aplicadosIds.has(oferta.id)) continue;
     const tarifas = (oferta.puestos ?? [])
       .filter((puesto) => puesto.plazas_cubiertas < puesto.plazas)
       .map((puesto) => Number(puesto.tarifa_dia));

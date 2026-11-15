@@ -47,6 +47,29 @@ export function useOfertas(
 }
 
 /**
+ * Todas las ofertas disponibles, sin el límite de una sola página — para sumas que no pueden
+ * quedarse cortas (ej. "potencial" de Mis eventos). Pagina hasta agotar `pagination.total`.
+ */
+export function useTodasLasOfertasDisponibles(opts: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: ['ofertas', 'disponibles-todas'] as const,
+    queryFn: async () => {
+      const limit = 200; // tope real del backend (ofertas.controller.js)
+      const primera = await turnosApi.listarOfertas({ disponibles: true, limit });
+      const todas = primera.data;
+      for (let page = 2; todas.length < primera.pagination.total; page++) {
+        const siguiente = await turnosApi.listarOfertas({ disponibles: true, limit, page });
+        if (siguiente.data.length === 0) break; // ponytail: corta si el backend no avanza, nunca debería pasar
+        todas.push(...siguiente.data);
+      }
+      return todas;
+    },
+    staleTime: 30_000,
+    enabled: opts.enabled ?? true,
+  });
+}
+
+/**
  * ¿La empresa ya creó alguna oferta? Solo para el checklist de "primeros pasos"
  * del dashboard — es un hecho monótono (una vez true, siempre true), así que no
  * hace falta refrescarlo cada vez que se abre la pantalla: `useCrearOferta` lo
