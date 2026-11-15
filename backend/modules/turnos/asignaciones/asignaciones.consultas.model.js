@@ -81,10 +81,13 @@ module.exports = {
   /**
    * Una postulación es única por (puesto, trabajador): el trabajador puede
    * postularse a varios puestos distintos de la misma oferta.
+   * Ignora 'cancelado' (mismo criterio que el chequeo de duplicado de
+   * asignarDirecto): una postulación cancelada/rechazada no debe bloquear
+   * para siempre volver a postularse al mismo puesto.
    */
   async obtenerPorPuestoYTrabajador(puestoId, trabajadorId) {
     const [filas] = await pool.query(
-      'SELECT * FROM asignaciones_turno WHERE puesto_id = ? AND trabajador_id = ? LIMIT 1',
+      "SELECT * FROM asignaciones_turno WHERE puesto_id = ? AND trabajador_id = ? AND estado != 'cancelado' ORDER BY id DESC LIMIT 1",
       [puestoId, trabajadorId]
     );
     return filas[0] || null;
