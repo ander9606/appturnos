@@ -48,7 +48,7 @@ export default function OfertaDetailScreen() {
   const ofertaEsEditable = oferta?.estado === 'abierta' || oferta?.estado === 'borrador';
 
   const miAsignacion = isWorker
-    ? (misTurnos ?? []).find((a) => a.oferta_id === id)
+    ? (misTurnos ?? []).find((a) => a.oferta_id === id && a.estado !== 'cancelado')
     : undefined;
   const yaAplicado = !!miAsignacion;
   // Mientras sigue 'pendiente', el puesto puede llenarse con otros postulantes
