@@ -3,27 +3,39 @@
 const { pool } = require('../../../config/database');
 
 /**
- * Avance de cada grupo respecto al rango liquidado: cuántos turnos tiene en total (sin los cancelados), cuántos caen
- * dentro del rango, cuántos quedan para después y la fecha del siguiente. Así la cuenta de cobro puede decir
- * «3 de 4 turnos» cuando un grupo se parte entre dos períodos. Sin rango cerrado no hay nada que comparar (null).
+ * Avance de cada trabajador en cada grupo respecto al rango liquidado: cuántos turnos DEL TRABAJADOR tiene el grupo en
+ * total, cuántos caen dentro del rango, cuántos quedan para después y la fecha del siguiente. Así la cuenta de cobro
+ * puede decir «3 de 4 turnos» cuando el grupo de ESE trabajador se parte entre dos períodos. Un grupo (feria, obra…)
+ * tiene turnos de varias personas: contar los del grupo entero le diría a cada una que le quedan turnos que son de otras.
+ * Cuentan los turnos que se le pagarán (confirmado, en curso, completado, fallido); una postulación sin confirmar o un
+ * turno cancelado no. Un turno fallido cuenta aunque su oferta quedara cancelada: es el que se cobra como compensación.
+ * Sin rango cerrado no hay nada que comparar (mapa vacío). Clave del mapa: `${grupo_id}:${trabajador_id}`.
  */
+const claveProgreso = (grupoId, trabajadorId) => `${grupoId}:${trabajadorId}`;
+
 async function progresoDeGrupos(empresaId, filas, fechaInicio, fechaFin) {
-  const ids = [...new Set(filas.map((f) => f.grupo_id).filter(Boolean))];
+  const gruposIds = [...new Set(filas.map((f) => f.grupo_id).filter(Boolean))];
+  const trabajadoresIds = [...new Set(filas.filter((f) => f.grupo_id).map((f) => f.trabajador_id))];
   const mapa = new Map();
-  if (!ids.length || !fechaInicio || !fechaFin) return mapa;
+  if (!gruposIds.length || !fechaInicio || !fechaFin) return mapa;
   const [res] = await pool.query(
-    `SELECT grupo_id,
-            COUNT(*) AS total,
-            SUM(fecha BETWEEN ? AND ?) AS en_periodo,
-            SUM(fecha > ?) AS despues,
-            DATE_FORMAT(MIN(CASE WHEN fecha > ? THEN fecha END), '%Y-%m-%d') AS proxima
-       FROM ofertas_turno
-      WHERE empresa_id = ? AND grupo_id IN (?) AND estado <> 'cancelada'
-      GROUP BY grupo_id`,
-    [fechaInicio, fechaFin, fechaFin, fechaFin, empresaId, ids]
+    `SELECT o.grupo_id, a.trabajador_id,
+            COUNT(DISTINCT o.id) AS total,
+            COUNT(DISTINCT CASE WHEN o.fecha BETWEEN ? AND ? THEN o.id END) AS en_periodo,
+            COUNT(DISTINCT CASE WHEN o.fecha > ? THEN o.id END) AS despues,
+            DATE_FORMAT(MIN(CASE WHEN o.fecha > ? THEN o.fecha END), '%Y-%m-%d') AS proxima
+       FROM asignaciones_turno a
+       JOIN ofertas_turno o ON o.id = a.oferta_id
+      WHERE a.empresa_id = ? AND o.grupo_id IN (?) AND a.trabajador_id IN (?)
+        AND a.estado IN ('confirmado', 'en_progreso', 'completado', 'fallido')
+        AND (o.estado <> 'cancelada' OR a.estado = 'fallido')
+      GROUP BY o.grupo_id, a.trabajador_id`,
+    [fechaInicio, fechaFin, fechaFin, fechaFin, empresaId, gruposIds, trabajadoresIds]
   );
   for (const r of res) {
-    mapa.set(r.grupo_id, { total: Number(r.total), en_periodo: Number(r.en_periodo), despues: Number(r.despues), proxima: r.proxima ?? null });
+    mapa.set(claveProgreso(r.grupo_id, r.trabajador_id), {
+      total: Number(r.total), en_periodo: Number(r.en_periodo), despues: Number(r.despues), proxima: r.proxima ?? null,
+    });
   }
   return mapa;
 }
@@ -185,7 +197,7 @@ module.exports = {
         lugar_alias:     row.lugar_alias ?? null,
         grupo_id:        row.grupo_id ?? null,
         grupo_nombre:    row.grupo_nombre ?? null,
-        grupo_progreso:  progresoGrupos.get(row.grupo_id) ?? null,
+        grupo_progreso:  progresoGrupos.get(claveProgreso(row.grupo_id, row.trabajador_id)) ?? null,
         hora_ingreso_real: row.hora_ingreso_real,
         hora_egreso_real:  row.hora_egreso_real,
         horas_trabajadas:  horas,
