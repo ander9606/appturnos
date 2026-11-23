@@ -10,6 +10,8 @@ const { ROLES } = require('../../config/constants');
 
 const GESTORES = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA];
 
+const VENTANA_DUPLICADO_SEG = 120;
+
 const TIPOS_LABEL = {
   retraso:   'Retraso',
   ausencia:  'Ausencia',
@@ -26,6 +28,15 @@ const NovedadesService = {
   async crear(empresaId, asignacionId, tipo, descripcion, horaEvento, fotoB64, usuario, latitud, longitud) {
     const asignacion = await _validarAcceso(empresaId, asignacionId, usuario);
     const empresaIdReal = asignacion.empresa_id;
+
+    // Idempotencia: un doble toque o un reintento de red no debe crear (ni notificar)
+    // dos veces la misma novedad. Se devuelve la ya creada, como si fuera la nueva.
+    // ponytail: check-then-insert, no atómico (dos peticiones en el mismo milisegundo
+    // podrían pasar) — upgrade path: columna hash + UNIQUE e INSERT IGNORE.
+    const duplicada = await NovedadesModel.buscarDuplicadoReciente(
+      empresaIdReal, asignacionId, usuario.sub, tipo, descripcion, VENTANA_DUPLICADO_SEG
+    );
+    if (duplicada) return duplicada;
 
     const novedad = await NovedadesModel.create(
       empresaIdReal, asignacionId, usuario.sub, tipo, descripcion, horaEvento, fotoB64, latitud, longitud

@@ -90,6 +90,33 @@ describe('NovedadesService.crear — evento novedad.reportada hacia logiq360', (
     expect(NotificacionesService.notificarVarios).toHaveBeenCalled();
   });
 
+  test('novedad idéntica reciente: devuelve la existente sin crear, notificar ni emitir', async () => {
+    // Regresión: 11 toques seguidos en "Enviar novedad" creaban 11 novedades y 11 notificaciones.
+    AsignacionesModel.obtenerPorId.mockResolvedValue({ id: 5, empresa_id: 7, trabajador_id: 3 });
+    NovedadesModel.buscarDuplicadoReciente.mockResolvedValue({ id: 99, tipo: 'retraso' });
+
+    await expect(
+      NovedadesService.crear(7, 5, 'retraso', 'Ya no quiero ir', null, null, usuarioGestor)
+    ).resolves.toEqual({ id: 99, tipo: 'retraso' });
+
+    expect(NovedadesModel.create).not.toHaveBeenCalled();
+    expect(NotificacionesService.notificarVarios).not.toHaveBeenCalled();
+    expect(IntegracionService.emitir).not.toHaveBeenCalled();
+  });
+
+  test('sin duplicado reciente crea normal', async () => {
+    AsignacionesModel.obtenerPorId.mockResolvedValue({ id: 5, empresa_id: 7, trabajador_id: 3 });
+    AsignacionesModel.obtenerConDetalles.mockResolvedValue({ empresa_id: 7, oferta_external_ref: null });
+    NovedadesModel.buscarDuplicadoReciente.mockResolvedValue(null);
+    NovedadesModel.create.mockResolvedValue({ id: 12 });
+    NovedadesModel.getParticipantes.mockResolvedValue([]);
+
+    await expect(
+      NovedadesService.crear(7, 5, 'retraso', 'Otro texto', null, null, usuarioGestor)
+    ).resolves.toEqual({ id: 12 });
+    expect(NovedadesModel.create).toHaveBeenCalledTimes(1);
+  });
+
   test('trabajador_turnos multi-empresa (JWT sin empresa_id) igual puede reportar', async () => {
     // Regresión: empresaId llega null desde el JWT para estos trabajadores.
     // obtenerPorId(null, ...) debe encontrar la asignación por id solamente,

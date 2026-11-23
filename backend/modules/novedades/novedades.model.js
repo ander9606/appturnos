@@ -35,6 +35,23 @@ const NovedadesModel = {
     return filas[0];
   },
 
+  /** Novedad idéntica (mismo autor, asignación, tipo y texto) creada en los últimos `segundos`, o null. */
+  async buscarDuplicadoReciente(empresaId, asignacionId, autorId, tipo, descripcion, segundos) {
+    const [[fila]] = await pool.query(
+      `SELECT n.id, n.asignacion_id, n.autor_id, n.tipo, n.descripcion,
+              n.hora_evento, n.created_at, n.latitud, n.longitud,
+              u.nombre AS autor_nombre, u.apellido AS autor_apellido
+       FROM novedades n
+       JOIN usuarios u ON u.id = n.autor_id
+       WHERE n.empresa_id = ? AND n.asignacion_id = ? AND n.autor_id = ?
+         AND n.tipo = ? AND n.descripcion = ?
+         AND n.created_at >= NOW() - INTERVAL ? SECOND
+       ORDER BY n.id DESC LIMIT 1`,
+      [empresaId, asignacionId, autorId, tipo, descripcion, segundos]
+    );
+    return fila || null;
+  },
+
   /** Retorna el trabajador_id y los usuarios gestores de la empresa para la asignación. */
   async getParticipantes(empresaId, asignacionId) {
     const [[asignacion]] = await pool.query(
