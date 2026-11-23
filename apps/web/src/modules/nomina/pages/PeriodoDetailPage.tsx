@@ -148,6 +148,7 @@ export function PeriodoDetailPage() {
         <RegistrosTab
           registros={registros}
           periodoInicio={periodo?.fecha_inicio}
+          periodoFin={periodo?.fecha_fin}
           horasPrevias={horasPrevias}
           loading={loadingReg}
           error={errReg}

@@ -243,7 +243,12 @@ export default function RegistrosPeriodoScreen() {
                 {abiertas && (
                   <View className="px-3.5 pb-2.5">
                     {resumen.semanas.map((s) => (
-                      <SemanaRow key={s.inicioSemana} semana={s} valorHora={0} />
+                      <SemanaRow
+                        key={s.inicioSemana}
+                        semana={s}
+                        valorHora={0}
+                        periodo={fechaInicio && fechaFin ? { fecha_inicio: fechaInicio, fecha_fin: fechaFin } : undefined}
+                      />
                     ))}
                   </View>
                 )}

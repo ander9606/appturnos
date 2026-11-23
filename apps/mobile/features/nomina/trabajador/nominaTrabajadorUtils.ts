@@ -306,6 +306,40 @@ export function estimarExtraSemanaCOP(semana: ResumenSemana, valorHora: number):
   return Math.round(multiplicadas * valorHora);
 }
 
+export interface Tramo { desde: string; hasta: string }
+
+/**
+ * Parte una semana (lun–dom) según un período: los días que son de ESTE período, los que quedaron en
+ * el ANTERIOR (semana que empieza a mitad de semana) y los que seguirán en el SIGUIENTE. Sirve igual
+ * para quincena y mes, donde la primera y la última semana casi siempre están partidas.
+ */
+export function tramosSemana(lunes: string, periodoInicio: string, periodoFin: string): {
+  enPeriodo: Tramo; anterior: Tramo | null; siguiente: Tramo | null;
+} {
+  const dia = (iso: string, n: number) => {
+    const d = new Date(`${iso}T00:00:00`);
+    d.setDate(d.getDate() + n);
+    return toISODate(d);
+  };
+  const domingo = dia(lunes, 6);
+  return {
+    enPeriodo: { desde: lunes > periodoInicio ? lunes : periodoInicio, hasta: domingo < periodoFin ? domingo : periodoFin },
+    anterior:  lunes < periodoInicio ? { desde: lunes, hasta: dia(periodoInicio, -1) } : null,
+    siguiente: domingo > periodoFin ? { desde: dia(periodoFin, 1), hasta: domingo } : null,
+  };
+}
+
+/** "Lun 12 – Dom 18 Oct" (mismo mes) o "Lun 28 Sep – Dom 4 Oct". Un solo día: "Vie 16 Oct". */
+export function fmtRangoDias(desde: string, hasta: string): string {
+  const a = new Date(`${desde}T00:00:00`);
+  const b = new Date(`${hasta}T00:00:00`);
+  const dm = (d: Date) => `${SHORT_DAYS[d.getDay()]} ${d.getDate()}`;
+  if (desde === hasta) return `${dm(a)} ${SHORT_MONTHS[a.getMonth()]}`;
+  return a.getMonth() === b.getMonth()
+    ? `${dm(a)} – ${dm(b)} ${SHORT_MONTHS[b.getMonth()]}`
+    : `${dm(a)} ${SHORT_MONTHS[a.getMonth()]} – ${dm(b)} ${SHORT_MONTHS[b.getMonth()]}`;
+}
+
 /** Horas que cuentan para el cupo semanal de 42 h: todas menos el festivo habitual (horas_festivo). */
 export function sumarHoras(registros: RegistroDiario[]): number {
   return registros.reduce((acc, r) => acc + analizarDia(r, 0).totalHoras - Number(r.horas_festivo), 0);

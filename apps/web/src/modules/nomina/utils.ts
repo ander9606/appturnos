@@ -159,6 +159,44 @@ export function tramoSemanaPrevia(primeraFecha: string): { desde: string; hasta:
   return { desde: lunes, hasta: d.toISOString().slice(0, 10) };
 }
 
+export interface Tramo { desde: string; hasta: string }
+
+const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+function sumarDias(fecha: string, n: number): string {
+  const d = new Date(`${fecha}T00:00:00`);
+  d.setDate(d.getDate() + n);
+  return iso(d);
+}
+
+/**
+ * Parte una semana (lun–dom) según un período: días de ESTE período, los que quedaron en el ANTERIOR
+ * y los que seguirán en el SIGUIENTE. Mismo criterio que mobile (nominaTrabajadorUtils.ts).
+ */
+export function tramosSemana(lunes: string, periodoInicio: string, periodoFin: string): {
+  enPeriodo: Tramo; anterior: Tramo | null; siguiente: Tramo | null;
+} {
+  const domingo = sumarDias(lunes, 6);
+  return {
+    enPeriodo: { desde: lunes > periodoInicio ? lunes : periodoInicio, hasta: domingo < periodoFin ? domingo : periodoFin },
+    anterior:  lunes < periodoInicio ? { desde: lunes, hasta: sumarDias(periodoInicio, -1) } : null,
+    siguiente: domingo > periodoFin ? { desde: sumarDias(periodoFin, 1), hasta: domingo } : null,
+  };
+}
+
+const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+/** "Lun 12 – Dom 18 Oct" (mismo mes) o "Lun 26 Oct – Dom 1 Nov". Un solo día: "Vie 16 Oct". */
+export function fmtRangoDias(desde: string, hasta: string): string {
+  const a = new Date(`${desde}T00:00:00`);
+  const b = new Date(`${hasta}T00:00:00`);
+  const dm = (d: Date) => `${DIAS_CORTOS[d.getDay()]} ${d.getDate()}`;
+  if (desde === hasta) return `${dm(a)} ${MESES_CORTOS[a.getMonth()]}`;
+  return a.getMonth() === b.getMonth()
+    ? `${dm(a)} – ${dm(b)} ${MESES_CORTOS[b.getMonth()]}`
+    : `${dm(a)} ${MESES_CORTOS[a.getMonth()]} – ${dm(b)} ${MESES_CORTOS[b.getMonth()]}`;
+}
+
 export interface ExplicacionHorasExtra {
   /** Horas ordinarias+nocturnas que ya llevaba esta semana antes de hoy. */
   acumuladoSemana: number;

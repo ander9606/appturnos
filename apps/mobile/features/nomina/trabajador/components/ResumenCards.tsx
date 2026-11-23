@@ -21,6 +21,8 @@ import {
   fmtPeriodo,
   getJornadaLegalSemanal,
   estimarExtraSemanaCOP,
+  tramosSemana,
+  fmtRangoDias,
   RECARGO_EXTRA,
   type ResumenPeriodoNomina,
   type ResumenSemana,
@@ -62,6 +64,7 @@ export function ResumenCards({
   onRevisarDescuentos,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
+  const periodoActivo = periodos.find((p) => p.id === periodoActivoId);
   const pendientes = misDescuentos.filter((d) => d.estado === 'pendiente');
   const rechazados = misDescuentos.filter((d) => d.estado === 'rechazado');
   const [expandedPago, setExpandedPago] = useState(pendientes.length > 0);
@@ -243,7 +246,7 @@ export function ResumenCards({
                     Horas por semana
                   </Text>
                   {resumen.semanas.map((s) => (
-                    <SemanaRow key={s.inicioSemana} semana={s} valorHora={valorHora} />
+                    <SemanaRow key={s.inicioSemana} semana={s} valorHora={valorHora} periodo={periodoActivo} />
                   ))}
                   <Text className="text-[10px] text-muted-foreground mt-0.5">
                     Jornada máxima legal en {new Date().getFullYear()}: {getJornadaLegalSemanal(new Date().getFullYear())}h/semana.
@@ -401,20 +404,33 @@ function fmtLunes(iso: string): string {
   return `${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`;
 }
 
-export function SemanaRow({ semana, valorHora }: { semana: ResumenSemana; valorHora: number }) {
+/**
+ * Una semana (lun–dom) del período. Con `periodo` muestra el rango completo y, si la semana está
+ * partida por el corte del período (siempre pasa en la primera y última semana de una quincena
+ * o un mes), separa qué días/horas son de este período, cuáles del anterior y cuáles del siguiente.
+ */
+export function SemanaRow({ semana, valorHora, periodo }: {
+  semana: ResumenSemana;
+  valorHora: number;
+  periodo?: { fecha_inicio: string; fecha_fin: string };
+}) {
   const excede = semana.horasExtra > 0;
   const extra$ = estimarExtraSemanaCOP(semana, valorHora);
   const pct = Math.min(100, (semana.horasTotales / semana.limiteHoras) * 100);
+  const t = periodo ? tramosSemana(semana.inicioSemana, periodo.fecha_inicio, periodo.fecha_fin) : null;
+  const partida = !!t && (t.anterior !== null || t.siguiente !== null);
+  const horasPrevias = semana.horasPrevias ?? 0;
+  const titulo = t
+    ? fmtRangoDias(semana.inicioSemana, (t.siguiente ?? t.enPeriodo).hasta)
+    : `Sem. ${fmtLunes(semana.inicioSemana)}`;
 
   return (
     <View className="py-1.5 border-b border-border last:border-0 gap-1.5">
       <View className="flex-row items-center justify-between">
-        <Text className="text-xs text-muted-foreground">
-          Sem. {fmtLunes(semana.inicioSemana)}
-        </Text>
+        <Text className="text-xs font-medium text-foreground">{titulo}</Text>
         <View className="flex-row items-center gap-2">
           <Text className={`text-xs font-medium ${excede ? 'text-success' : 'text-foreground'}`}>
-            {semana.horasTotales.toFixed(1)}h / {semana.limiteHoras}h
+            {partida ? 'Semana: ' : ''}{semana.horasTotales.toFixed(1)}h / {semana.limiteHoras}h
           </Text>
           {excede && (
             <Text className="text-xs font-semibold text-success">
@@ -438,9 +454,54 @@ export function SemanaRow({ semana, valorHora }: { semana: ResumenSemana; valorH
           +{semana.horasFestivo.toFixed(1)}h festivo (recargo, no cuenta para las {semana.limiteHoras}h)
         </Text>
       )}
-      {!!semana.horasPrevias && (
-        <Text className="text-[10px] text-muted-foreground">
-          {semana.horasPrevias.toFixed(1)}h de esta semana son del período anterior (a la izquierda de la raya).
+      {partida && t ? (
+        <View className="gap-0.5">
+          {t.anterior && (
+            <TramoLinea
+              etiqueta="Período anterior"
+              rango={fmtRangoDias(t.anterior.desde, t.anterior.hasta)}
+              horas={horasPrevias > 0 ? horasPrevias : undefined}
+              muted
+            />
+          )}
+          <TramoLinea
+            etiqueta="Este período"
+            rango={fmtRangoDias(t.enPeriodo.desde, t.enPeriodo.hasta)}
+            horas={semana.horasTotales - horasPrevias}
+          />
+          {t.siguiente && (
+            <TramoLinea
+              etiqueta="Período siguiente"
+              rango={fmtRangoDias(t.siguiente.desde, t.siguiente.hasta)}
+              muted
+            />
+          )}
+          {t.anterior && horasPrevias > 0 && (
+            <Text className="text-[10px] text-muted-foreground">
+              Las horas del período anterior cuentan para el tope de {semana.limiteHoras}h (a la izquierda de la raya).
+            </Text>
+          )}
+        </View>
+      ) : (
+        !!horasPrevias && (
+          <Text className="text-[10px] text-muted-foreground">
+            {horasPrevias.toFixed(1)}h de esta semana son del período anterior (a la izquierda de la raya).
+          </Text>
+        )
+      )}
+    </View>
+  );
+}
+
+function TramoLinea({ etiqueta, rango, horas, muted }: { etiqueta: string; rango: string; horas?: number; muted?: boolean }) {
+  return (
+    <View className="flex-row items-center justify-between">
+      <Text className={`text-[11px] ${muted ? 'text-muted-foreground' : 'text-foreground font-medium'}`}>
+        {etiqueta} · {rango}
+      </Text>
+      {horas !== undefined && (
+        <Text className={`text-[11px] ${muted ? 'text-muted-foreground' : 'text-foreground font-medium'}`}>
+          {horas.toFixed(1)}h
         </Text>
       )}
     </View>
