@@ -143,7 +143,8 @@ function CompensatorioRow({ compensatorio: c }: { compensatorio: DescansoCompens
 // ── Fila ya asignada/tomada — reasignable a otra fecha dentro del plazo ──────
 // Exportada porque gestor-compensatorios.tsx (pantalla completa) la reusa.
 
-export function AsignadoRow({ compensatorio: c }: { compensatorio: DescansoCompensatorio }) {
+/** `sinNombre`: la fila va dentro de la tarjeta de un empleado, que ya muestra su nombre. */
+export function AsignadoRow({ compensatorio: c, sinNombre = false }: { compensatorio: DescansoCompensatorio; sinNombre?: boolean }) {
   const [editando, setEditando] = useState(false);
   const [fecha, setFecha]       = useState<string | null>(null);
   const { mutate, isPending }   = useReasignarCompensatorio();
@@ -161,12 +162,18 @@ export function AsignadoRow({ compensatorio: c }: { compensatorio: DescansoCompe
     return (
       <View className="px-4 py-3 flex-row items-center justify-between">
         <View className="flex-1">
-          <Text className="text-sm font-semibold text-foreground">
-            {c.trabajador_nombre} {c.trabajador_apellido}
-          </Text>
-          <Text className="text-xs text-muted-foreground mt-0.5">
-            Por trabajo el {fmtFechaCorta(c.origen_fecha)}
-          </Text>
+          {sinNombre ? (
+            <Text className="text-sm font-semibold text-foreground">Trabajó el {fmtFechaCorta(c.origen_fecha)}</Text>
+          ) : (
+            <>
+              <Text className="text-sm font-semibold text-foreground">
+                {c.trabajador_nombre} {c.trabajador_apellido}
+              </Text>
+              <Text className="text-xs text-muted-foreground mt-0.5">
+                Por trabajo el {fmtFechaCorta(c.origen_fecha)}
+              </Text>
+            </>
+          )}
         </View>
         <View className="items-end gap-1">
           <ClasificacionBadge clasificacion={c.clasificacion} />
@@ -192,10 +199,12 @@ export function AsignadoRow({ compensatorio: c }: { compensatorio: DescansoCompe
     <View className="px-4 py-3 gap-2">
       <View className="flex-row items-start justify-between">
         <View className="flex-1">
-          <Text className="text-sm font-semibold text-foreground">
-            {c.trabajador_nombre} {c.trabajador_apellido}
-          </Text>
-          <Text className="text-xs text-muted-foreground mt-0.5">
+          {!sinNombre && (
+            <Text className="text-sm font-semibold text-foreground">
+              {c.trabajador_nombre} {c.trabajador_apellido}
+            </Text>
+          )}
+          <Text className={sinNombre ? 'text-sm font-semibold text-foreground' : 'text-xs text-muted-foreground mt-0.5'}>
             Actualmente el {fmtFechaCorta(c.fecha_asignada!)} · por trabajo el {fmtFechaCorta(c.origen_fecha)}
           </Text>
         </View>
