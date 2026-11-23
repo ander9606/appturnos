@@ -3,7 +3,7 @@ import { showAlert } from '@/lib/alertDialog';
 import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Modal, View, TouchableOpacity, ScrollView, Image, Platform,
 } from 'react-native';
@@ -37,6 +37,11 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
   const [horaEvento, setHoraEvento] = useState<string | null>(null);
   const [fotoB64, setFotoB64] = useState<string | null>(null);
   const mutation = useCrearNovedad(asignacionId);
+  // Candado desde el primer toque: `mutation.isPending` solo se activa después de
+  // esperar el GPS, y en esa ventana cada toque extra creaba una novedad duplicada.
+  // El ref bloquea al instante (síncrono); el estado repinta el botón.
+  const enviandoRef = useRef(false);
+  const [enviando, setEnviando] = useState(false);
 
   const handlePickFoto = async () => {
     const ImagePicker = await import('expo-image-picker');
@@ -87,10 +92,13 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
   const handleUsarAhora = () => setHoraEvento(toLocalIso(new Date()));
 
   const handleEnviar = async () => {
+    if (enviandoRef.current) return;
     if (!descripcion.trim()) {
       showAlert('Campo requerido', 'Escribe una descripción de la novedad.', 'warning');
       return;
     }
+    enviandoRef.current = true;
+    setEnviando(true);
     try {
       const { latitud, longitud } = await obtenerUbicacionActual();
       await mutation.mutateAsync({
@@ -109,6 +117,9 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'No se pudo reportar la novedad. Intenta de nuevo.';
       showAlert('Error', message);
+    } finally {
+      enviandoRef.current = false;
+      setEnviando(false);
     }
   };
 
@@ -215,15 +226,15 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
           {/* Botón */}
           <TouchableOpacity
             onPress={handleEnviar}
-            disabled={mutation.isPending}
+            disabled={enviando}
             className="bg-primary rounded-2xl py-4 items-center flex-row justify-center gap-2"
-            style={{ opacity: mutation.isPending ? 0.6 : 1 }}
+            style={{ opacity: enviando ? 0.6 : 1 }}
           >
-            {mutation.isPending
+            {enviando
               ? <Spinner size="small" color={COLORS.white} />
               : <Ionicons name="send-outline" size={18} color={COLORS.white} />}
             <Text className="text-white font-semibold text-base">
-              {mutation.isPending ? 'Enviando…' : 'Enviar novedad'}
+              {enviando ? 'Enviando…' : 'Enviar novedad'}
             </Text>
           </TouchableOpacity>
         </ScrollView>
