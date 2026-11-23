@@ -32,9 +32,13 @@ const CompensatoriosModel = {
     const [filas] = await pool.query(
       `SELECT dc.*,
               t.nombre   AS trabajador_nombre,
-              t.apellido AS trabajador_apellido
+              t.apellido AS trabajador_apellido,
+              -- Horas que este descanso acredita a la semana en que se toma (ver sumarOrdinariasEnSemana):
+              -- solo el festivo habitual; el ocasional ya contó como horas normales y da 0.
+              COALESCE(r.horas_festivo, 0) AS horas_festivo_origen
        FROM descansos_compensatorios dc
        JOIN trabajadores t ON t.id = dc.trabajador_id
+       LEFT JOIN registros_diarios r ON r.id = dc.origen_registro_id
        WHERE ${where.join(' AND ')}
        ORDER BY dc.origen_fecha DESC`,
       params

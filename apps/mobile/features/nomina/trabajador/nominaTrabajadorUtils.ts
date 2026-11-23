@@ -19,7 +19,7 @@
  *   el compensatorio no lleva es un pago adicional POR EL DÍA DE DESCANSO en sí.
  */
 
-import type { RegistroDiario, PeriodoNomina, TipoDia, TipoPeriodo } from '@api-client';
+import type { RegistroDiario, PeriodoNomina, TipoDia, TipoPeriodo, DescansoCompensatorio } from '@api-client';
 import {
   recargoFestivo, HORAS_MES_NOMINA, JORNADA_SEMANAL_HORAS,
   RECARGO_NOCTURNO, RECARGO_EXTRA_DIURNA, RECARGO_EXTRA_NOCTURNA,
@@ -119,6 +119,13 @@ export interface ResumenSemana {
   /** Extras guardadas por el backend en los registros de la semana (para estimar el pago con la tasa de cada tipo). */
   horasExtraDiurnas?: number;
   horasExtraNocturnas?: number;
+  /**
+   * Horas de festivo habitual acreditadas a ESTA semana por un compensatorio tomado en ella. Ya están
+   * sumadas en horasTotales; el festivo se trabajó en otra semana (o período) y `origenesCompensatorio`
+   * dice cuándo (ISO de cada festivo de origen).
+   */
+  horasCompensatorio?: number;
+  origenesCompensatorio?: string[];
 }
 
 // ── Helpers internos ───────────────────────────────────────────────────────
@@ -362,6 +369,56 @@ export function aplicarHorasPrevias(
       if (s.inicioSemana !== lunesISO) return s;
       const horasTotales = s.horasTotales + horas;
       return { ...s, horasTotales, horasExtra: Math.max(0, horasTotales - s.limiteHoras), horasPrevias: horas };
+    }),
+  };
+}
+
+export interface CreditoCompensatorio { fecha_asignada: string; origen_fecha: string; horas: number }
+
+/**
+ * Créditos al tope semanal que dan los compensatorios de un trabajador: mismo criterio que
+ * `sumarOrdinariasEnSemana` del backend — solo descansos asignados/tomados, con horas de festivo
+ * habitual > 0 y ya llegados (`fecha_asignada <= hastaISO`).
+ */
+export function creditosDeCompensatorios(
+  compensatorios: ReadonlyArray<Pick<DescansoCompensatorio, 'trabajador_id' | 'estado' | 'fecha_asignada' | 'origen_fecha' | 'horas_festivo_origen'>>,
+  trabajadorId: number | undefined,
+  hastaISO: string,
+): CreditoCompensatorio[] {
+  const out: CreditoCompensatorio[] = [];
+  for (const c of compensatorios) {
+    const horas = Number(c.horas_festivo_origen ?? 0);
+    if (trabajadorId === undefined || c.trabajador_id !== trabajadorId) continue;
+    if ((c.estado !== 'asignado' && c.estado !== 'tomado') || !c.fecha_asignada || c.fecha_asignada > hastaISO) continue;
+    if (horas > 0) out.push({ fecha_asignada: c.fecha_asignada, origen_fecha: c.origen_fecha, horas });
+  }
+  return out;
+}
+
+/**
+ * Suma a cada semana las horas que le acreditan los compensatorios tomados en ella y recalcula el
+ * extra. Sin esto la barra semanal muestra menos horas de las que el backend contó para el tope.
+ * Solo toca semanas que ya están en el resumen; el total del período no cambia.
+ */
+export function aplicarCompensatorios(
+  resumen: ResumenPeriodoNomina,
+  creditos: CreditoCompensatorio[],
+): ResumenPeriodoNomina {
+  if (creditos.length === 0) return resumen;
+  return {
+    ...resumen,
+    semanas: resumen.semanas.map((s) => {
+      const delSemana = creditos.filter((c) => lunesDeSemana(c.fecha_asignada) === s.inicioSemana);
+      if (delSemana.length === 0) return s;
+      const horas = delSemana.reduce((a, c) => a + c.horas, 0);
+      const horasTotales = s.horasTotales + horas;
+      return {
+        ...s,
+        horasTotales,
+        horasExtra: Math.max(0, horasTotales - s.limiteHoras),
+        horasCompensatorio: (s.horasCompensatorio ?? 0) + horas,
+        origenesCompensatorio: [...(s.origenesCompensatorio ?? []), ...delSemana.map((c) => c.origen_fecha)],
+      };
     }),
   };
 }

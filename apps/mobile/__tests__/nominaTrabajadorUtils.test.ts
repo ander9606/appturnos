@@ -1,4 +1,4 @@
-import { ayerDe, calcularElapsedLabel, calcularElapsedMinutes, encontrarRegistroActivo, etiquetaPeriodo, getJornadaLegalSemanal, tramoSemanaPrevia, aplicarHorasPrevias, calcularResumenPeriodo, sumarHoras, estimarExtraSemanaCOP, tramosSemana, fmtRangoDias } from '../features/nomina/trabajador/nominaTrabajadorUtils';
+import { ayerDe, calcularElapsedLabel, calcularElapsedMinutes, encontrarRegistroActivo, etiquetaPeriodo, getJornadaLegalSemanal, tramoSemanaPrevia, aplicarHorasPrevias, calcularResumenPeriodo, sumarHoras, estimarExtraSemanaCOP, tramosSemana, fmtRangoDias, aplicarCompensatorios, creditosDeCompensatorios } from '../features/nomina/trabajador/nominaTrabajadorUtils';
 
 describe('getJornadaLegalSemanal', () => {
   it('2026 en adelante → 42h (tope final de la Ley 2101, coincide con el backend)', () => {
@@ -149,6 +149,38 @@ describe('tramosSemana / fmtRangoDias', () => {
     expect(fmtRangoDias('2026-10-12', '2026-10-18')).toBe('Lun 12 – Dom 18 Oct');
     expect(fmtRangoDias('2026-10-26', '2026-11-01')).toBe('Lun 26 Oct – Dom 1 Nov');
     expect(fmtRangoDias('2026-10-16', '2026-10-16')).toBe('Vie 16 Oct');
+  });
+});
+
+// Compensatorio: acredita al tope de 42 h de la semana en que se toma las horas del festivo habitual
+// trabajado antes (otra semana u otro período). Mismo criterio que sumarOrdinariasEnSemana del backend.
+describe('compensatorio acredita horas a la semana', () => {
+  const base = {
+    totalHoras: 30, horasOrdinarias: 30, horasExtraDiurnas: 0, horasExtraNocturnas: 0, horasNocturnas: 0,
+    horasFestivo: 0, diasRegistrados: 3, diasConExtras: 0, diasEspeciales: 0, valorExtraCOP: 0,
+    semanas: [{ inicioSemana: '2026-11-16', horasTotales: 30, limiteHoras: 42, horasExtra: 0 }],
+  };
+  const comp = (o: Record<string, unknown>) => ({
+    trabajador_id: 7, estado: 'asignado', fecha_asignada: '2026-11-19', origen_fecha: '2026-11-15', horas_festivo_origen: '8.00', ...o,
+  }) as never;
+
+  it('suma el festivo del domingo anterior a la semana del descanso y recalcula el extra', () => {
+    const creditos = creditosDeCompensatorios([comp({})], 7, '2026-11-20');
+    expect(creditos).toEqual([{ fecha_asignada: '2026-11-19', origen_fecha: '2026-11-15', horas: 8 }]);
+    const r = aplicarCompensatorios(base, creditos);
+    expect(r.semanas[0]).toMatchObject({ horasTotales: 38, horasExtra: 0, horasCompensatorio: 8, origenesCompensatorio: ['2026-11-15'] });
+    expect(aplicarCompensatorios({ ...base, semanas: [{ ...base.semanas[0], horasTotales: 36 }] }, creditos).semanas[0])
+      .toMatchObject({ horasTotales: 44, horasExtra: 2 });
+    expect(r.totalHoras).toBe(30);
+  });
+
+  it('ignora ocasional (0 h), pendiente, otro trabajador y descansos que aún no llegan', () => {
+    const lista = [
+      comp({ horas_festivo_origen: '0.00' }), comp({ estado: 'pendiente' }), comp({ trabajador_id: 9 }),
+      comp({ fecha_asignada: '2026-11-25' }), comp({ fecha_asignada: null }),
+    ];
+    expect(creditosDeCompensatorios(lista, 7, '2026-11-20')).toEqual([]);
+    expect(aplicarCompensatorios(base, [])).toBe(base);
   });
 });
 
