@@ -94,8 +94,12 @@ export function useCrearRegistro() {
       trabajador_id?: number;
       novedad?: string;
       tipo_dia?: TipoDia;
+      compensatorio_id?: number;
     }) => nominaApi.crearRegistro(datos),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['registros'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registros'] });
+      qc.invalidateQueries({ queryKey: ['compensatorios'] }); // marcar un día compensatorio descuenta un pendiente
+    },
   });
 }
 
@@ -140,7 +144,10 @@ export function useCorregirRegistro() {
   return useMutation({
     mutationFn: ({ id, ...datos }: Parameters<typeof nominaApi.corregirRegistro>[1] & { id: number }) =>
       nominaApi.corregirRegistro(id, datos),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['registros'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registros'] });
+      qc.invalidateQueries({ queryKey: ['compensatorios'] }); // el día pudo descontar o liberar un compensatorio
+    },
   });
 }
 

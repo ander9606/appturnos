@@ -81,6 +81,41 @@ describe('crear un registro «compensatorio»', () => {
     expect(CompensatoriosModel.asignar).toHaveBeenCalledWith(1, 4, expect.objectContaining({ fechaAsignada: FECHA }));
   });
 
+  test('el gestor elige un compensatorio concreto (no el más antiguo): se descuenta ese', async () => {
+    CompensatoriosModel.listarPendientesDeTrabajador.mockResolvedValue([
+      pendiente(3, '2026-05-24'), // el más antiguo, sirve
+      pendiente(5, '2026-06-07'), // el elegido
+    ]);
+
+    await RegistrosService.crear(1, GESTOR, {
+      trabajador_id: 5, periodo_id: 1, fecha: FECHA, tipo_dia: 'compensatorio', compensatorio_id: 5,
+    });
+
+    expect(CompensatoriosModel.asignar).toHaveBeenCalledWith(1, 5, expect.objectContaining({ fechaAsignada: FECHA }));
+    expect(CompensatoriosModel.asignar).not.toHaveBeenCalledWith(1, 3, expect.anything());
+  });
+
+  test('compensatorio_id que no es un pendiente de este trabajador (ajeno o ya tomado) → 422, sin guardar', async () => {
+    CompensatoriosModel.listarPendientesDeTrabajador.mockResolvedValue([pendiente(3, '2026-06-07')]);
+
+    await expect(RegistrosService.crear(1, GESTOR, {
+      trabajador_id: 5, periodo_id: 1, fecha: FECHA, tipo_dia: 'compensatorio', compensatorio_id: 99,
+    })).rejects.toMatchObject({ statusCode: 422 });
+    expect(RegistrosModel.crear).not.toHaveBeenCalled();
+  });
+
+  test('compensatorio elegido cuya ventana de 28 días ya venció para ese día → 422 aunque otro sí sirva', async () => {
+    CompensatoriosModel.listarPendientesDeTrabajador.mockResolvedValue([
+      pendiente(3, '2026-04-05'), // vencido para el 10 jun
+      pendiente(4, '2026-06-07'),
+    ]);
+
+    await expect(RegistrosService.crear(1, GESTOR, {
+      trabajador_id: 5, periodo_id: 1, fecha: FECHA, tipo_dia: 'compensatorio', compensatorio_id: 3,
+    })).rejects.toMatchObject({ statusCode: 422, message: expect.stringContaining('28 días') });
+    expect(RegistrosModel.crear).not.toHaveBeenCalled();
+  });
+
   test('carrera: el pendiente ya lo tomó otro → 409 y el registro recién creado se borra', async () => {
     CompensatoriosModel.listarPendientesDeTrabajador.mockResolvedValue([pendiente(3, '2026-06-07')]);
     CompensatoriosModel.asignar.mockResolvedValue(0);
@@ -115,6 +150,15 @@ describe('corregir el tipo de día de un registro', () => {
 
     expect(RegistrosModel.actualizar).toHaveBeenCalledWith(1, 99, expect.objectContaining({ tipo_dia: 'compensatorio' }));
     expect(CompensatoriosModel.asignar).toHaveBeenCalledWith(1, 3, expect.objectContaining({ fechaAsignada: FECHA }));
+  });
+
+  test('ordinario → compensatorio eligiendo uno concreto: descuenta ese', async () => {
+    RegistrosModel.obtenerPorId.mockResolvedValue(registro('ordinario'));
+    CompensatoriosModel.listarPendientesDeTrabajador.mockResolvedValue([pendiente(3, '2026-05-24'), pendiente(4, '2026-06-07')]);
+
+    await RegistrosService.corregir(1, GESTOR, 99, { tipo_dia: 'compensatorio', compensatorio_id: 4 });
+
+    expect(CompensatoriosModel.asignar).toHaveBeenCalledWith(1, 4, expect.objectContaining({ fechaAsignada: FECHA }));
   });
 
   test('compensatorio → ordinario: el descanso de ese día vuelve a pendiente', async () => {

@@ -299,12 +299,16 @@ export const nominaApi = {
     novedad?: string;
     jornada_continua?: boolean;
     tipo_dia?: TipoDia;
+    /** Con tipo_dia 'compensatorio': cuál descanso pendiente se descuenta (si falta, el más antiguo que sirva). */
+    compensatorio_id?: number;
   }): Promise<RegistroDiario> {
     return api.post<RegistroDiario>('/api/nomina/registros', datos);
   },
 
   corregirRegistro(id: number, datos: {
     tipo_dia?: TipoDia;
+    /** Al pasar el día a 'compensatorio': cuál descanso pendiente se descuenta (si falta, el más antiguo que sirva). */
+    compensatorio_id?: number;
     novedad?: string;
     /** null limpia el valor guardado — ej. al reclasificar a compensatorio/ausencia. */
     hora_entrada?: string | null;

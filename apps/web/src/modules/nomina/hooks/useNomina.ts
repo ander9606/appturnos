@@ -149,6 +149,7 @@ export function useCrearRegistro() {
     mutationFn: nominaApi.crearRegistro,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['nomina', 'registros'] });
+      qc.invalidateQueries({ queryKey: KEYS.compensatorios() }); // un día compensatorio descuenta un pendiente
       toast.success('Registro creado');
     },
     onError: (err: unknown) => toast.error(getErrMsg(err)),
@@ -305,6 +306,7 @@ export function useCorregirRegistro() {
       nominaApi.corregirRegistro(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['nomina', 'registros'] });
+      qc.invalidateQueries({ queryKey: KEYS.compensatorios() }); // el día pudo descontar o liberar un compensatorio
       toast.success('Registro actualizado');
     },
     onError: (err: unknown) => toast.error(getErrMsg(err)),

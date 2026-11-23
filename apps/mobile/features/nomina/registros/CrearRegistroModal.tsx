@@ -22,6 +22,7 @@ import type { TipoDia } from '@api-client';
 import { TIPOS_DIA_SIN_HORARIO, TIPOS_RANGO } from './tiposDia';
 import { fmtTime } from './fechasRegistro';
 import { TipoDiaChips } from './TipoDiaChips';
+import { CompensatorioSelector } from '@/features/nomina/compensatorios/CompensatorioSelector';
 
 // ── Modal: crear nuevo registro ───────────────────────────────────────────
 
@@ -53,6 +54,7 @@ export function CrearRegistroModal({
   const [horaEntrada, setHoraEntrada] = useState<Date | null>(null);
   const [horaSalida,  setHoraSalida]  = useState<Date | null>(null);
   const [novedad,     setNovedad]     = useState('');
+  const [compensatorioId, setCompensatorioId] = useState<number | null>(null);
 
   const [showFecha,      setShowFecha]      = useState(false);
   const [showFechaHasta, setShowFechaHasta] = useState(false);
@@ -72,6 +74,7 @@ export function CrearRegistroModal({
       setHoraEntrada(null);
       setHoraSalida(null);
       setNovedad('');
+      setCompensatorioId(null);
       setShowFecha(false);
       setShowFechaHasta(false);
       setShowEntrada(false);
@@ -137,6 +140,10 @@ export function CrearRegistroModal({
       return;
     }
 
+    if (tipoDia === 'compensatorio' && compensatorioId === null) {
+      showAlert('Falta el compensatorio', 'Elige cuál compensatorio pendiente se descuenta, o cambia el tipo de día.', 'warning');
+      return;
+    }
     if (!sinHorario && !horaEntrada) {
       showAlert('Falta la hora de entrada', undefined, 'warning');
       return;
@@ -160,6 +167,7 @@ export function CrearRegistroModal({
         trabajador_id: creando!.trabajadorId,
         fecha:         toISODate(fecha),
         tipo_dia:      tipoDia,
+        compensatorio_id: tipoDia === 'compensatorio' ? compensatorioId ?? undefined : undefined,
         hora_entrada:  sinHorario ? undefined : fmtTime(horaEntrada!),
         hora_salida:   !sinHorario && horaSalida ? fmtTime(horaSalida) : undefined,
         novedad:       novedad.trim() || undefined,
@@ -258,6 +266,15 @@ export function CrearRegistroModal({
             <Text className="text-sm font-semibold text-foreground">Tipo de día</Text>
             <TipoDiaChips value={tipoDia} onChange={setTipoDia} />
           </View>
+
+          {tipoDia === 'compensatorio' && (
+            <CompensatorioSelector
+              trabajadorId={creando.trabajadorId}
+              fecha={toISODate(fecha)}
+              value={compensatorioId}
+              onChange={setCompensatorioId}
+            />
+          )}
 
           {sinHorario ? (
             <View className={`rounded-xl px-4 py-3 flex-row items-center gap-2 ${esAusencia ? 'bg-danger-light' : 'bg-info-light'}`}>

@@ -21,6 +21,7 @@ import { TIPOS_DIA_SIN_HORARIO } from './tiposDia';
 import { SHORT_DAYS, fmtTime, horaAFecha } from './fechasRegistro';
 import { EditarSesionesModal } from './EditarSesionesModal';
 import { TipoDiaChips } from './TipoDiaChips';
+import { CompensatorioSelector } from '@/features/nomina/compensatorios/CompensatorioSelector';
 
 export function EditarRegistroModal({
   registro,
@@ -36,6 +37,7 @@ export function EditarRegistroModal({
   const [horaSalida, setHoraSalida] = useState<Date | null>(null);
   const [showEntrada, setShowEntrada] = useState(false);
   const [showSalida, setShowSalida] = useState(false);
+  const [compensatorioId, setCompensatorioId] = useState<number | null>(null);
 
   const esAusencia = tipoDia === 'ausencia';
   const sinHorario = esAusencia || TIPOS_DIA_SIN_HORARIO.includes(tipoDia);
@@ -48,6 +50,7 @@ export function EditarRegistroModal({
       setHoraSalida(horaAFecha(registro.hora_salida));
       setShowEntrada(false);
       setShowSalida(false);
+      setCompensatorioId(null);
     }
   }, [registro]);
 
@@ -64,7 +67,14 @@ export function EditarRegistroModal({
     if (d) setHoraSalida(d);
   }
 
+  // Pasar el día a «compensatorio» descuenta un descanso pendiente: el gestor elige cuál.
+  const pasaACompensatorio = tipoDia === 'compensatorio' && registro.tipo_dia !== 'compensatorio';
+
   const handleGuardar = async () => {
+    if (pasaACompensatorio && compensatorioId === null) {
+      showAlert('Falta el compensatorio', 'Elige cuál compensatorio pendiente se descuenta, o cambia el tipo de día.', 'warning');
+      return;
+    }
     if (!sinHorario && horaEntrada && horaSalida && fmtTime(horaSalida) === fmtTime(horaEntrada)) {
       showAlert('La hora de salida no puede ser igual a la de entrada.');
       return;
@@ -73,6 +83,7 @@ export function EditarRegistroModal({
       await corregir.mutateAsync({
         id: registro.id,
         tipo_dia: tipoDia,
+        compensatorio_id: pasaACompensatorio ? compensatorioId ?? undefined : undefined,
         novedad: novedad.trim() || undefined,
         // null (no undefined) para que se limpie un horario que haya quedado
         // guardado de antes de reclasificar el día a compensatorio/ausencia.
@@ -115,6 +126,15 @@ export function EditarRegistroModal({
             <Text className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Tipo de día</Text>
             <TipoDiaChips value={tipoDia} onChange={setTipoDia} />
           </View>
+
+          {pasaACompensatorio && (
+            <CompensatorioSelector
+              trabajadorId={registro.trabajador_id}
+              fecha={registro.fecha}
+              value={compensatorioId}
+              onChange={setCompensatorioId}
+            />
+          )}
 
           {sinHorario ? (
             <View className={`rounded-xl px-4 py-3 flex-row items-center gap-2 ${esAusencia ? 'bg-danger-light' : 'bg-info-light'}`}>
