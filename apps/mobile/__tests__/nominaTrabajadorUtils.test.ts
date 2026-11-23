@@ -1,4 +1,4 @@
-import { ayerDe, calcularElapsedLabel, calcularElapsedMinutes, encontrarRegistroActivo, etiquetaPeriodo, getJornadaLegalSemanal, tramoSemanaPrevia, aplicarHorasPrevias, calcularResumenPeriodo, sumarHoras, estimarExtraSemanaCOP } from '../features/nomina/trabajador/nominaTrabajadorUtils';
+import { ayerDe, calcularElapsedLabel, calcularElapsedMinutes, encontrarRegistroActivo, etiquetaPeriodo, getJornadaLegalSemanal, tramoSemanaPrevia, aplicarHorasPrevias, calcularResumenPeriodo, sumarHoras, estimarExtraSemanaCOP, tramosSemana, fmtRangoDias } from '../features/nomina/trabajador/nominaTrabajadorUtils';
 
 describe('getJornadaLegalSemanal', () => {
   it('2026 en adelante → 42h (tope final de la Ley 2101, coincide con el backend)', () => {
@@ -119,6 +119,36 @@ describe('tramoSemanaPrevia / aplicarHorasPrevias', () => {
   it('sin horas previas o semana distinta no cambia nada', () => {
     expect(aplicarHorasPrevias(base, '2026-10-12', 0)).toBe(base);
     expect(aplicarHorasPrevias(base, '2026-10-05', 10).semanas[0].horasTotales).toBe(5.5);
+  });
+});
+
+// Semanas partidas por el corte del período (quincena o mes): qué días son de cada período.
+describe('tramosSemana / fmtRangoDias', () => {
+  it('quincena 16–31 oct: la semana del 12 queda partida con su tramo anterior', () => {
+    expect(tramosSemana('2026-10-12', '2026-10-16', '2026-10-31')).toEqual({
+      enPeriodo: { desde: '2026-10-16', hasta: '2026-10-18' },
+      anterior: { desde: '2026-10-12', hasta: '2026-10-15' },
+      siguiente: null,
+    });
+  });
+  it('la última semana sigue en el período siguiente (cruza de mes)', () => {
+    expect(tramosSemana('2026-10-26', '2026-10-16', '2026-10-31')).toEqual({
+      enPeriodo: { desde: '2026-10-26', hasta: '2026-10-31' },
+      anterior: null,
+      siguiente: { desde: '2026-11-01', hasta: '2026-11-01' },
+    });
+  });
+  it('mes completo: semanas del medio enteras, extremos partidos', () => {
+    const t = tramosSemana('2026-11-09', '2026-11-01', '2026-11-30');
+    expect(t.anterior).toBeNull();
+    expect(t.siguiente).toBeNull();
+    expect(tramosSemana('2026-10-26', '2026-11-01', '2026-11-30').anterior).toEqual({ desde: '2026-10-26', hasta: '2026-10-31' });
+    expect(tramosSemana('2026-11-30', '2026-11-01', '2026-11-30').siguiente).toEqual({ desde: '2026-12-01', hasta: '2026-12-06' });
+  });
+  it('formatea rangos', () => {
+    expect(fmtRangoDias('2026-10-12', '2026-10-18')).toBe('Lun 12 – Dom 18 Oct');
+    expect(fmtRangoDias('2026-10-26', '2026-11-01')).toBe('Lun 26 Oct – Dom 1 Nov');
+    expect(fmtRangoDias('2026-10-16', '2026-10-16')).toBe('Vie 16 Oct');
   });
 });
 

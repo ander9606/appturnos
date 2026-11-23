@@ -9,11 +9,11 @@ import { fmtDiaSemana, fmtHora, fmtHrs } from '@/shared/lib/format';
 import { TIPO_DIA_LABELS } from '../constants';
 import { AlmuerzoIndicator, EnVivoIndicator, ExtraIndicator } from './DiaIndicators';
 import { UbicacionMarcajeModal } from './UbicacionMarcajeModal';
-import { agruparPorSemana, explicarHorasExtra } from '../utils';
+import { agruparPorSemana, explicarHorasExtra, tramosSemana, fmtRangoDias } from '../utils';
 import { EmptyState } from '@/shared/components/EmptyState';
 
 export function RegistrosTab({
-  registros, loading, error, onRetry, compensatorioDe, onCorregir, onReasignar, onShowCrear, periodoInicio, horasPrevias,
+  registros, loading, error, onRetry, compensatorioDe, onCorregir, onReasignar, onShowCrear, periodoInicio, periodoFin, horasPrevias,
 }: {
   registros: Registro[];
   loading: boolean;
@@ -24,6 +24,7 @@ export function RegistrosTab({
   onReasignar: (c: DescansoCompensatorio) => void;
   onShowCrear: (trabajador?: { id: number; nombre: string }) => void;
   periodoInicio?: string;
+  periodoFin?: string;
   /** Horas por trabajador de la semana partida (período anterior), para el desglose por semana. */
   horasPrevias?: { lunes: string | null; porTrabajador: Map<number, number> };
 }) {
@@ -146,30 +147,56 @@ export function RegistrosTab({
                 {abierto && (
                   <>
                   {semanas.length > 0 && (
-                    <div className="px-4 py-2.5 border-t border-border bg-muted/40 flex flex-wrap items-center gap-x-4 gap-y-1">
-                      <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
-                        Por semana (cuenta para extras):
-                      </span>
-                      {semanas.map(s => (
-                        <span key={s.inicioSemana} className="text-xs">
-                          <span className="text-muted-foreground">{fmtDiaSemana(s.inicioSemana)}: </span>
-                          {s.horasExtra > 0 ? (
-                            <span>
-                              <span className="text-foreground">{s.limiteHoras}h cupo</span>
-                              <span className="text-success font-semibold"> + {fmtHrs(s.horasExtra)}h extra</span>
-                              <span className="text-muted-foreground"> = {fmtHrs(s.horasTotales)}h</span>
-                            </span>
-                          ) : (
-                            <span className="text-foreground">{fmtHrs(s.horasTotales)} / {s.limiteHoras}h</span>
-                          )}
-                          {s.horasFestivo ? (
-                            <span className="text-danger"> · +{fmtHrs(s.horasFestivo)}h festivo (recargo, fuera de las {s.limiteHoras}h)</span>
-                          ) : null}
-                          {s.horasPrevias ? (
-                            <span className="text-muted-foreground"> · {fmtHrs(s.horasPrevias)}h del período anterior</span>
-                          ) : null}
-                        </span>
-                      ))}
+                    <div className="px-4 py-2.5 border-t border-border bg-muted/40">
+                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                        Por semana (el tope de {semanas[0].limiteHoras}h se cuenta de lunes a domingo, aunque cruce períodos)
+                      </p>
+                      <ul className="flex flex-col divide-y divide-border/60">
+                        {semanas.map(s => {
+                          const t = periodoInicio && periodoFin ? tramosSemana(s.inicioSemana, periodoInicio, periodoFin) : null;
+                          const previas = s.horasPrevias ?? 0;
+                          return (
+                            <li key={s.inicioSemana} className="py-1.5 text-xs flex flex-col gap-0.5">
+                              <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+                                <span className="font-medium text-foreground">
+                                  {t ? fmtRangoDias(s.inicioSemana, (t.siguiente ?? t.enPeriodo).hasta) : fmtDiaSemana(s.inicioSemana)}
+                                </span>
+                                {s.horasExtra > 0 ? (
+                                  <span>
+                                    <span className="text-foreground">{s.limiteHoras}h cupo</span>
+                                    <span className="text-success font-semibold"> + {fmtHrs(s.horasExtra)}h extra</span>
+                                    <span className="text-muted-foreground"> = {fmtHrs(s.horasTotales)}h</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-foreground">{fmtHrs(s.horasTotales)} / {s.limiteHoras}h</span>
+                                )}
+                              </div>
+                              {t && (t.anterior || t.siguiente) ? (
+                                <div className="flex flex-col text-[11px]">
+                                  {t.anterior && (
+                                    <span className="text-muted-foreground">
+                                      Período anterior · {fmtRangoDias(t.anterior.desde, t.anterior.hasta)}{previas > 0 ? ` · ${fmtHrs(previas)}h` : ''}
+                                    </span>
+                                  )}
+                                  <span className="text-foreground font-medium">
+                                    Este período · {fmtRangoDias(t.enPeriodo.desde, t.enPeriodo.hasta)} · {fmtHrs(s.horasTotales - previas)}h
+                                  </span>
+                                  {t.siguiente && (
+                                    <span className="text-muted-foreground">
+                                      Período siguiente · {fmtRangoDias(t.siguiente.desde, t.siguiente.hasta)}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : previas > 0 ? (
+                                <span className="text-[11px] text-muted-foreground">{fmtHrs(previas)}h del período anterior</span>
+                              ) : null}
+                              {s.horasFestivo ? (
+                                <span className="text-[11px] text-danger">+{fmtHrs(s.horasFestivo)}h festivo (recargo, fuera de las {s.limiteHoras}h)</span>
+                              ) : null}
+                            </li>
+                          );
+                        })}
+                      </ul>
                     </div>
                   )}
                   <div className="overflow-x-auto">
