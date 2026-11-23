@@ -28,7 +28,7 @@ function fechaLarga(fechaISO) {
  * puesta) — antes solo reasignar() la tenía, dejando asignar() sin ningún
  * control server-side más allá del formato de fecha en la ruta.
  */
-async function validarFechaDescanso(empresaId, comp, fechaAsignada) {
+async function validarFechaDescanso(empresaId, comp, fechaAsignada, { ignorarRegistro = false } = {}) {
   const limite = sumarDiasISO(comp.origen_fecha, COMPENSATORIO_PLAZO_DIAS);
   if (fechaAsignada <= comp.origen_fecha || fechaAsignada > limite) {
     throw new AppError(
@@ -40,8 +40,10 @@ async function validarFechaDescanso(empresaId, comp, fechaAsignada) {
     throw new AppError('No puedes asignar el descanso a un domingo o festivo', 422);
   }
 
+  // ignorarRegistro: al marcar un día a mano como compensatorio, el registro de ese día es justo el que se
+  // está marcando — que exista no es un choque.
   const [registroExistente, yaAsignado] = await Promise.all([
-    RegistrosModel.obtenerPorFecha(empresaId, comp.trabajador_id, fechaAsignada),
+    ignorarRegistro ? null : RegistrosModel.obtenerPorFecha(empresaId, comp.trabajador_id, fechaAsignada),
     CompensatoriosModel.existeFechaAsignada(empresaId, comp.trabajador_id, fechaAsignada),
   ]);
   if (registroExistente) throw new AppError('El trabajador ya tiene un registro ese día', 409);
@@ -184,6 +186,79 @@ const CompensatoriosService = {
       fechaAsignada,
       asignadoPor: usuarioId,
     });
+  },
+
+  /**
+   * Marcar un día a mano como 'compensatorio' (crear o corregir un registro) solo vale si el trabajador
+   * tiene un descanso pendiente que descontar. Elige el más antiguo cuya ventana de 28 días incluya la
+   * fecha y valida que la fecha sirva (no domingo/festivo, sin otro descanso ese día). No escribe nada:
+   * se llama ANTES de guardar el registro para que un rechazo no deje datos a medias.
+   */
+  async elegirPendienteParaDia(empresaId, trabajadorId, fecha) {
+    const pendientes = await CompensatoriosModel.listarPendientesDeTrabajador(empresaId, trabajadorId);
+    if (pendientes.length === 0) {
+      throw new AppError(
+        'El trabajador no tiene compensatorios pendientes: no se puede marcar este día como compensatorio. ' +
+        "Si es un descanso sin compensatorio, usa el tipo «Descanso».",
+        422
+      );
+    }
+    const comp = pendientes.find((c) => fecha > c.origen_fecha && fecha <= sumarDiasISO(c.origen_fecha, COMPENSATORIO_PLAZO_DIAS));
+    if (!comp) {
+      const masViejo = pendientes[0];
+      throw new AppError(
+        `El trabajador tiene ${pendientes.length} compensatorio(s) pendiente(s), pero ninguno se puede tomar el ${fecha}: ` +
+        `cada uno se toma dentro de los ${COMPENSATORIO_PLAZO_DIAS} días siguientes al día trabajado ` +
+        `(el más antiguo, del ${masViejo.origen_fecha}, vence el ${sumarDiasISO(masViejo.origen_fecha, COMPENSATORIO_PLAZO_DIAS)})`,
+        422
+      );
+    }
+    await validarFechaDescanso(empresaId, comp, fecha, { ignorarRegistro: true });
+    return comp;
+  },
+
+  /** Descuenta el pendiente elegido por elegirPendienteParaDia: lo asigna a `fecha` y lo marca tomado. */
+  async consumirParaDia(empresaId, usuarioId, comp, fecha) {
+    let rows;
+    try {
+      rows = await CompensatoriosModel.asignar(empresaId, comp.id, { fechaAsignada: fecha, asignadoPor: usuarioId });
+    } catch (err) {
+      if (err.code === 'ER_DUP_ENTRY') {
+        throw new AppError('El trabajador ya tiene otro descanso asignado ese día', 409);
+      }
+      throw err;
+    }
+    if (rows === 0) throw new AppError('Ese compensatorio ya no está pendiente', 409);
+    await CompensatoriosModel.marcarTomado(empresaId, comp.id);
+
+    // Best-effort: el día ya quedó marcado, un fallo avisando no debe deshacerlo.
+    try {
+      const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, comp.trabajador_id);
+      if (trabajador?.usuario_id) {
+        await NotificacionesService.notificar({
+          empresaId,
+          usuarioId: trabajador.usuario_id,
+          tipo: 'nomina.compensatorio_asignado',
+          titulo: 'Descanso compensatorio asignado',
+          mensaje: `El ${fecha} no tienes que asistir a laborar — es tu compensatorio por el ${comp.origen_fecha}.`,
+          data: { compensatorio_id: comp.id },
+        });
+      }
+    } catch (err) {
+      logger.error('[compensatorios] fallo notificando compensatorio marcado a mano', err.message);
+    }
+  },
+
+  /**
+   * Un día que era 'compensatorio' deja de serlo (se corrigió a otro tipo): su descanso vuelve a quedar
+   * pendiente y sin fecha, para que el trabajador no pierda el día. Devuelve el descanso liberado o null
+   * (un día marcado antes de esta regla puede no tener ninguno ligado).
+   */
+  async liberarDia(empresaId, trabajadorId, fecha) {
+    const comp = await CompensatoriosModel.obtenerPorFechaAsignada(empresaId, trabajadorId, fecha);
+    if (!comp) return null;
+    await CompensatoriosModel.liberar(empresaId, comp.id);
+    return comp;
   },
 
   /**

@@ -80,8 +80,9 @@ export function EditarRegistroModal({
         hora_salida: sinHorario ? null : horaSalida ? fmtTime(horaSalida) : undefined,
       });
       onClose();
-    } catch {
-      showAlert('Error', 'No se pudo guardar el registro.');
+    } catch (e: unknown) {
+      // El servidor explica el motivo (p. ej. «el trabajador no tiene compensatorios pendientes»).
+      showAlert('Error', e instanceof Error && e.message ? e.message : 'No se pudo guardar el registro.');
     }
   };
 

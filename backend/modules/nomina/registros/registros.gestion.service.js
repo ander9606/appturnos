@@ -221,6 +221,12 @@ const RegistrosGestionService = {
         sumarNocturnasFestivo,
       }));
 
+    // Marcar el día como compensatorio solo vale si hay un descanso pendiente que descontar; se valida
+    // antes de guardar para que un rechazo no deje un registro suelto.
+    const compATomar = datos.tipo_dia === 'compensatorio'
+      ? await CompensatoriosService.elegirPendienteParaDia(empresaId, trabajadorId, datos.fecha)
+      : null;
+
     const id = await RegistrosModel.crear(empresaId, {
       trabajador_id: trabajadorId,
       periodo_id: datos.periodo_id,
@@ -233,6 +239,15 @@ const RegistrosGestionService = {
       jornada_continua: jornadaContinua,
       horas_acumuladas_semana: dia.ordinariasAcum,
     });
+
+    if (compATomar) {
+      try {
+        await CompensatoriosService.consumirParaDia(empresaId, usuario.sub, compATomar, datos.fecha);
+      } catch (err) {
+        await RegistrosModel.eliminar(empresaId, id); // carrera con otra asignación: no dejar el día marcado sin descontar
+        throw err;
+      }
+    }
 
     await crearCompensatorioDelDia(empresaId, {
       trabajadorId,
@@ -345,6 +360,13 @@ const RegistrosGestionService = {
           })));
 
     const tipoDiaEfectivo = datos.tipo_dia !== undefined ? datos.tipo_dia : registro.tipo_dia;
+    const eraCompensatorio = registro.tipo_dia === 'compensatorio';
+    const seraCompensatorio = tipoDiaEfectivo === 'compensatorio';
+
+    // Pasar un día a «compensatorio» exige un descanso pendiente que descontar (se valida antes de escribir).
+    const compATomar = seraCompensatorio && !eraCompensatorio
+      ? await CompensatoriosService.elegirPendienteParaDia(empresaId, registro.trabajador_id, registro.fecha)
+      : null;
 
     await RegistrosModel.actualizar(empresaId, id, {
       ...camposSesiones,
@@ -357,6 +379,14 @@ const RegistrosGestionService = {
       jornada_continua: jornadaContinua,
       horas_acumuladas_semana: dia.ordinariasAcum,
     });
+
+    // ponytail: si consumirParaDia falla por una carrera (otro gestor tomó ese descanso a la vez) el registro
+    // ya quedó actualizado; el error llega al gestor, que lo reintenta — upgrade path: transacción única.
+    if (compATomar) await CompensatoriosService.consumirParaDia(empresaId, usuario.sub, compATomar, registro.fecha);
+    // Un día que deja de ser compensatorio devuelve su descanso a «pendiente».
+    if (eraCompensatorio && !seraCompensatorio) {
+      await CompensatoriosService.liberarDia(empresaId, registro.trabajador_id, registro.fecha);
+    }
 
     // Cubre también completar acá (corrección manual) una salida que el trabajador olvidó marcar.
     await crearCompensatorioDelDia(empresaId, {

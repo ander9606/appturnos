@@ -7,7 +7,7 @@ import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View, FlatList, TouchableOpacity, RefreshControl,
 } from 'react-native';
@@ -25,6 +25,7 @@ import {
 } from '@/features/nomina/compensatorios/useCompensatorios';
 import { AsignadoRow, ClasificacionBadge } from '@/features/nomina/compensatorios/GestorCompensatoriosPanel';
 import { RangoFechasCompensatorio } from '@/features/nomina/compensatorios/RangoFechasCompensatorio';
+import { agruparPorEmpleado, type GrupoEmpleado } from '@/features/nomina/compensatorios/agruparPorEmpleado';
 import { useRoleGuard } from '@/components/RoleGuard';
 
 type Filtro = 'todos' | 'pendiente' | 'asignado';
@@ -50,7 +51,8 @@ export default function GestorCompensatoriosScreen() {
   const { data: todos = [], isLoading, isRefetching, refetch } = useCompensatoriosTodos();
 
   const pendientes = todos.filter((c) => c.estado === 'pendiente').length;
-  const lista = todos.filter((c) => enBucket(c.estado, filtro));
+  // Una tarjeta (tabla) por empleado, no una tarjeta por compensatorio con el nombre repetido.
+  const grupos = useMemo(() => agruparPorEmpleado(todos.filter((c) => enBucket(c.estado, filtro))), [todos, filtro]);
 
   const denied = useRoleGuard(['admin_empresa', 'jefe_nomina']);
   if (denied) return denied;
@@ -63,14 +65,10 @@ export default function GestorCompensatoriosScreen() {
         <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       ) : (
         <FlatList
-          data={lista}
-          keyExtractor={(c) => String(c.id)}
-          renderItem={({ item }) =>
-            item.estado === 'pendiente'
-              ? <CompensatorioRow compensatorio={item} />
-              : <AsignadoRow compensatorio={item} />
-          }
-          ItemSeparatorComponent={() => <View className="h-2" />}
+          data={grupos}
+          keyExtractor={(g) => String(g.trabajadorId)}
+          renderItem={({ item }) => <TablaEmpleado grupo={item} />}
+          ItemSeparatorComponent={() => <View className="h-3" />}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -129,9 +127,38 @@ export default function GestorCompensatoriosScreen() {
   );
 }
 
+// ── Tabla de un empleado: cabecera con su nombre y una fila por compensatorio ─────
+
+function TablaEmpleado({ grupo: g }: { grupo: GrupoEmpleado }) {
+  return (
+    <View className="bg-card border border-border rounded-2xl overflow-hidden">
+      <View className="px-4 py-3 flex-row items-center justify-between gap-2 border-b border-border">
+        <Text className="flex-1 text-sm font-bold text-foreground" numberOfLines={1}>{g.nombre}</Text>
+        {g.pendientes > 0 && (
+          <View className="bg-warning-light px-2 py-0.5 rounded-full">
+            <Text className="text-[10px] font-semibold text-amber-700">
+              {g.pendientes} pendiente{g.pendientes > 1 ? 's' : ''}
+            </Text>
+          </View>
+        )}
+        <Text className="text-[11px] text-muted-foreground">
+          {g.filas.length} descanso{g.filas.length > 1 ? 's' : ''}
+        </Text>
+      </View>
+      {g.filas.map((c, i) => (
+        <View key={c.id} className={i > 0 ? 'border-t border-border' : ''}>
+          {c.estado === 'pendiente'
+            ? <CompensatorioRow compensatorio={c} sinNombre />
+            : <AsignadoRow compensatorio={c} sinNombre />}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 // ── Fila pendiente ────────────────────────────────────────────────────────────
 
-function CompensatorioRow({ compensatorio: c }: { compensatorio: DescansoCompensatorio }) {
+function CompensatorioRow({ compensatorio: c, sinNombre = false }: { compensatorio: DescansoCompensatorio; sinNombre?: boolean }) {
   const [showPicker, setShowPicker] = useState(false);
   const [fecha, setFecha]           = useState<string | null>(null);
   const { mutate, isPending }       = useAsignarCompensatorio();
@@ -146,18 +173,21 @@ function CompensatorioRow({ compensatorio: c }: { compensatorio: DescansoCompens
   }
 
   return (
-    <View
-      className="bg-card rounded-2xl px-4 py-3 gap-3"
-      style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 6 }}
-    >
+    <View className="px-4 py-3 gap-3">
       <View className="flex-row items-start justify-between">
         <View className="flex-1">
-          <Text className="text-sm font-semibold text-foreground">
-            {c.trabajador_nombre} {c.trabajador_apellido}
-          </Text>
-          <Text className="text-xs text-amber-700 mt-0.5">
-            Trabajó el {fmtFechaCorta(c.origen_fecha)}
-          </Text>
+          {sinNombre ? (
+            <Text className="text-sm font-semibold text-foreground">Trabajó el {fmtFechaCorta(c.origen_fecha)}</Text>
+          ) : (
+            <>
+              <Text className="text-sm font-semibold text-foreground">
+                {c.trabajador_nombre} {c.trabajador_apellido}
+              </Text>
+              <Text className="text-xs text-amber-700 mt-0.5">
+                Trabajó el {fmtFechaCorta(c.origen_fecha)}
+              </Text>
+            </>
+          )}
         </View>
         <View className="items-end gap-1">
           <ClasificacionBadge clasificacion={c.clasificacion} />

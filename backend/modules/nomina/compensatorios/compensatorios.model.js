@@ -124,6 +124,43 @@ const CompensatoriosModel = {
     return res.affectedRows;
   },
 
+  /** Pendientes del trabajador, el más antiguo primero: el que se descuenta al marcar un día a mano. */
+  async listarPendientesDeTrabajador(empresaId, trabajadorId) {
+    const [filas] = await pool.query(
+      `SELECT * FROM descansos_compensatorios
+       WHERE empresa_id = ? AND trabajador_id = ? AND estado = 'pendiente'
+       ORDER BY origen_fecha ASC, id ASC`,
+      [empresaId, trabajadorId]
+    );
+    return filas;
+  },
+
+  /** El descanso (asignado o tomado) que el trabajador tiene en esa fecha, si hay. */
+  async obtenerPorFechaAsignada(empresaId, trabajadorId, fecha) {
+    const [filas] = await pool.query(
+      `SELECT * FROM descansos_compensatorios
+       WHERE empresa_id = ? AND trabajador_id = ? AND fecha_asignada = ?
+         AND estado IN ('asignado', 'tomado') LIMIT 1`,
+      [empresaId, trabajadorId, fecha]
+    );
+    return filas[0] || null;
+  },
+
+  /**
+   * Devuelve un descanso asignado/tomado a 'pendiente' y le quita la fecha. el aviso
+   * al gestor se reinicia: si se vuelve a asignar, el aviso "hoy descansa" debe salir de nuevo.
+   */
+  async liberar(empresaId, id) {
+    const [res] = await pool.query(
+      `UPDATE descansos_compensatorios
+       SET estado = 'pendiente', fecha_asignada = NULL, asignado_por = NULL, asignado_en = NULL,
+           notificado_gestor = 0
+       WHERE id = ? AND empresa_id = ? AND estado IN ('asignado', 'tomado')`,
+      [id, empresaId]
+    );
+    return res.affectedRows;
+  },
+
   /** Marca como tomado (cuando se registra ese día como compensatorio en registros_diarios). */
   async marcarTomado(empresaId, id) {
     await pool.query(
