@@ -61,6 +61,8 @@ router.post(
     body('periodo_id').isInt({ min: 1 }).withMessage('periodo_id es obligatorio'),
     body('fecha').isISO8601().withMessage('fecha inválida (YYYY-MM-DD)'),
     body('tipo_dia').optional().isIn(TIPOS_DIA).withMessage('tipo_dia inválido'),
+    // Con tipo_dia 'compensatorio': cuál descanso pendiente se descuenta (si falta, el más antiguo que sirva).
+    body('compensatorio_id').optional().isInt({ min: 1 }).withMessage('compensatorio_id inválido'),
     // Los tipos en TIPOS_DIA_SIN_HORARIO no tienen hora de entrada — solo
     // 'ordinario' (el único que queda) la requiere siempre.
     body('hora_entrada')
@@ -172,6 +174,8 @@ router.put(
     body('hora_salida').optional({ values: 'falsy' }).matches(RE_HORA).withMessage('hora_salida inválida'),
     body('novedad').optional({ values: 'falsy' }).isString(),
     body('tipo_dia').optional().isIn(TIPOS_DIA).withMessage('tipo_dia inválido'),
+    // Con tipo_dia 'compensatorio': cuál descanso pendiente se descuenta (si falta, el más antiguo que sirva).
+    body('compensatorio_id').optional().isInt({ min: 1 }).withMessage('compensatorio_id inválido'),
     body('jornada_continua').optional().isBoolean().withMessage('jornada_continua inválido'),
     // Día con reingreso: la lista completa de sesiones (la última puede ir sin salida si sigue abierta).
     body('sesiones').optional().isArray({ min: 2 }).withMessage('sesiones debe traer 2 o más'),

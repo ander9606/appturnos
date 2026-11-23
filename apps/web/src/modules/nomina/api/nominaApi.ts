@@ -17,7 +17,7 @@ export const nominaApi = {
   listarRegistros: (params: { periodo_id?: number; trabajador_id?: number; fecha?: string; fecha_desde?: string; fecha_hasta?: string; sospechoso?: boolean; page?: number; limit?: number }) =>
     api.get('/nomina/registros', { params: { ...params, sospechoso: params.sospechoso === undefined ? undefined : (params.sospechoso ? '1' : '0') } }).then(r => r.data),
 
-  crearRegistro: (data: { periodo_id: number; fecha: string; hora_entrada?: string; hora_salida?: string; trabajador_id: number; novedad?: string; tipo_dia?: TipoDia }) =>
+  crearRegistro: (data: { periodo_id: number; fecha: string; hora_entrada?: string; hora_salida?: string; trabajador_id: number; novedad?: string; tipo_dia?: TipoDia; compensatorio_id?: number }) =>
     api.post('/nomina/registros', data).then(r => r.data),
 
   corregirRegistro: (id: number, data: {
@@ -25,6 +25,8 @@ export const nominaApi = {
     hora_salida?: string | null;
     novedad?: string;
     tipo_dia?: TipoDia;
+    /** Al pasar el día a 'compensatorio': cuál descanso pendiente se descuenta (si falta, el más antiguo que sirva). */
+    compensatorio_id?: number;
     /** Día con reingreso (Registro.sesiones > 1): la lista COMPLETA de sesiones, en orden; reemplaza a hora_entrada/hora_salida. */
     sesiones?: { hora_entrada: string; hora_salida?: string | null }[];
   }) =>

@@ -5,6 +5,7 @@ import { useCrearRegistro, useCrearRegistroRango, useTrabajadoresNomina } from '
 import type { Trabajador, TipoDia } from '../types';
 import { Modal } from '@/shared/components/Modal';
 import { TIPO_DIA_OPTIONS, TIPOS_DIA_SIN_HORARIO } from '../constants';
+import { CompensatorioSelector } from './CompensatorioSelector';
 
 // 'licencia', 'vacacion' e 'incapacidad' se marcan por rango — a diferencia
 // de los demás tipos, que son un día puntual sin horario que registrar.
@@ -30,6 +31,7 @@ export function CrearRegistroModal({ periodoId, trabajador, onClose }: {
     hora_salida: '',
     novedad: '',
   });
+  const [compensatorioId, setCompensatorioId] = useState<number | null>(null);
 
   const esRango = TIPOS_RANGO.includes(form.tipo_dia);
   const esAusencia = form.tipo_dia === 'ausencia';
@@ -42,6 +44,10 @@ export function CrearRegistroModal({ periodoId, trabajador, onClose }: {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (form.tipo_dia === 'compensatorio' && compensatorioId === null) {
+      toast.error('Elige cuál compensatorio pendiente se descuenta, o cambia el tipo de día');
+      return;
+    }
     if (!sinHorario && form.hora_salida && form.hora_salida <= form.hora_entrada) {
       toast.error('La hora de salida debe ser posterior a la de entrada');
       return;
@@ -65,6 +71,7 @@ export function CrearRegistroModal({ periodoId, trabajador, onClose }: {
         trabajador_id: Number(form.trabajador_id),
         fecha: form.fecha,
         tipo_dia: form.tipo_dia,
+        compensatorio_id: form.tipo_dia === 'compensatorio' ? compensatorioId ?? undefined : undefined,
         hora_entrada: sinHorario ? undefined : form.hora_entrada,
         hora_salida: sinHorario ? undefined : form.hora_salida || undefined,
         novedad: form.novedad || undefined,
@@ -144,6 +151,14 @@ export function CrearRegistroModal({ periodoId, trabajador, onClose }: {
               className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
             />
           </div>
+        )}
+        {form.tipo_dia === 'compensatorio' && (
+          <CompensatorioSelector
+            trabajadorId={Number(form.trabajador_id) || 0}
+            fecha={form.fecha}
+            value={compensatorioId}
+            onChange={setCompensatorioId}
+          />
         )}
         {sinHorario ? (
           <div className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs ${esAusencia ? 'bg-danger-light text-danger' : 'bg-info-light text-info'}`}>

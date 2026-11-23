@@ -7,6 +7,7 @@ import { Modal } from '@/shared/components/Modal';
 import { fmtDiaSemana } from '@/shared/lib/format';
 import { TIPO_DIA_OPTIONS, TIPOS_DIA_SIN_HORARIO } from '../constants';
 import { CorregirSesionesModal } from './CorregirSesionesModal';
+import { CompensatorioSelector } from './CompensatorioSelector';
 
 type Props = { registro: Registro; onClose: () => void };
 
@@ -23,6 +24,10 @@ function CorregirRegistroModal({ registro, onClose }: Props) {
     tipo_dia: registro.tipo_dia,
     novedad: registro.novedad ?? '',
   });
+  const [compensatorioId, setCompensatorioId] = useState<number | null>(null);
+
+  // Pasar el día a «compensatorio» descuenta un descanso pendiente: el gestor elige cuál.
+  const pasaACompensatorio = form.tipo_dia === 'compensatorio' && registro.tipo_dia !== 'compensatorio';
 
   const esAusencia = form.tipo_dia === 'ausencia';
   const sinHorario = esAusencia || TIPOS_DIA_SIN_HORARIO.includes(form.tipo_dia);
@@ -34,6 +39,10 @@ function CorregirRegistroModal({ registro, onClose }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (pasaACompensatorio && compensatorioId === null) {
+      toast.error('Elige cuál compensatorio pendiente se descuenta, o cambia el tipo de día');
+      return;
+    }
     if (!sinHorario && form.hora_entrada && form.hora_salida && form.hora_entrada === form.hora_salida) {
       toast.error('La hora de salida no puede ser igual a la de entrada');
       return;
@@ -45,6 +54,7 @@ function CorregirRegistroModal({ registro, onClose }: Props) {
       hora_entrada: sinHorario ? null : form.hora_entrada || undefined,
       hora_salida: sinHorario ? null : form.hora_salida || undefined,
       tipo_dia: form.tipo_dia,
+      compensatorio_id: pasaACompensatorio ? compensatorioId ?? undefined : undefined,
       novedad: form.novedad || undefined,
     });
     onClose();
@@ -67,6 +77,14 @@ function CorregirRegistroModal({ registro, onClose }: Props) {
             ))}
           </select>
         </div>
+        {pasaACompensatorio && (
+          <CompensatorioSelector
+            trabajadorId={registro.trabajador_id}
+            fecha={registro.fecha}
+            value={compensatorioId}
+            onChange={setCompensatorioId}
+          />
+        )}
         {sinHorario ? (
           <div className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs ${esAusencia ? 'bg-danger-light text-danger' : 'bg-info-light text-info'}`}>
             <Info size={14} className="flex-shrink-0" />

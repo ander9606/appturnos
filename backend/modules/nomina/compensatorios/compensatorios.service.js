@@ -190,11 +190,12 @@ const CompensatoriosService = {
 
   /**
    * Marcar un día a mano como 'compensatorio' (crear o corregir un registro) solo vale si el trabajador
-   * tiene un descanso pendiente que descontar. Elige el más antiguo cuya ventana de 28 días incluya la
-   * fecha y valida que la fecha sirva (no domingo/festivo, sin otro descanso ese día). No escribe nada:
-   * se llama ANTES de guardar el registro para que un rechazo no deje datos a medias.
+   * tiene un descanso pendiente que descontar. El gestor elige cuál (`compensatorioId`); si no viene,
+   * se toma el más antiguo cuya ventana de 28 días incluya la fecha. Valida que la fecha sirva (no
+   * domingo/festivo, sin otro descanso ese día). No escribe nada: se llama ANTES de guardar el registro
+   * para que un rechazo no deje datos a medias.
    */
-  async elegirPendienteParaDia(empresaId, trabajadorId, fecha) {
+  async elegirPendienteParaDia(empresaId, trabajadorId, fecha, compensatorioId) {
     const pendientes = await CompensatoriosModel.listarPendientesDeTrabajador(empresaId, trabajadorId);
     if (pendientes.length === 0) {
       throw new AppError(
@@ -203,15 +204,32 @@ const CompensatoriosService = {
         422
       );
     }
-    const comp = pendientes.find((c) => fecha > c.origen_fecha && fecha <= sumarDiasISO(c.origen_fecha, COMPENSATORIO_PLAZO_DIAS));
-    if (!comp) {
-      const masViejo = pendientes[0];
-      throw new AppError(
-        `El trabajador tiene ${pendientes.length} compensatorio(s) pendiente(s), pero ninguno se puede tomar el ${fecha}: ` +
-        `cada uno se toma dentro de los ${COMPENSATORIO_PLAZO_DIAS} días siguientes al día trabajado ` +
-        `(el más antiguo, del ${masViejo.origen_fecha}, vence el ${sumarDiasISO(masViejo.origen_fecha, COMPENSATORIO_PLAZO_DIAS)})`,
-        422
-      );
+    const sirve = (c) => fecha > c.origen_fecha && fecha <= sumarDiasISO(c.origen_fecha, COMPENSATORIO_PLAZO_DIAS);
+
+    let comp;
+    if (compensatorioId) {
+      // La lista ya es solo de este trabajador y de esta empresa: un id ajeno o ya tomado no aparece.
+      comp = pendientes.find((c) => c.id === Number(compensatorioId));
+      if (!comp) throw new AppError('El compensatorio elegido no está pendiente para este trabajador', 422);
+      if (!sirve(comp)) {
+        throw new AppError(
+          `El compensatorio del ${comp.origen_fecha} no se puede tomar el ${fecha}: ` +
+          `debe tomarse dentro de los ${COMPENSATORIO_PLAZO_DIAS} días siguientes al día trabajado ` +
+          `(vence el ${sumarDiasISO(comp.origen_fecha, COMPENSATORIO_PLAZO_DIAS)})`,
+          422
+        );
+      }
+    } else {
+      comp = pendientes.find(sirve);
+      if (!comp) {
+        const masViejo = pendientes[0];
+        throw new AppError(
+          `El trabajador tiene ${pendientes.length} compensatorio(s) pendiente(s), pero ninguno se puede tomar el ${fecha}: ` +
+          `cada uno se toma dentro de los ${COMPENSATORIO_PLAZO_DIAS} días siguientes al día trabajado ` +
+          `(el más antiguo, del ${masViejo.origen_fecha}, vence el ${sumarDiasISO(masViejo.origen_fecha, COMPENSATORIO_PLAZO_DIAS)})`,
+          422
+        );
+      }
     }
     await validarFechaDescanso(empresaId, comp, fecha, { ignorarRegistro: true });
     return comp;

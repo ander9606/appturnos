@@ -224,7 +224,7 @@ const RegistrosGestionService = {
     // Marcar el día como compensatorio solo vale si hay un descanso pendiente que descontar; se valida
     // antes de guardar para que un rechazo no deje un registro suelto.
     const compATomar = datos.tipo_dia === 'compensatorio'
-      ? await CompensatoriosService.elegirPendienteParaDia(empresaId, trabajadorId, datos.fecha)
+      ? await CompensatoriosService.elegirPendienteParaDia(empresaId, trabajadorId, datos.fecha, datos.compensatorio_id)
       : null;
 
     const id = await RegistrosModel.crear(empresaId, {
@@ -365,7 +365,7 @@ const RegistrosGestionService = {
 
     // Pasar un día a «compensatorio» exige un descanso pendiente que descontar (se valida antes de escribir).
     const compATomar = seraCompensatorio && !eraCompensatorio
-      ? await CompensatoriosService.elegirPendienteParaDia(empresaId, registro.trabajador_id, registro.fecha)
+      ? await CompensatoriosService.elegirPendienteParaDia(empresaId, registro.trabajador_id, registro.fecha, datos.compensatorio_id)
       : null;
 
     await RegistrosModel.actualizar(empresaId, id, {
