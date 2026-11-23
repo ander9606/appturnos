@@ -26,10 +26,13 @@ import {
 } from '../useNomina';
 import { useMisDescuentos } from '../descuentos/useDescuentos';
 import { useHorasPreviasSemana } from '../useHorasPreviasSemana';
+import { useMisCompensatorios } from '../compensatorios/useCompensatorios';
 import {
   getValorHora,
   calcularResumenPeriodo,
   aplicarHorasPrevias,
+  aplicarCompensatorios,
+  creditosDeCompensatorios,
   sumarHoras,
   lunesDeSemana,
   encontrarRegistroActivo,
@@ -216,15 +219,26 @@ export function useNominaTrabajador(): NominaTrabajadorState {
   const registros = registrosResp?.data ?? [];
 
   // ── Cálculos derivados ─────────────────────────────────────────────────
-  const previas = useHorasPreviasSemana(registros);
-  const resumen = useMemo(
-    () => aplicarHorasPrevias(calcularResumenPeriodo(registros, valorHora), previas.lunes,
-      registros[0] ? previas.porTrabajador.get(registros[0].trabajador_id) : undefined),
-    [registros, valorHora, previas],
-  );
-
   // Sin useMemo: con la app abierta pasada la medianoche, "hoy" tiene que cambiar solo.
   const todayISO = bogotaToday();
+
+  const previas = useHorasPreviasSemana(registros);
+  // Un compensatorio tomado esta semana acredita al tope de 42 h el festivo habitual trabajado antes
+  // (otra semana u otro período): sin sumarlo, la barra mostraría menos horas que las que contó el backend.
+  const { data: compensatorios = [] } = useMisCompensatorios();
+  const trabajadorId = registros[0]?.trabajador_id;
+  const creditos = useMemo(
+    () => creditosDeCompensatorios(compensatorios, trabajadorId, todayISO),
+    [compensatorios, trabajadorId, todayISO],
+  );
+  const resumen = useMemo(
+    () => aplicarCompensatorios(
+      aplicarHorasPrevias(calcularResumenPeriodo(registros, valorHora), previas.lunes,
+        trabajadorId !== undefined ? previas.porTrabajador.get(trabajadorId) : undefined),
+      creditos,
+    ),
+    [registros, valorHora, previas, trabajadorId, creditos],
+  );
 
   // Semana lunes → hoy, consultada por fechas y no por período: si el período cambió a mitad
   // de semana, los días previos están en el período anterior pero siguen contando para las 42 h.
@@ -240,8 +254,8 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     [semanaResp, registros, lunesISO],
   );
   const resumenSemana = useMemo(
-    () => calcularResumenPeriodo(registrosSemana, valorHora),
-    [registrosSemana, valorHora],
+    () => aplicarCompensatorios(calcularResumenPeriodo(registrosSemana, valorHora), creditos),
+    [registrosSemana, valorHora, creditos],
   );
   // Horas de esta semana que quedaron en el período anterior: la barra pinta una raya donde terminan.
   const horasSemanaPeriodoAnterior = useMemo(() => {

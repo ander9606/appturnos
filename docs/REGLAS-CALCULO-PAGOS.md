@@ -362,6 +362,9 @@ stateDiagram-v2
 - **Fecha válida**: entre el día siguiente y 28 días después; nunca domingo ni festivo; sin choque con otro registro o compensatorio del trabajador ese día.
 - La asigna o reasigna `jefe_nomina` o `admin_empresa`. El día del descanso se avisa a los gestores.
 - **Efecto en el tope semanal**: las horas del festivo original se acreditan a la semana en que se toma el compensatorio, así esa semana llega antes a las 42 h.
+  - Aplica aunque el festivo se haya trabajado la semana pasada o en el período anterior: sus horas no cuentan en la semana en que se trabajaron y pasan a la semana del descanso (desde que está asignado).
+  - Solo se acreditan las horas del festivo **habitual**. Las del **ocasional** ya contaron como horas normales en la semana en que se trabajaron, así que su compensatorio no acredita nada.
+  - **Ejemplo**: domingo 15 nov, festivo habitual de 8 h. Semana del 16 al 22: lunes a miércoles 30 h y compensatorio el jueves 19. Esa semana lleva 30 + 8 = 38 h para el tope; si el viernes trabaja 6 h, 4 h son ordinarias y 2 h son extra, aunque en los registros de esa semana solo se vean 36 h. La pantalla de nómina lo muestra como «+8,0 h acreditadas por el compensatorio».
 
 ## 9. Ejemplo completo: quincena del 16 al 30 de septiembre de 2026
 

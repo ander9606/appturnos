@@ -119,6 +119,8 @@ export interface DescansoCompensatorio {
   fecha_asignada: string | null;
   trabajador_nombre: string;
   trabajador_apellido: string;
+  /** Horas de festivo habitual que este descanso acredita a la semana en que se toma (0 si fue ocasional). */
+  horas_festivo_origen?: number | string;
 }
 
 export interface RangoDiaCompensatorio {

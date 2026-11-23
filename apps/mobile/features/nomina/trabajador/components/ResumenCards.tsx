@@ -23,6 +23,7 @@ import {
   estimarExtraSemanaCOP,
   tramosSemana,
   fmtRangoDias,
+  fmtFechaCorta,
   RECARGO_EXTRA,
   type ResumenPeriodoNomina,
   type ResumenSemana,
@@ -420,6 +421,7 @@ export function SemanaRow({ semana, valorHora, periodo }: {
   const t = periodo ? tramosSemana(semana.inicioSemana, periodo.fecha_inicio, periodo.fecha_fin) : null;
   const partida = !!t && (t.anterior !== null || t.siguiente !== null);
   const horasPrevias = semana.horasPrevias ?? 0;
+  const horasComp = semana.horasCompensatorio ?? 0;
   const titulo = t
     ? fmtRangoDias(semana.inicioSemana, (t.siguiente ?? t.enPeriodo).hasta)
     : `Sem. ${fmtLunes(semana.inicioSemana)}`;
@@ -467,7 +469,7 @@ export function SemanaRow({ semana, valorHora, periodo }: {
           <TramoLinea
             etiqueta="Este período"
             rango={fmtRangoDias(t.enPeriodo.desde, t.enPeriodo.hasta)}
-            horas={semana.horasTotales - horasPrevias}
+            horas={semana.horasTotales - horasPrevias - horasComp}
           />
           {t.siguiente && (
             <TramoLinea
@@ -488,6 +490,12 @@ export function SemanaRow({ semana, valorHora, periodo }: {
             {horasPrevias.toFixed(1)}h de esta semana son del período anterior (a la izquierda de la raya).
           </Text>
         )
+      )}
+      {horasComp > 0 && (
+        <Text className="text-[10px] text-info">
+          +{horasComp.toFixed(1)}h acreditadas por el compensatorio de esta semana: son del festivo del{' '}
+          {(semana.origenesCompensatorio ?? []).map(fmtFechaCorta).join(' y ')}, que no contó en su propia semana.
+        </Text>
       )}
     </View>
   );

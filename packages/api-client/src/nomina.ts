@@ -100,6 +100,12 @@ export interface DescansoCompensatorio {
   // Joined
   trabajador_nombre: string;
   trabajador_apellido: string;
+  /**
+   * Horas de festivo habitual del día trabajado: se acreditan al tope de 42 h de la semana en que se
+   * toma el descanso (`fecha_asignada`), aunque el festivo fuera de otra semana u otro período.
+   * 0 si fue ocasional. MySQL DECIMAL llega como string.
+   */
+  horas_festivo_origen?: number | string;
 }
 
 export interface RangoDiaCompensatorio {

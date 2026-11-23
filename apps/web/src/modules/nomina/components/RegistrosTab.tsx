@@ -5,15 +5,15 @@ import { Plus, Pencil, CalendarClock, MapPin, ChevronDown, X, AlertTriangle } fr
 import { useDescartarSospechoso } from '../hooks/useNomina';
 import type { Registro, DescansoCompensatorio } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
-import { fmtDiaSemana, fmtHora, fmtHrs } from '@/shared/lib/format';
+import { fmtDiaSemana, fmtHora, fmtHrs, bogotaToday } from '@/shared/lib/format';
 import { TIPO_DIA_LABELS } from '../constants';
 import { AlmuerzoIndicator, EnVivoIndicator, ExtraIndicator } from './DiaIndicators';
 import { UbicacionMarcajeModal } from './UbicacionMarcajeModal';
-import { agruparPorSemana, explicarHorasExtra, tramosSemana, fmtRangoDias } from '../utils';
+import { agruparPorSemana, explicarHorasExtra, tramosSemana, fmtRangoDias, creditosDeCompensatorios } from '../utils';
 import { EmptyState } from '@/shared/components/EmptyState';
 
 export function RegistrosTab({
-  registros, loading, error, onRetry, compensatorioDe, onCorregir, onReasignar, onShowCrear, periodoInicio, periodoFin, horasPrevias,
+  registros, loading, error, onRetry, compensatorioDe, onCorregir, onReasignar, onShowCrear, periodoInicio, periodoFin, horasPrevias, compensatorios = [],
 }: {
   registros: Registro[];
   loading: boolean;
@@ -25,6 +25,8 @@ export function RegistrosTab({
   onShowCrear: (trabajador?: { id: number; nombre: string }) => void;
   periodoInicio?: string;
   periodoFin?: string;
+  /** Todos los compensatorios: los tomados esta semana acreditan al tope de 42 h el festivo trabajado antes. */
+  compensatorios?: DescansoCompensatorio[];
   /** Horas por trabajador de la semana partida (período anterior), para el desglose por semana. */
   horasPrevias?: { lunes: string | null; porTrabajador: Map<number, number> };
 }) {
@@ -116,6 +118,7 @@ export function RegistrosTab({
             const semanas = agruparPorSemana(
               g.registros,
               horasPrevias?.lunes ? { lunes: horasPrevias.lunes, horas: horasPrevias.porTrabajador.get(g.trabajadorId) ?? 0 } : undefined,
+              creditosDeCompensatorios(compensatorios, g.trabajadorId, bogotaToday()),
             );
             return (
               <div key={g.trabajadorId} className="bg-card border border-border rounded-xl overflow-hidden">
@@ -179,7 +182,7 @@ export function RegistrosTab({
                                     </span>
                                   )}
                                   <span className="text-foreground font-medium">
-                                    Este período · {fmtRangoDias(t.enPeriodo.desde, t.enPeriodo.hasta)} · {fmtHrs(s.horasTotales - previas)}h
+                                    Este período · {fmtRangoDias(t.enPeriodo.desde, t.enPeriodo.hasta)} · {fmtHrs(s.horasTotales - previas - (s.horasCompensatorio ?? 0))}h
                                   </span>
                                   {t.siguiente && (
                                     <span className="text-muted-foreground">
@@ -189,6 +192,12 @@ export function RegistrosTab({
                                 </div>
                               ) : previas > 0 ? (
                                 <span className="text-[11px] text-muted-foreground">{fmtHrs(previas)}h del período anterior</span>
+                              ) : null}
+                              {s.horasCompensatorio ? (
+                                <span className="text-[11px] text-info">
+                                  +{fmtHrs(s.horasCompensatorio)}h acreditadas por el compensatorio de esta semana: son del festivo del{' '}
+                                  {(s.origenesCompensatorio ?? []).map(fmtDiaSemana).join(' y ')}, que no contó en su propia semana.
+                                </span>
                               ) : null}
                               {s.horasFestivo ? (
                                 <span className="text-[11px] text-danger">+{fmtHrs(s.horasFestivo)}h festivo (recargo, fuera de las {s.limiteHoras}h)</span>

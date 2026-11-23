@@ -20,11 +20,14 @@ import { useRoleGuard } from '@/components/RoleGuard';
 import {
   calcularResumenPeriodo,
   aplicarHorasPrevias,
+  aplicarCompensatorios,
+  creditosDeCompensatorios,
   etiquetaPeriodo,
 } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { SemanaRow } from '@/features/nomina/trabajador/components/ResumenCards';
 import { useHorasPreviasSemana } from '@/features/nomina/useHorasPreviasSemana';
 import { useTheme } from '@/lib/theme';
+import { bogotaToday } from '@/lib/formatters';
 import type { ResumenPeriodoNomina } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import type { RegistroDiario, DescansoCompensatorio } from '@api-client';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -112,9 +115,12 @@ export default function RegistrosPeriodoScreen() {
       .sort((a, b) => a.nombre.localeCompare(b.nombre))
       .map((g) => ({
         ...g,
-        resumen: aplicarHorasPrevias(calcularResumenPeriodo(g.registros, 0), previas.lunes, previas.porTrabajador.get(g.trabajadorId)),
+        resumen: aplicarCompensatorios(
+          aplicarHorasPrevias(calcularResumenPeriodo(g.registros, 0), previas.lunes, previas.porTrabajador.get(g.trabajadorId)),
+          creditosDeCompensatorios(compensatorios, g.trabajadorId, bogotaToday()),
+        ),
       }));
-  }, [registros, previas]);
+  }, [registros, previas, compensatorios]);
 
   const sections: Seccion[] = React.useMemo(() => {
     return grupos.map((g) => ({

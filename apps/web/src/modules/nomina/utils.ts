@@ -1,4 +1,4 @@
-import type { Registro } from './types';
+import type { Registro, DescansoCompensatorio } from './types';
 import { JORNADA_SEMANAL_HORAS } from '@/shared/laboral';
 
 // Espejo de JORNADA_CONTINUA_UMBRAL_HORAS en backend/config/constants.js.
@@ -86,6 +86,32 @@ export interface ResumenSemana {
   horasPrevias?: number;
   /** Horas de festivo habitual (3.º en adelante): fuera del cupo de 42 h, con recargo; no están en horasTotales. */
   horasFestivo?: number;
+  /** Horas de festivo habitual acreditadas a esta semana por un compensatorio tomado en ella (ya están en horasTotales). */
+  horasCompensatorio?: number;
+  /** Fecha del festivo trabajado que originó cada crédito (otra semana u otro período). */
+  origenesCompensatorio?: string[];
+}
+
+export interface CreditoCompensatorio { fecha_asignada: string; origen_fecha: string; horas: number }
+
+/**
+ * Créditos al tope semanal de los compensatorios de un trabajador — mismo criterio que
+ * `sumarOrdinariasEnSemana` del backend: asignados/tomados, con horas de festivo habitual > 0 y ya
+ * llegados (`fecha_asignada <= hastaISO`). Espejo de mobile (nominaTrabajadorUtils.ts).
+ */
+export function creditosDeCompensatorios(
+  compensatorios: DescansoCompensatorio[],
+  trabajadorId: number,
+  hastaISO: string,
+): CreditoCompensatorio[] {
+  const out: CreditoCompensatorio[] = [];
+  for (const c of compensatorios) {
+    const horas = Number(c.horas_festivo_origen ?? 0);
+    if (c.trabajador_id !== trabajadorId || (c.estado !== 'asignado' && c.estado !== 'tomado')) continue;
+    if (!c.fecha_asignada || c.fecha_asignada > hastaISO || horas <= 0) continue;
+    out.push({ fecha_asignada: c.fecha_asignada, origen_fecha: c.origen_fecha, horas });
+  }
+  return out;
 }
 
 /** ISO del lunes de la semana a la que pertenece `fecha`. */
@@ -113,6 +139,8 @@ export function agruparPorSemana(
   registros: Registro[],
   /** Horas que el trabajador ya llevaba esa semana en el período anterior (el tope de 42 h cruza períodos). */
   previas?: { lunes: string; horas: number },
+  /** Horas que acreditan los compensatorios tomados en cada semana (ver creditosDeCompensatorios). */
+  creditos: CreditoCompensatorio[] = [],
 ): ResumenSemana[] {
   const horasPorSemana = new Map<string, number>();
   const festivoPorSemana = new Map<string, number>();
@@ -126,13 +154,16 @@ export function agruparPorSemana(
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([inicioSemana, horasPeriodo]) => {
       const horasPrevias = previas && previas.lunes === inicioSemana && previas.horas > 0 ? previas.horas : 0;
-      const horasTotales = horasPeriodo + horasPrevias;
+      const delSemana = creditos.filter(c => lunesDeSemana(c.fecha_asignada) === inicioSemana);
+      const horasComp = delSemana.reduce((a, c) => a + c.horas, 0);
+      const horasTotales = horasPeriodo + horasPrevias + horasComp;
       return {
         inicioSemana,
         horasTotales,
         limiteHoras: JORNADA_SEMANAL_HORAS,
         horasExtra: Math.max(0, horasTotales - JORNADA_SEMANAL_HORAS),
         ...(horasPrevias > 0 ? { horasPrevias } : {}),
+        ...(horasComp > 0 ? { horasCompensatorio: horasComp, origenesCompensatorio: delSemana.map(c => c.origen_fecha) } : {}),
         ...(festivoPorSemana.get(inicioSemana) ? { horasFestivo: festivoPorSemana.get(inicioSemana) } : {}),
       };
     });

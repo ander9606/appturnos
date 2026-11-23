@@ -149,6 +149,7 @@ export function PeriodoDetailPage() {
           registros={registros}
           periodoInicio={periodo?.fecha_inicio}
           periodoFin={periodo?.fecha_fin}
+          compensatorios={compensatorios}
           horasPrevias={horasPrevias}
           loading={loadingReg}
           error={errReg}
