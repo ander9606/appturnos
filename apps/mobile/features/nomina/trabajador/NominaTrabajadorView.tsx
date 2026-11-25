@@ -11,7 +11,7 @@ import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { COLORS, alpha } from '@/lib/designTokens';
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, SectionList, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,12 +20,12 @@ import { useTheme } from '@/lib/theme';
 import { formatShortDate } from '@/lib/formatters';
 import { RegistroCard } from '../RegistroCard';
 import { PeriodoHeaderCard } from './components/PeriodoHeaderCard';
-import { ResumenCards } from './components/ResumenCards';
+import { ResumenCards, SemanaRow } from './components/ResumenCards';
 import { DescuentosPendientesModal } from './components/DescuentosPendientesModal';
 import { TurnosEventualCard } from './components/TurnosEventualCard';
 import { IngresoHoyTab } from './components/IngresoHoyTab';
 import { useNominaTrabajador } from './useNominaTrabajador';
-import { analizarDia } from './nominaTrabajadorUtils';
+import { analizarDia, agruparRegistrosPorSemana } from './nominaTrabajadorUtils';
 import { useMisCompensatorios } from '../compensatorios/useCompensatorios';
 import { useRegistrosHistorial } from '../useNomina';
 import { NavegadorMes } from '@/components/ui/NavegadorMes';
@@ -106,6 +106,9 @@ export function NominaTrabajadorView() {
     isError,
     error,
   } = useNominaTrabajador();
+
+  // La lista de registros se corta por semana (lun–dom): así las fronteras de semana y de período se ven donde se miran los días.
+  const secciones = useMemo(() => agruparRegistrosPorSemana(registros), [registros]);
 
   const analisisHoy = useMemo(
     () => (registroHoy ? analizarDia(registroHoy, valorHora) : null),
@@ -228,13 +231,21 @@ export function NominaTrabajadorView() {
         />
       ) : (
         /* ── Tab: Mi Nómina ──────────────────────────────── */
-        <FlatList
-          data={viewMode === 'mes' ? [] : registros}
+        <SectionList
+          sections={viewMode === 'mes' ? [] : secciones}
           keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => (
             <RegistroCard registro={item} valorHora={valorHora} periodoInicio={periodoActivo?.fecha_inicio} />
           )}
-          contentContainerClassName="gap-2 pb-8"
+          renderSectionHeader={({ section }) => {
+            const semana = resumen.semanas.find((w) => w.inicioSemana === section.lunes);
+            return semana ? (
+              <View className="bg-card border border-border rounded-2xl px-4 py-2 mt-3 mb-2">
+                <SemanaRow semana={semana} valorHora={valorHora} periodo={periodoActivo} />
+              </View>
+            ) : null;
+          }}
+          stickySectionHeadersEnabled={false}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
@@ -374,7 +385,7 @@ export function NominaTrabajadorView() {
             )
           }
           ItemSeparatorComponent={() => <View className="h-2" />}
-          contentContainerStyle={{ paddingHorizontal: 20 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
         />
       )}
 

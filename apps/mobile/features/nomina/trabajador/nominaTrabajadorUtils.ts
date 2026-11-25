@@ -126,6 +126,8 @@ export interface ResumenSemana {
    */
   horasCompensatorio?: number;
   origenesCompensatorio?: string[];
+  /** Día(s) de la semana en que se toma el compensatorio que acredita esas horas (fecha_asignada). */
+  fechasCompensatorio?: string[];
 }
 
 // ── Helpers internos ───────────────────────────────────────────────────────
@@ -336,6 +338,43 @@ export function tramosSemana(lunes: string, periodoInicio: string, periodoFin: s
   };
 }
 
+export type ZonaDia = 'anterior' | 'este' | 'siguiente';
+
+/**
+ * Los 7 días de una semana (lun–dom) con la zona a la que pertenecen según el período: antes de su inicio
+ * ('anterior'), dentro ('este') o después de su fin ('siguiente'). Es lo que dibuja la franja de la semana.
+ */
+export function diasSemanaEnPeriodo(lunes: string, periodoInicio: string, periodoFin: string): { fecha: string; zona: ZonaDia }[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(`${lunes}T00:00:00`);
+    d.setDate(d.getDate() + i);
+    const fecha = toISODate(d);
+    return { fecha, zona: fecha < periodoInicio ? 'anterior' : fecha > periodoFin ? 'siguiente' : 'este' };
+  });
+}
+
+/** Agrupa días consecutivos de la misma zona: [anterior×4, este×3] → [{zona:'anterior',n:4},{zona:'este',n:3}]. */
+export function tramosContiguos(dias: { zona: ZonaDia }[]): { zona: ZonaDia; n: number }[] {
+  const out: { zona: ZonaDia; n: number }[] = [];
+  for (const d of dias) {
+    const ultimo = out[out.length - 1];
+    if (ultimo && ultimo.zona === d.zona) ultimo.n++;
+    else out.push({ zona: d.zona, n: 1 });
+  }
+  return out;
+}
+
+/** Agrupa los registros por semana (lun–dom) conservando el orden en que vienen: así la lista del mes se corta por semana. */
+export function agruparRegistrosPorSemana<T extends { fecha: string }>(registros: T[]): { lunes: string; data: T[] }[] {
+  const grupos = new Map<string, T[]>();
+  for (const r of registros) {
+    const lunes = lunesDeSemana(r.fecha);
+    const g = grupos.get(lunes);
+    if (g) g.push(r); else grupos.set(lunes, [r]);
+  }
+  return Array.from(grupos, ([lunes, data]) => ({ lunes, data }));
+}
+
 /** "Lun 12 – Dom 18 Oct" (mismo mes) o "Lun 28 Sep – Dom 4 Oct". Un solo día: "Vie 16 Oct". */
 export function fmtRangoDias(desde: string, hasta: string): string {
   const a = new Date(`${desde}T00:00:00`);
@@ -418,6 +457,7 @@ export function aplicarCompensatorios(
         horasExtra: Math.max(0, horasTotales - s.limiteHoras),
         horasCompensatorio: (s.horasCompensatorio ?? 0) + horas,
         origenesCompensatorio: [...(s.origenesCompensatorio ?? []), ...delSemana.map((c) => c.origen_fecha)],
+        fechasCompensatorio: [...(s.fechasCompensatorio ?? []), ...delSemana.map((c) => c.fecha_asignada)],
       };
     }),
   };

@@ -28,9 +28,9 @@ describe('desglosePago', () => {
     }));
     expect(d.conceptos.map((c) => c.clave)).toEqual(['base', 'extraDiurna', 'festivo']);
     expect(d.conceptos.reduce((s, c) => s + c.monto, 0)).toBe(d.bruto);
-    expect(d.conceptos[1].label).toBe('Extra diurna · 4,5h');
-    expect(d.conceptos[1].formula).toBe('4,5h × $8.333 × 1,25');
-    expect(d.conceptos[2].formula).toContain('× 1,9');
+    expect(d.conceptos[1].label).toBe('Extra diurna · 4.5h');
+    expect(d.conceptos[1].formula).toBe('4.5h × $8.333 × 1.25');
+    expect(d.conceptos[2].formula).toContain('× 1.9');
   });
 
   it('contratista (sin salud ni pensión) con un descuento aceptado: lo muestra con su motivo', () => {
@@ -44,7 +44,7 @@ describe('desglosePago', () => {
 
   it('por tarifa hora (sin salario base): la base es horas × valor', () => {
     const d = desglosePago(linea({ salario_base: null, horas_ordinarias: 40 }));
-    expect(d.conceptos[0].label).toBe('Horas ordinarias · 40,0h');
-    expect(d.conceptos[0].formula).toBe('40,0h × $8.333');
+    expect(d.conceptos[0].label).toBe('Horas ordinarias · 40.0h');
+    expect(d.conceptos[0].formula).toBe('40.0h × $8.333');
   });
 });

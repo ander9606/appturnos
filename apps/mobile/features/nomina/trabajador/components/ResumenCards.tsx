@@ -17,10 +17,10 @@ import { formatCOP } from '@/lib/formatters';
 import { COLORS, HOUR_TYPE_COLORS } from '@/lib/designTokens';
 import { Badge } from '@/components/ui/Badge';
 import { MarcaPeriodoAnterior } from './MarcaPeriodoAnterior';
+import { FranjaSemana } from './FranjaSemana';
 import { PagoDesglose } from '../../PagoDesglose';
 import {
   fmtPeriodo,
-  getJornadaLegalSemanal,
   estimarExtraSemanaCOP,
   tramosSemana,
   fmtRangoDias,
@@ -87,6 +87,8 @@ export function ResumenCards({
                          resumen.horasNocturnas > 0    || resumen.horasFestivo > 0;
   const semanasConExtra = resumen.semanas.filter((s) => s.horasExtra > 0);
   const tieneNovedades  = tieneExtras || semanasConExtra.length > 0;
+  // El desglose por semana vive en la lista de registros; aquí solo hay detalle para quien aún no tiene liquidación.
+  const hayDetalle      = !miLiquidacion && tieneExtras;
 
   return (
     <View className="gap-3">
@@ -179,6 +181,7 @@ export function ResumenCards({
       {tieneNovedades && (
         <TouchableOpacity
           onPress={() => setExpanded((v) => !v)}
+          disabled={!hayDetalle}
           activeOpacity={0.8}
           className="bg-card border border-border rounded-2xl px-4 py-3"
         >
@@ -190,11 +193,11 @@ export function ResumenCards({
                 Novedades del período
               </Text>
             </View>
-            <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={COLORS.mutedForeground} />
+            {hayDetalle && <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={COLORS.mutedForeground} />}
           </View>
 
           {/* Resumen comprimido */}
-          {!expanded && (
+          {(!expanded || !hayDetalle) && (
             <View className="flex-row gap-4 mt-2">
               {semanasConExtra.length > 0 && (
                 <Text className="text-xs text-success">
@@ -215,24 +218,8 @@ export function ResumenCards({
           )}
 
           {/* Detalle expandido */}
-          {expanded && (
+          {expanded && hayDetalle && (
             <View className="mt-3 gap-3">
-              {/* Desglose semanal */}
-              {resumen.semanas.length > 0 && (
-                <View className="gap-1.5">
-                  <Text className="text-xs font-semibold text-foreground">
-                    Horas por semana
-                  </Text>
-                  {resumen.semanas.map((s) => (
-                    <SemanaRow key={s.inicioSemana} semana={s} valorHora={valorHora} periodo={periodoActivo} />
-                  ))}
-                  <Text className="text-[10px] text-muted-foreground mt-0.5">
-                    Jornada máxima legal en {new Date().getFullYear()}: {getJornadaLegalSemanal(new Date().getFullYear())}h/semana.
-                    Las horas extra solo se generan al superar este límite.
-                  </Text>
-                </View>
-              )}
-
               {!miLiquidacion && tieneExtras && (
                   <View className="bg-primary-50 rounded-xl px-3 py-3 gap-1.5">
                     <Text className="text-xs font-semibold text-primary-600">
@@ -377,61 +364,25 @@ export function SemanaRow({ semana, valorHora, periodo }: {
           +{semana.horasFestivo.toFixed(1)}h festivo (recargo, no cuenta para las {semana.limiteHoras}h)
         </Text>
       )}
-      {partida && t ? (
-        <View className="gap-0.5">
-          {t.anterior && (
-            <TramoLinea
-              etiqueta="Período anterior"
-              rango={fmtRangoDias(t.anterior.desde, t.anterior.hasta)}
-              horas={horasPrevias > 0 ? horasPrevias : undefined}
-              muted
-            />
-          )}
-          <TramoLinea
-            etiqueta="Este período"
-            rango={fmtRangoDias(t.enPeriodo.desde, t.enPeriodo.hasta)}
-            horas={semana.horasTotales - horasPrevias - horasComp}
-          />
-          {t.siguiente && (
-            <TramoLinea
-              etiqueta="Período siguiente"
-              rango={fmtRangoDias(t.siguiente.desde, t.siguiente.hasta)}
-              muted
-            />
-          )}
-          {t.anterior && horasPrevias > 0 && (
-            <Text className="text-[10px] text-muted-foreground">
-              Las horas del período anterior cuentan para el tope de {semana.limiteHoras}h (a la izquierda de la raya).
-            </Text>
-          )}
-        </View>
-      ) : (
-        !!horasPrevias && (
-          <Text className="text-[10px] text-muted-foreground">
-            {horasPrevias.toFixed(1)}h de esta semana son del período anterior (a la izquierda de la raya).
-          </Text>
-        )
+      {periodo && (partida || horasComp > 0) ? (
+        <FranjaSemana
+          lunes={semana.inicioSemana}
+          periodo={periodo}
+          horasAnterior={horasPrevias}
+          horasEste={semana.horasTotales - horasPrevias - horasComp}
+          fechasCompensatorio={semana.fechasCompensatorio}
+        />
+      ) : null}
+      {horasPrevias > 0 && (
+        <Text className="text-[10px] text-muted-foreground">La raya de la barra marca las horas del período anterior.</Text>
       )}
       {horasComp > 0 && (
-        <Text className="text-[10px] text-info">
-          +{horasComp.toFixed(1)}h acreditadas por el compensatorio de esta semana: son del festivo del{' '}
-          {(semana.origenesCompensatorio ?? []).map(fmtFechaCorta).join(' y ')}, que no contó en su propia semana.
-        </Text>
-      )}
-    </View>
-  );
-}
-
-function TramoLinea({ etiqueta, rango, horas, muted }: { etiqueta: string; rango: string; horas?: number; muted?: boolean }) {
-  return (
-    <View className="flex-row items-center justify-between">
-      <Text className={`text-[11px] ${muted ? 'text-muted-foreground' : 'text-foreground font-medium'}`}>
-        {etiqueta} · {rango}
-      </Text>
-      {horas !== undefined && (
-        <Text className={`text-[11px] ${muted ? 'text-muted-foreground' : 'text-foreground font-medium'}`}>
-          {horas.toFixed(1)}h
-        </Text>
+        <View className="flex-row items-center gap-1">
+          <Ionicons name="bed-outline" size={12} color={COLORS.info} />
+          <Text className="text-[10px] text-info flex-1">
+            +{horasComp.toFixed(1)}h por el compensatorio del {(semana.origenesCompensatorio ?? []).map(fmtFechaCorta).join(' y ')}
+          </Text>
+        </View>
       )}
     </View>
   );

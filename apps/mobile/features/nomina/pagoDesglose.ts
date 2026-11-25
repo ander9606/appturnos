@@ -32,9 +32,9 @@ const TIPO_DESCUENTO: Record<TipoDescuento, string> = {
   prestamo: 'Préstamo', inasistencia: 'Inasistencia', dano_equipo: 'Daño a equipo', anticipo: 'Anticipo', otro: 'Otro',
 };
 
-const h = (n: number) => `${Number(n).toFixed(1).replace('.', ',')}h`;
-/** Factor con coma decimal, como el resto de los números de la pantalla: 1.9 → "1,9". */
-const x = (n: number) => String(Number(n)).replace('.', ',');
+/** Horas y factores con punto decimal, como el resto de la app (`toFixed(1)`). */
+const h = (n: number) => `${Number(n).toFixed(1)}h`;
+const x = (n: number) => String(Number(n));
 
 /**
  * Convierte una línea de la liquidación en lo que se dibuja: conceptos que suman el bruto, descuentos, auxilio y

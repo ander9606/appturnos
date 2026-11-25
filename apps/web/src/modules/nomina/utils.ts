@@ -90,6 +90,8 @@ export interface ResumenSemana {
   horasFestivo?: number;
   /** Horas de festivo habitual acreditadas a esta semana por un compensatorio tomado en ella (ya están en horasTotales). */
   horasCompensatorio?: number;
+  /** Día(s) de la semana en que se toma el compensatorio que acredita esas horas (fecha_asignada). */
+  fechasCompensatorio?: string[];
   /** Fecha del festivo trabajado que originó cada crédito (otra semana u otro período). */
   origenesCompensatorio?: string[];
 }
@@ -165,7 +167,7 @@ export function agruparPorSemana(
         limiteHoras: JORNADA_SEMANAL_HORAS,
         horasExtra: Math.max(0, horasTotales - JORNADA_SEMANAL_HORAS),
         ...(horasPrevias > 0 ? { horasPrevias } : {}),
-        ...(horasComp > 0 ? { horasCompensatorio: horasComp, origenesCompensatorio: delSemana.map(c => c.origen_fecha) } : {}),
+        ...(horasComp > 0 ? { horasCompensatorio: horasComp, origenesCompensatorio: delSemana.map(c => c.origen_fecha), fechasCompensatorio: delSemana.map(c => c.fecha_asignada) } : {}),
         ...(festivoPorSemana.get(inicioSemana) ? { horasFestivo: festivoPorSemana.get(inicioSemana) } : {}),
       };
     });
@@ -214,6 +216,27 @@ export function tramosSemana(lunes: string, periodoInicio: string, periodoFin: s
     anterior:  lunes < periodoInicio ? { desde: lunes, hasta: sumarDias(periodoInicio, -1) } : null,
     siguiente: domingo > periodoFin ? { desde: sumarDias(periodoFin, 1), hasta: domingo } : null,
   };
+}
+
+export type ZonaDia = 'anterior' | 'este' | 'siguiente';
+
+/** Los 7 días de una semana (lun–dom) con su zona respecto del período. Espejo de mobile (diasSemanaEnPeriodo). */
+export function diasSemanaEnPeriodo(lunes: string, periodoInicio: string, periodoFin: string): { fecha: string; zona: ZonaDia }[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const fecha = sumarDias(lunes, i);
+    return { fecha, zona: fecha < periodoInicio ? 'anterior' : fecha > periodoFin ? 'siguiente' : 'este' };
+  });
+}
+
+/** Agrupa días consecutivos de la misma zona. */
+export function tramosContiguos(dias: { zona: ZonaDia }[]): { zona: ZonaDia; n: number }[] {
+  const out: { zona: ZonaDia; n: number }[] = [];
+  for (const d of dias) {
+    const ultimo = out[out.length - 1];
+    if (ultimo && ultimo.zona === d.zona) ultimo.n++;
+    else out.push({ zona: d.zona, n: 1 });
+  }
+  return out;
 }
 
 const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -299,9 +322,9 @@ export interface DesglosePago {
   neto: number;
 }
 
-const hrs = (n: number) => `${Number(n).toFixed(1).replace('.', ',')}h`;
-/** Factor con coma decimal: 1.9 → "1,9". */
-const factor = (n: number) => String(Number(n)).replace('.', ',');
+/** Horas y factores con punto decimal, como el resto de la app (`fmtHrs`). */
+const hrs = (n: number) => `${Number(n).toFixed(1)}h`;
+const factor = (n: number) => String(Number(n));
 
 /**
  * Convierte una línea de la liquidación en lo que se dibuja. Lee los montos de la liquidación (la misma que ve el

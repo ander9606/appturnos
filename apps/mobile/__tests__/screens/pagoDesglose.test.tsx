@@ -31,7 +31,7 @@ const linea = (o: Record<string, unknown> = {}) => ({
 test('muestra un concepto por fila, bruto, descuentos, auxilio y neto; la cuenta aparece al tocar', () => {
   render(<PagoDesglose linea={linea()} />);
   expect(screen.getByText('Salario base')).toBeTruthy();
-  expect(screen.getByText('Extra diurna · 4,5h')).toBeTruthy();
+  expect(screen.getByText('Extra diurna · 4.5h')).toBeTruthy();
   expect(screen.getByText('Bruto')).toBeTruthy();
   expect(screen.getByText('Salud (4%)')).toBeTruthy();
   expect(screen.getByText('Auxilio de transporte')).toBeTruthy();

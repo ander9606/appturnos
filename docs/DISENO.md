@@ -374,6 +374,7 @@ Para mostrar de dónde sale un pago o en qué punto está un período, **primero
 
 - **Desglose del pago** (`PagoDesglose`, móvil y web): una barra apilada en pesos (un segmento por concepto, con `HOUR_TYPE_COLORS`), una fila de una línea por concepto (punto de color + etiqueta corta + monto) y, debajo, bruto → descuentos → auxilio → neto. La fórmula ("horas × valor × factor") se muestra al tocar la fila, no en la fila. Lee los montos de la liquidación (`desglosePago`); la pantalla no recalcula.
 - **Estado del período** (`PeriodoPasos`, móvil y web): Abierto → Cerrado → Liquidado, con el paso actual resaltado y los anteriores en check. Reemplaza frases que explicaban cada estado.
+- **Semana partida por el corte del período** (`FranjaSemana`, móvil y web): los 7 días (lun–dom) como celdas, con lo que cae dentro del período en color y lo de fuera (anterior o siguiente) atenuado, y una etiqueta corta por tramo ("Anterior · 42.0h", "Este período · 5.5h"). El día de un compensatorio lleva una cama. En la lista de registros del trabajador cada semana abre con su `SemanaRow`, así las fronteras se ven donde se consultan los días.
 - **Neto primero.** La cifra grande de una liquidación es el neto a pagar (el bruto va debajo). Mientras el período está abierto lleva la pastilla «Estimado».
 - Nunca solo color: cada segmento tiene su fila con etiqueta y monto.
 

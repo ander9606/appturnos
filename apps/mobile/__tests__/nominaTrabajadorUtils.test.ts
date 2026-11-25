@@ -1,4 +1,4 @@
-import { ayerDe, calcularElapsedLabel, calcularElapsedMinutes, encontrarRegistroActivo, etiquetaPeriodo, getJornadaLegalSemanal, tramoSemanaPrevia, aplicarHorasPrevias, calcularResumenPeriodo, sumarHoras, estimarExtraSemanaCOP, tramosSemana, fmtRangoDias, aplicarCompensatorios, creditosDeCompensatorios } from '../features/nomina/trabajador/nominaTrabajadorUtils';
+import { ayerDe, calcularElapsedLabel, calcularElapsedMinutes, encontrarRegistroActivo, etiquetaPeriodo, getJornadaLegalSemanal, tramoSemanaPrevia, aplicarHorasPrevias, calcularResumenPeriodo, sumarHoras, estimarExtraSemanaCOP, tramosSemana, fmtRangoDias, aplicarCompensatorios, creditosDeCompensatorios, diasSemanaEnPeriodo, tramosContiguos, agruparRegistrosPorSemana } from '../features/nomina/trabajador/nominaTrabajadorUtils';
 
 describe('getJornadaLegalSemanal', () => {
   it('2026 en adelante → 42h (tope final de la Ley 2101, coincide con el backend)', () => {
@@ -152,6 +152,32 @@ describe('tramosSemana / fmtRangoDias', () => {
   });
 });
 
+// Franja de la semana: cada día con su zona respecto del período, y la lista del mes cortada por semana.
+describe('diasSemanaEnPeriodo / tramosContiguos / agruparRegistrosPorSemana', () => {
+  it('semana partida por el inicio del período: 4 días del anterior y 3 de este', () => {
+    const dias = diasSemanaEnPeriodo('2026-10-12', '2026-10-16', '2026-10-31');
+    expect(dias.map((d) => d.fecha[8] + d.fecha[9])).toEqual(['12', '13', '14', '15', '16', '17', '18']);
+    expect(tramosContiguos(dias)).toEqual([{ zona: 'anterior', n: 4 }, { zona: 'este', n: 3 }]);
+  });
+
+  it('semana que cruza el fin del período (y de mes): este seguido de siguiente', () => {
+    const dias = diasSemanaEnPeriodo('2026-10-26', '2026-10-16', '2026-10-31');
+    expect(tramosContiguos(dias)).toEqual([{ zona: 'este', n: 6 }, { zona: 'siguiente', n: 1 }]);
+    expect(dias[6].fecha).toBe('2026-11-01');
+  });
+
+  it('semana completa dentro del período: un solo tramo', () => {
+    expect(tramosContiguos(diasSemanaEnPeriodo('2026-11-09', '2026-11-01', '2026-11-30'))).toEqual([{ zona: 'este', n: 7 }]);
+  });
+
+  it('agrupa registros por semana respetando el orden de llegada (más recientes primero)', () => {
+    const r = (fecha: string) => ({ fecha });
+    const g = agruparRegistrosPorSemana([r('2026-11-12'), r('2026-11-10'), r('2026-11-05'), r('2026-11-03')]);
+    expect(g.map((x) => [x.lunes, x.data.length])).toEqual([['2026-11-09', 2], ['2026-11-02', 2]]);
+    expect(agruparRegistrosPorSemana([])).toEqual([]);
+  });
+});
+
 // Compensatorio: acredita al tope de 42 h de la semana en que se toma las horas del festivo habitual
 // trabajado antes (otra semana u otro período). Mismo criterio que sumarOrdinariasEnSemana del backend.
 describe('compensatorio acredita horas a la semana', () => {
@@ -168,7 +194,9 @@ describe('compensatorio acredita horas a la semana', () => {
     const creditos = creditosDeCompensatorios([comp({})], 7, '2026-11-20');
     expect(creditos).toEqual([{ fecha_asignada: '2026-11-19', origen_fecha: '2026-11-15', horas: 8 }]);
     const r = aplicarCompensatorios(base, creditos);
-    expect(r.semanas[0]).toMatchObject({ horasTotales: 38, horasExtra: 0, horasCompensatorio: 8, origenesCompensatorio: ['2026-11-15'] });
+    expect(r.semanas[0]).toMatchObject({
+      horasTotales: 38, horasExtra: 0, horasCompensatorio: 8, origenesCompensatorio: ['2026-11-15'], fechasCompensatorio: ['2026-11-19'],
+    });
     expect(aplicarCompensatorios({ ...base, semanas: [{ ...base.semanas[0], horasTotales: 36 }] }, creditos).semanas[0])
       .toMatchObject({ horasTotales: 44, horasExtra: 2 });
     expect(r.totalHoras).toBe(30);
