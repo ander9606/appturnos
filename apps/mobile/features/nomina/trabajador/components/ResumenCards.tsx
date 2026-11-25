@@ -11,20 +11,20 @@
 
 import { Text } from '@/components/ui/Text';
 import React, { useEffect, useState } from 'react';
-import { View, TouchableOpacity, ScrollView } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { formatCOP } from '@/lib/formatters';
 import { COLORS, HOUR_TYPE_COLORS } from '@/lib/designTokens';
 import { Badge } from '@/components/ui/Badge';
 import { MarcaPeriodoAnterior } from './MarcaPeriodoAnterior';
+import { FranjaSemana } from './FranjaSemana';
+import { PagoDesglose } from '../../PagoDesglose';
+import { PeriodoSelector } from '../../PeriodoSelector';
 import {
-  fmtPeriodo,
-  getJornadaLegalSemanal,
   estimarExtraSemanaCOP,
   tramosSemana,
   fmtRangoDias,
   fmtFechaCorta,
-  RECARGO_EXTRA,
   type ResumenPeriodoNomina,
   type ResumenSemana,
 } from '../nominaTrabajadorUtils';
@@ -74,8 +74,7 @@ export function ResumenCards({
     if (pendientes.length > 0) setExpandedPago(true);
   }, [pendientes.length]);
 
-  const tieneDeduccionLegal = tipoContrato === 'laboral' && miLiquidacion && miLiquidacion.neto !== miLiquidacion.total;
-  const tieneDescuentos = tieneDeduccionLegal || pendientes.length > 0 || rechazados.length > 0;
+  const tieneDescuentos = pendientes.length > 0 || rechazados.length > 0;
 
   // Misma fuente de verdad que ve el gestor — reemplaza el estimado del cliente
   // (resumen.valorExtraCOP, fórmula distinta) apenas llega la liquidación real.
@@ -88,6 +87,8 @@ export function ResumenCards({
                          resumen.horasNocturnas > 0    || resumen.horasFestivo > 0;
   const semanasConExtra = resumen.semanas.filter((s) => s.horasExtra > 0);
   const tieneNovedades  = tieneExtras || semanasConExtra.length > 0;
+  // El desglose por semana vive en la lista de registros; aquí solo hay detalle para quien aún no tiene liquidación.
+  const hayDetalle      = !miLiquidacion && tieneExtras;
 
   return (
     <View className="gap-3">
@@ -105,6 +106,17 @@ export function ResumenCards({
         />
       </View>
 
+      {/* ── Tu pago del período: de dónde sale, siempre visible cuando hay liquidación ── */}
+      {miLiquidacion && (
+        <View className="bg-card border border-border rounded-2xl px-4 py-4 gap-3">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-sm font-semibold text-foreground">Tu pago del período</Text>
+            {periodoActivo?.estado === 'abierto' && <Badge label="Estimado" variant="warning" size="sm" />}
+          </View>
+          <PagoDesglose linea={miLiquidacion} />
+        </View>
+      )}
+
       {/* ── Detalle de pago — colapsado, solo si hay algo que explicar ── */}
       {tieneDescuentos && (
         <TouchableOpacity
@@ -115,7 +127,7 @@ export function ResumenCards({
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-2">
               {pendientes.length > 0 && <View className="w-2 h-2 rounded-full bg-warning" />}
-              <Text className="text-sm font-semibold text-foreground">Detalle de pago</Text>
+              <Text className="text-sm font-semibold text-foreground">Descuentos</Text>
             </View>
             <Ionicons name={expandedPago ? 'chevron-up' : 'chevron-down'} size={16} color={COLORS.mutedForeground} />
           </View>
@@ -128,42 +140,9 @@ export function ResumenCards({
 
           {expandedPago && (
             <View className="gap-3 mt-3">
-              {miLiquidacion && tieneDeduccionLegal && (
-                <View className="gap-1.5">
-                  <View className="flex-row items-center justify-between">
-                    <Text className="text-xs text-muted-foreground">Bruto</Text>
-                    <Text className="text-xs font-medium text-foreground">{formatCOP(miLiquidacion.total)}</Text>
-                  </View>
-                  <View className="flex-row items-center justify-between">
-                    <Text className="text-xs text-muted-foreground">Salud (4%)</Text>
-                    <Text className="text-xs font-medium text-danger">-{formatCOP(miLiquidacion.descuento_salud)}</Text>
-                  </View>
-                  <View className="flex-row items-center justify-between">
-                    <Text className="text-xs text-muted-foreground">Pensión</Text>
-                    <Text className="text-xs font-medium text-danger">-{formatCOP(miLiquidacion.descuento_pension)}</Text>
-                  </View>
-                  {miLiquidacion.otros_descuentos.map((d) => (
-                    <View key={d.id} className="flex-row items-center justify-between">
-                      <Text className="text-xs text-muted-foreground">{TIPO_DESCUENTO_LABELS[d.tipo]} · {d.motivo}</Text>
-                      <Text className="text-xs font-medium text-danger">-{formatCOP(d.monto)}</Text>
-                    </View>
-                  ))}
-                  {miLiquidacion.subsidio_transporte > 0 && (
-                    <View className="flex-row items-center justify-between">
-                      <Text className="text-xs text-muted-foreground">Auxilio de transporte</Text>
-                      <Text className="text-xs font-medium text-success">+{formatCOP(miLiquidacion.subsidio_transporte)}</Text>
-                    </View>
-                  )}
-                  <View className="flex-row items-center justify-between pt-1.5 mt-0.5 border-t border-border">
-                    <Text className="text-xs font-semibold text-foreground">Neto</Text>
-                    <Text className="text-xs font-bold text-success">{formatCOP(miLiquidacion.neto)}</Text>
-                  </View>
-                </View>
-              )}
-
               {pendientes.length > 0 && (
-                <View className="gap-2 pt-1 border-t border-border">
-                  <Text className="text-xs font-semibold text-foreground mt-2">Por tu aceptación</Text>
+                <View className="gap-2">
+                  <Text className="text-xs font-semibold text-foreground">Por tu aceptación</Text>
                   {pendientes.map((d) => (
                     <View key={d.id} className="flex-row items-center justify-between">
                       <Text className="text-xs text-muted-foreground flex-1">
@@ -202,6 +181,7 @@ export function ResumenCards({
       {tieneNovedades && (
         <TouchableOpacity
           onPress={() => setExpanded((v) => !v)}
+          disabled={!hayDetalle}
           activeOpacity={0.8}
           className="bg-card border border-border rounded-2xl px-4 py-3"
         >
@@ -213,11 +193,11 @@ export function ResumenCards({
                 Novedades del período
               </Text>
             </View>
-            <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={COLORS.mutedForeground} />
+            {hayDetalle && <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={COLORS.mutedForeground} />}
           </View>
 
           {/* Resumen comprimido */}
-          {!expanded && (
+          {(!expanded || !hayDetalle) && (
             <View className="flex-row gap-4 mt-2">
               {semanasConExtra.length > 0 && (
                 <Text className="text-xs text-success">
@@ -238,71 +218,8 @@ export function ResumenCards({
           )}
 
           {/* Detalle expandido */}
-          {expanded && (
+          {expanded && hayDetalle && (
             <View className="mt-3 gap-3">
-              {/* Desglose semanal */}
-              {resumen.semanas.length > 0 && (
-                <View className="gap-1.5">
-                  <Text className="text-xs font-semibold text-foreground">
-                    Horas por semana
-                  </Text>
-                  {resumen.semanas.map((s) => (
-                    <SemanaRow key={s.inicioSemana} semana={s} valorHora={valorHora} periodo={periodoActivo} />
-                  ))}
-                  <Text className="text-[10px] text-muted-foreground mt-0.5">
-                    Jornada máxima legal en {new Date().getFullYear()}: {getJornadaLegalSemanal(new Date().getFullYear())}h/semana.
-                    Las horas extra solo se generan al superar este límite.
-                  </Text>
-                </View>
-              )}
-
-              {/* Salario base resaltado — para que quede claro qué es fijo y qué es extra */}
-              {miLiquidacion && Number(miLiquidacion.pago_ordinario) > 0 && (
-                <View className="bg-muted rounded-xl px-3 py-3">
-                  <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                    Salario base
-                  </Text>
-                  <View className="flex-row items-center justify-between gap-2">
-                    <Text className="text-xs text-muted-foreground flex-1">
-                      {miLiquidacion.salario_base != null
-                        ? `${formatCOP(miLiquidacion.salario_base)} ÷ 30 × ${miLiquidacion.dias_periodo} días`
-                        : `${Number(miLiquidacion.horas_ordinarias).toFixed(1)}h ordinarias × ${formatCOP(miLiquidacion.valor_hora)}`}
-                    </Text>
-                    <Text className="text-base font-bold text-foreground">
-                      {formatCOP(miLiquidacion.pago_ordinario)}
-                    </Text>
-                  </View>
-                </View>
-              )}
-
-              {/* Horas con recargo por tipo — en pesos cuando ya llegó la liquidación real */}
-              {tieneExtras && (
-                miLiquidacion ? (
-                  <View className="bg-warning-light rounded-xl px-3 py-3 gap-1.5">
-                    <Text className="text-xs font-semibold text-warning uppercase tracking-wide">
-                      ⚡ Horas extra y recargos
-                    </Text>
-                    {Number(miLiquidacion.horas_nocturnas) > 0 && (
-                      <FilaConcepto label={`${Number(miLiquidacion.horas_nocturnas).toFixed(1)}h nocturnas × ${formatCOP(miLiquidacion.valor_hora)} × ${miLiquidacion.recargo_nocturno}`} valor={Number(miLiquidacion.pago_nocturno)} />
-                    )}
-                    {Number(miLiquidacion.horas_extra_diurnas) > 0 && (
-                      <FilaConcepto label={`${Number(miLiquidacion.horas_extra_diurnas).toFixed(1)}h extra diurna × ${formatCOP(miLiquidacion.valor_hora)} × ${RECARGO_EXTRA.EXTRA_DIURNA}`} valor={Number(miLiquidacion.pago_extra_diurno)} />
-                    )}
-                    {Number(miLiquidacion.horas_extra_nocturnas) > 0 && (
-                      <FilaConcepto label={`${Number(miLiquidacion.horas_extra_nocturnas).toFixed(1)}h extra nocturna × ${formatCOP(miLiquidacion.valor_hora)} × ${RECARGO_EXTRA.EXTRA_NOCTURNA}`} valor={Number(miLiquidacion.pago_extra_nocturno)} />
-                    )}
-                    {Number(miLiquidacion.horas_festivo) > 0 && (
-                      <FilaConcepto label={`${Number(miLiquidacion.horas_festivo).toFixed(1)}h festivo/dominical × ${formatCOP(miLiquidacion.valor_hora)} × ${miLiquidacion.recargo_festivo}`} valor={Number(miLiquidacion.pago_festivo)} />
-                    )}
-                    <View className="border-t border-warning/30 my-0.5" />
-                    <View className="flex-row items-center justify-between">
-                      <Text className="text-xs font-semibold text-warning">Subtotal extra</Text>
-                      <Text className="text-sm font-bold text-warning">+{formatCOP(pagoExtraPeriodo)}</Text>
-                    </View>
-                  </View>
-                ) : null
-              )}
-
               {!miLiquidacion && tieneExtras && (
                   <View className="bg-primary-50 rounded-xl px-3 py-3 gap-1.5">
                     <Text className="text-xs font-semibold text-primary-600">
@@ -334,30 +251,9 @@ export function ResumenCards({
         </TouchableOpacity>
       )}
 
-      {/* ── Selector de período ───────────────────────────── */}
+      {/* ── Selector de período (el mismo de las vistas del gestor) ── */}
       {periodos.length > 1 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View className="flex-row gap-2 py-0.5">
-            {periodos.map((p) => (
-              <TouchableOpacity
-                key={p.id}
-                onPress={() => onSeleccionarPeriodo(p.id)}
-                className={[
-                  'px-3 py-1.5 rounded-full border',
-                  p.id === periodoActivoId
-                    ? 'bg-foreground border-foreground'
-                    : 'bg-card border-border',
-                ].join(' ')}
-              >
-                <Text className={`text-xs font-medium ${
-                  p.id === periodoActivoId ? 'text-white' : 'text-foreground'
-                }`}>
-                  {fmtPeriodo(p)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </ScrollView>
+        <PeriodoSelector periodos={periodos} activeId={periodoActivoId} onSelect={onSeleccionarPeriodo} />
       )}
     </View>
   );
@@ -376,15 +272,6 @@ function StatCard({ label, value, valueClass }: { label: string; value: string; 
     >
       <Text className={`text-base font-extrabold ${valueClass}`}>{value}</Text>
       <Text className="text-[10px] text-muted-foreground">{label}</Text>
-    </View>
-  );
-}
-
-function FilaConcepto({ label, valor }: { label: string; valor: number }) {
-  return (
-    <View className="flex-row items-center justify-between gap-2">
-      <Text className="text-xs text-amber-700 flex-1">{label}</Text>
-      <Text className="text-xs font-semibold text-amber-700">{formatCOP(valor)}</Text>
     </View>
   );
 }
@@ -456,61 +343,25 @@ export function SemanaRow({ semana, valorHora, periodo }: {
           +{semana.horasFestivo.toFixed(1)}h festivo (recargo, no cuenta para las {semana.limiteHoras}h)
         </Text>
       )}
-      {partida && t ? (
-        <View className="gap-0.5">
-          {t.anterior && (
-            <TramoLinea
-              etiqueta="Período anterior"
-              rango={fmtRangoDias(t.anterior.desde, t.anterior.hasta)}
-              horas={horasPrevias > 0 ? horasPrevias : undefined}
-              muted
-            />
-          )}
-          <TramoLinea
-            etiqueta="Este período"
-            rango={fmtRangoDias(t.enPeriodo.desde, t.enPeriodo.hasta)}
-            horas={semana.horasTotales - horasPrevias - horasComp}
-          />
-          {t.siguiente && (
-            <TramoLinea
-              etiqueta="Período siguiente"
-              rango={fmtRangoDias(t.siguiente.desde, t.siguiente.hasta)}
-              muted
-            />
-          )}
-          {t.anterior && horasPrevias > 0 && (
-            <Text className="text-[10px] text-muted-foreground">
-              Las horas del período anterior cuentan para el tope de {semana.limiteHoras}h (a la izquierda de la raya).
-            </Text>
-          )}
-        </View>
-      ) : (
-        !!horasPrevias && (
-          <Text className="text-[10px] text-muted-foreground">
-            {horasPrevias.toFixed(1)}h de esta semana son del período anterior (a la izquierda de la raya).
-          </Text>
-        )
+      {periodo && (partida || horasComp > 0) ? (
+        <FranjaSemana
+          lunes={semana.inicioSemana}
+          periodo={periodo}
+          horasAnterior={horasPrevias}
+          horasEste={semana.horasTotales - horasPrevias - horasComp}
+          fechasCompensatorio={semana.fechasCompensatorio}
+        />
+      ) : null}
+      {horasPrevias > 0 && (
+        <Text className="text-[10px] text-muted-foreground">La raya de la barra marca las horas del período anterior.</Text>
       )}
       {horasComp > 0 && (
-        <Text className="text-[10px] text-info">
-          +{horasComp.toFixed(1)}h acreditadas por el compensatorio de esta semana: son del festivo del{' '}
-          {(semana.origenesCompensatorio ?? []).map(fmtFechaCorta).join(' y ')}, que no contó en su propia semana.
-        </Text>
-      )}
-    </View>
-  );
-}
-
-function TramoLinea({ etiqueta, rango, horas, muted }: { etiqueta: string; rango: string; horas?: number; muted?: boolean }) {
-  return (
-    <View className="flex-row items-center justify-between">
-      <Text className={`text-[11px] ${muted ? 'text-muted-foreground' : 'text-foreground font-medium'}`}>
-        {etiqueta} · {rango}
-      </Text>
-      {horas !== undefined && (
-        <Text className={`text-[11px] ${muted ? 'text-muted-foreground' : 'text-foreground font-medium'}`}>
-          {horas.toFixed(1)}h
-        </Text>
+        <View className="flex-row items-center gap-1">
+          <Ionicons name="bed-outline" size={12} color={COLORS.info} />
+          <Text className="text-[10px] text-info flex-1">
+            +{horasComp.toFixed(1)}h por el compensatorio del {(semana.origenesCompensatorio ?? []).map(fmtFechaCorta).join(' y ')}
+          </Text>
+        </View>
       )}
     </View>
   );

@@ -9,12 +9,12 @@ import { View, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { LiquidacionLinea, DescansoCompensatorio, DescuentoNomina, TipoDescuento } from '@api-client';
-import { getInitials } from '@/lib/formatters';
+import { getInitials, formatCOP } from '@/lib/formatters';
 import { COLORS, HOUR_TYPE_COLORS, avatarColorForId } from '@/lib/designTokens';
 import { CompositionBar } from '@/components/ui/CompositionBar';
 import { Badge } from '@/components/ui/Badge';
 import { useCrearDescuento } from './descuentos/useDescuentos';
-import { RECARGO_EXTRA } from './trabajador/nominaTrabajadorUtils';
+import { PagoDesglose } from './PagoDesglose';
 
 const TIPO_DESCUENTO_LABELS: Record<TipoDescuento, string> = {
   prestamo: 'Préstamo',
@@ -24,15 +24,6 @@ const TIPO_DESCUENTO_LABELS: Record<TipoDescuento, string> = {
   otro: 'Otro',
 };
 const TIPO_DESCUENTO_OPTIONS = Object.keys(TIPO_DESCUENTO_LABELS) as TipoDescuento[];
-
-function FilaConcepto({ label, valor }: { label: string; valor: number }) {
-  return (
-    <View className="flex-row items-center justify-between gap-2">
-      <Text className="text-xs text-amber-700 flex-1">{label}</Text>
-      <Text className="text-xs font-semibold text-amber-700">${valor.toLocaleString('es-CO')}</Text>
-    </View>
-  );
-}
 
 interface LiquidacionRowProps {
   linea: LiquidacionLinea;
@@ -83,9 +74,6 @@ export function LiquidacionRow({
     linea.horas_extra_nocturnas + linea.horas_nocturnas + linea.horas_festivo;
 
   const extrasTotal = linea.horas_extra_diurnas + linea.horas_extra_nocturnas;
-  const tieneDescuentos = linea.descuento_salud + linea.descuento_pension > 0;
-  const pagoExtraTotal =
-    linea.pago_nocturno + linea.pago_extra_diurno + linea.pago_extra_nocturno + linea.pago_festivo;
 
   return (
     <TouchableOpacity
@@ -135,14 +123,13 @@ export function LiquidacionRow({
           )}
         </View>
 
-        {/* Total pay + expand toggle */}
-        <View className="items-end gap-1">
-          <Text className="text-base font-bold text-success">
-            ${(tieneDescuentos ? linea.neto : linea.total).toLocaleString('es-CO')}
-          </Text>
-          <Text className="text-[10px] text-muted-foreground">
-            {tieneDescuentos ? `neto · bruto $${linea.total.toLocaleString('es-CO')}` : (expanded ? '▲' : '▼')}
-          </Text>
+        {/* Neto a pagar (siempre el neto: así las filas suman la cabecera) + expandir */}
+        <View className="items-end gap-0.5">
+          <Text className="text-base font-bold text-success">{formatCOP(linea.neto)}</Text>
+          {linea.neto !== linea.total && (
+            <Text className="text-[10px] text-muted-foreground">bruto {formatCOP(linea.total)}</Text>
+          )}
+          <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color={COLORS.mutedForeground} />
         </View>
       </View>
 
@@ -160,95 +147,14 @@ export function LiquidacionRow({
         />
       </View>
 
-      {/* ── Expanded: recibo — salario base resaltado + extra/recargos en pesos ── */}
+      {/* ── Expanded: de dónde sale el pago ─────────────────── */}
       {expanded && (
         <View className="px-4 pb-4 border-t border-border">
-          <View className="bg-muted/60 rounded-xl px-3 py-2.5 mt-3">
-            <Text className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-              Salario base
-            </Text>
-            <View className="flex-row items-center justify-between gap-2">
-              <Text className="text-xs text-muted-foreground flex-1">
-                {linea.salario_base != null
-                  ? `$${linea.salario_base.toLocaleString('es-CO')} ÷ 30 × ${linea.dias_periodo} días`
-                  : `${linea.horas_ordinarias.toFixed(1)}h ordinarias × $${linea.valor_hora.toLocaleString('es-CO')}`}
-              </Text>
-              <Text className="text-base font-bold text-foreground">
-                ${linea.pago_ordinario.toLocaleString('es-CO')}
-              </Text>
-            </View>
+          <View className="mt-3">
+            <PagoDesglose linea={linea} />
           </View>
-
-          {pagoExtraTotal > 0 && (
-            <View className="bg-warning-light rounded-xl px-3 py-2.5 mt-2 gap-1.5">
-              <Text className="text-[10px] font-semibold text-warning uppercase tracking-wide">
-                ⚡ Horas extra y recargos
-              </Text>
-              {linea.horas_nocturnas > 0 && (
-                <FilaConcepto label={`${linea.horas_nocturnas.toFixed(1)}h nocturnas × $${linea.valor_hora.toLocaleString('es-CO')} × ${linea.recargo_nocturno}`} valor={linea.pago_nocturno} />
-              )}
-              {linea.horas_extra_diurnas > 0 && (
-                <FilaConcepto label={`${linea.horas_extra_diurnas.toFixed(1)}h extra diurna × $${linea.valor_hora.toLocaleString('es-CO')} × ${RECARGO_EXTRA.EXTRA_DIURNA}`} valor={linea.pago_extra_diurno} />
-              )}
-              {linea.horas_extra_nocturnas > 0 && (
-                <FilaConcepto label={`${linea.horas_extra_nocturnas.toFixed(1)}h extra nocturna × $${linea.valor_hora.toLocaleString('es-CO')} × ${RECARGO_EXTRA.EXTRA_NOCTURNA}`} valor={linea.pago_extra_nocturno} />
-              )}
-              {linea.horas_festivo > 0 && (
-                <FilaConcepto label={`${linea.horas_festivo.toFixed(1)}h festivo/dominical × $${linea.valor_hora.toLocaleString('es-CO')} × ${linea.recargo_festivo}`} valor={linea.pago_festivo} />
-              )}
-              <View className="border-t border-warning/30 my-0.5" />
-              <View className="flex-row items-center justify-between">
-                <Text className="text-xs font-semibold text-warning">Subtotal extra</Text>
-                <Text className="text-sm font-bold text-warning">${pagoExtraTotal.toLocaleString('es-CO')}</Text>
-              </View>
-            </View>
-          )}
-
-          <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-border">
-            <Text className="text-sm font-semibold text-foreground">Total bruto</Text>
-            <Text className="text-base font-bold text-foreground">${linea.total.toLocaleString('es-CO')}</Text>
-          </View>
-          {tieneDescuentos && (
-            <View className="flex-row flex-wrap gap-x-4 gap-y-2 mt-3 pt-3 border-t border-border">
-              <View className="gap-0.5 min-w-[80px]">
-                <Text className="text-[10px] text-muted-foreground">Salud (4%)</Text>
-                <Text className="text-sm font-semibold text-danger">
-                  -${linea.descuento_salud.toLocaleString('es-CO')}
-                </Text>
-              </View>
-              <View className="gap-0.5 min-w-[80px]">
-                <Text className="text-[10px] text-muted-foreground">Pensión</Text>
-                <Text className="text-sm font-semibold text-danger">
-                  -${linea.descuento_pension.toLocaleString('es-CO')}
-                </Text>
-              </View>
-              {linea.subsidio_transporte > 0 && (
-                <View className="gap-0.5 min-w-[80px]">
-                  <Text className="text-[10px] text-muted-foreground">Aux. transporte</Text>
-                  <Text className="text-sm font-semibold text-success">
-                    +${linea.subsidio_transporte.toLocaleString('es-CO')}
-                  </Text>
-                </View>
-              )}
-              <View className="gap-0.5 min-w-[80px]">
-                <Text className="text-[10px] text-muted-foreground">Neto a pagar</Text>
-                <Text className="text-sm font-bold text-success">
-                  ${linea.neto.toLocaleString('es-CO')}
-                </Text>
-              </View>
-            </View>
-          )}
           {/* ── Descuentos manuales (préstamos, inasistencias, etc.) ─── */}
           <View className="mt-3 pt-3 border-t border-border gap-2">
-            {linea.otros_descuentos.map((d) => (
-              <View key={d.id} className="flex-row items-center gap-2">
-                <Badge label="Aceptado" variant="success" size="sm" />
-                <Text className="text-xs text-foreground flex-1">
-                  {TIPO_DESCUENTO_LABELS[d.tipo]} · {d.motivo}
-                </Text>
-                <Text className="text-xs font-semibold text-danger">-${d.monto.toLocaleString('es-CO')}</Text>
-              </View>
-            ))}
             {descuentosPendientes.map((d) => (
               <View key={d.id} className="flex-row items-center gap-2">
                 <Badge

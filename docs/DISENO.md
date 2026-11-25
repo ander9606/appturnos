@@ -368,6 +368,19 @@ Los tres usan el color del perfil (`useTheme()`), nunca un color fijo:
 - `WeekStrip` (`features/turnos/WeekStrip.tsx`): día seleccionado sólido, hoy con aro suave, rayita en los días con turnos.
 - Pendiente: los selectores de fecha nativos (`DateTimePicker`) los dibuja el sistema; en iOS se puede darles `accentColor`, en Android dependen del tema nativo del build (no cambia por OTA).
 
+### 5.12 Nómina: explicar con gráficos, no con párrafos
+
+Para mostrar de dónde sale un pago o en qué punto está un período, **primero un gráfico y la cuenta solo bajo demanda**:
+
+- **Desglose del pago** (`PagoDesglose`, móvil y web): una barra apilada en pesos (un segmento por concepto, con `HOUR_TYPE_COLORS`), una fila de una línea por concepto (punto de color + etiqueta corta + monto) y, debajo, bruto → descuentos → auxilio → neto. La fórmula ("horas × valor × factor") se muestra al tocar la fila, no en la fila. Lee los montos de la liquidación (`desglosePago`); la pantalla no recalcula.
+- **Estado del período** (`PeriodoPasos`, móvil y web): Abierto → Cerrado → Liquidado, con el paso actual resaltado y los anteriores en check. Reemplaza frases que explicaban cada estado.
+- **Semana partida por el corte del período** (`FranjaSemana`, móvil y web): los 7 días (lun–dom) como celdas, con lo que cae dentro del período en color y lo de fuera (anterior o siguiente) atenuado, y una etiqueta corta por tramo ("Anterior · 42.0h", "Este período · 5.5h"). El día de un compensatorio lleva una cama. En la lista de registros del trabajador cada semana abre con su `SemanaRow`, así las fronteras se ven donde se consultan los días.
+- **Selector de período** (`PeriodoSelector`, móvil): el mismo para el trabajador y el gestor. Cada chip lleva un punto de estado (abierto verde, cerrado ámbar, liquidado gris), el año cuando la lista cruza de año (`abarcanVariosAnios`) y `accessibilityState.selected`.
+- **Novedades por empleado** (`NovedadesChips`, registros del equipo): ícono + número (días sin salida, marcajes sospechosos, compensatorios pendientes), sin frases; quien tiene algo por revisar va primero. Si la lista llega recortada por `limit`, se avisa arriba ("Se muestran N de M").
+- **Importes por día** (`RegistroCard`): son una estimación del cliente, por eso se rotulan «estimado»; la cifra que se paga es la de «Tu pago del período».
+- **Neto primero.** La cifra grande de una liquidación es el neto a pagar (el bruto va debajo). Mientras el período está abierto lleva la pastilla «Estimado».
+- Nunca solo color: cada segmento tiene su fila con etiqueta y monto.
+
 ## 6. Accesibilidad
 
 Contraste medido (WCAG: 4.5:1 texto normal, 3:1 texto grande ≥ 18 px o ≥ 14 px en negrita, y elementos gráficos):

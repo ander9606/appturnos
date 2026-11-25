@@ -1,7 +1,7 @@
 import { SkeletonTable } from '@/shared/components/Skeleton';
 import { puedeGestionarNomina } from '../permisos';
 import { useState } from 'react';
-import { Plus, Pencil, CalendarClock, MapPin, ChevronDown, X, AlertTriangle } from 'lucide-react';
+import { Plus, Pencil, CalendarClock, MapPin, ChevronDown, X, AlertTriangle, BedDouble } from 'lucide-react';
 import { useDescartarSospechoso } from '../hooks/useNomina';
 import type { Registro, DescansoCompensatorio } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
@@ -10,6 +10,7 @@ import { TIPO_DIA_LABELS } from '../constants';
 import { AlmuerzoIndicator, EnVivoIndicator, ExtraIndicator } from './DiaIndicators';
 import { UbicacionMarcajeModal } from './UbicacionMarcajeModal';
 import { agruparPorSemana, explicarHorasExtra, tramosSemana, fmtRangoDias, creditosDeCompensatorios } from '../utils';
+import { FranjaSemana } from './FranjaSemana';
 import { EmptyState } from '@/shared/components/EmptyState';
 
 export function RegistrosTab({
@@ -174,29 +175,22 @@ export function RegistrosTab({
                                   <span className="text-foreground">{fmtHrs(s.horasTotales)} / {s.limiteHoras}h</span>
                                 )}
                               </div>
-                              {t && (t.anterior || t.siguiente) ? (
-                                <div className="flex flex-col text-[11px]">
-                                  {t.anterior && (
-                                    <span className="text-muted-foreground">
-                                      Período anterior · {fmtRangoDias(t.anterior.desde, t.anterior.hasta)}{previas > 0 ? ` · ${fmtHrs(previas)}h` : ''}
-                                    </span>
-                                  )}
-                                  <span className="text-foreground font-medium">
-                                    Este período · {fmtRangoDias(t.enPeriodo.desde, t.enPeriodo.hasta)} · {fmtHrs(s.horasTotales - previas - (s.horasCompensatorio ?? 0))}h
-                                  </span>
-                                  {t.siguiente && (
-                                    <span className="text-muted-foreground">
-                                      Período siguiente · {fmtRangoDias(t.siguiente.desde, t.siguiente.hasta)}
-                                    </span>
-                                  )}
-                                </div>
+                              {periodoInicio && periodoFin && ((t && (t.anterior || t.siguiente)) || s.horasCompensatorio) ? (
+                                <FranjaSemana
+                                  lunes={s.inicioSemana}
+                                  periodoInicio={periodoInicio}
+                                  periodoFin={periodoFin}
+                                  horasAnterior={previas}
+                                  horasEste={s.horasTotales - previas - (s.horasCompensatorio ?? 0)}
+                                  fechasCompensatorio={s.fechasCompensatorio}
+                                />
                               ) : previas > 0 ? (
                                 <span className="text-[11px] text-muted-foreground">{fmtHrs(previas)}h del período anterior</span>
                               ) : null}
                               {s.horasCompensatorio ? (
-                                <span className="text-[11px] text-info">
-                                  +{fmtHrs(s.horasCompensatorio)}h acreditadas por el compensatorio de esta semana: son del festivo del{' '}
-                                  {(s.origenesCompensatorio ?? []).map(fmtDiaSemana).join(' y ')}, que no contó en su propia semana.
+                                <span className="inline-flex items-center gap-1 text-[11px] text-info">
+                                  <BedDouble size={12} />
+                                  +{fmtHrs(s.horasCompensatorio)}h por el compensatorio del {(s.origenesCompensatorio ?? []).map(fmtDiaSemana).join(' y ')}
                                 </span>
                               ) : null}
                               {s.horasFestivo ? (

@@ -31,6 +31,7 @@ import { PeriodoSelector }        from '@/features/nomina/PeriodoSelector';
 import { LiquidacionRow }         from '@/features/nomina/LiquidacionRow';
 import { Button }                 from '@/components/ui/Button';
 import { CompositionBar }         from '@/components/ui/CompositionBar';
+import { PeriodoPasos }           from '@/features/nomina/PeriodoPasos';
 import { NavegadorMes } from '@/components/ui/NavegadorMes';
 import { MonthCalendar }          from '@/components/ui/MonthCalendar';
 import { getMonthGrid, shiftMonth, mesDeHoy, type CalendarDay } from '@/lib/calendar';
@@ -263,9 +264,17 @@ function NominaGestorView() {
 
               {totales && (
                 <View className="bg-white/15 rounded-2xl px-4 py-3 mt-1">
-                  <Text className="text-white/80 text-xs">
-                    {liquidacion?.tipo_contrato === 'laboral' ? 'Total neto a pagar' : 'Total a pagar'}
-                  </Text>
+                  <View className="flex-row items-center gap-1.5">
+                    <Text className="text-white/80 text-xs">
+                      {liquidacion?.tipo_contrato === 'laboral' ? 'Total neto a pagar' : 'Total a pagar'}
+                    </Text>
+                    {/* Con el período abierto el total todavía cambia: no debe leerse como definitivo. */}
+                    {activePeriodo?.estado === 'abierto' && (
+                      <View className="bg-white/25 rounded-full px-1.5 py-0.5">
+                        <Text className="text-white text-[10px] font-bold">Estimado</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text className="text-white text-3xl font-extrabold">
                     ${totales.total_neto_general.toLocaleString('es-CO')}
                   </Text>
@@ -346,25 +355,7 @@ function NominaGestorView() {
 
               {activePeriodo && (
                 <View className="gap-2">
-                  {/* Context label explaining what the current state means */}
-                  <View className="flex-row items-center gap-1.5 px-1">
-                    <Ionicons
-                      name={
-                        activePeriodo.estado === 'abierto'   ? 'lock-open-outline'
-                        : activePeriodo.estado === 'cerrado' ? 'lock-closed-outline'
-                        : 'checkmark-circle-outline'
-                      }
-                      size={14}
-                      color={COLORS.mutedForeground}
-                    />
-                    <Text className="text-xs text-muted-foreground">
-                      {activePeriodo.estado === 'abierto'
-                        ? 'Los trabajadores pueden registrar horas'
-                        : activePeriodo.estado === 'cerrado'
-                        ? 'Horas congeladas — pendiente de pago'
-                        : 'Período pagado'}
-                    </Text>
-                  </View>
+                  <PeriodoPasos estado={activePeriodo.estado} />
                   <View className="flex-row gap-2">
                     {activePeriodo.estado === 'cerrado' && rol !== 'nomina' && (
                       <View className="flex-1 gap-1">

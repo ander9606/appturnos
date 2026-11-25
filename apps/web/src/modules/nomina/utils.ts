@@ -1,5 +1,7 @@
-import type { Registro, DescansoCompensatorio } from './types';
-import { JORNADA_SEMANAL_HORAS } from '@/shared/laboral';
+import type { Registro, DescansoCompensatorio, LiquidacionLinea } from './types';
+import { fmtCOP } from '@/shared/lib/format';
+import { TIPO_DESCUENTO_LABELS } from './constants';
+import { JORNADA_SEMANAL_HORAS, RECARGO_EXTRA_DIURNA, RECARGO_EXTRA_NOCTURNA } from '@/shared/laboral';
 
 // Espejo de JORNADA_CONTINUA_UMBRAL_HORAS en backend/config/constants.js.
 const UMBRAL_JORNADA_CONTINUA_MIN = 6 * 60;
@@ -88,6 +90,8 @@ export interface ResumenSemana {
   horasFestivo?: number;
   /** Horas de festivo habitual acreditadas a esta semana por un compensatorio tomado en ella (ya están en horasTotales). */
   horasCompensatorio?: number;
+  /** Día(s) de la semana en que se toma el compensatorio que acredita esas horas (fecha_asignada). */
+  fechasCompensatorio?: string[];
   /** Fecha del festivo trabajado que originó cada crédito (otra semana u otro período). */
   origenesCompensatorio?: string[];
 }
@@ -163,7 +167,7 @@ export function agruparPorSemana(
         limiteHoras: JORNADA_SEMANAL_HORAS,
         horasExtra: Math.max(0, horasTotales - JORNADA_SEMANAL_HORAS),
         ...(horasPrevias > 0 ? { horasPrevias } : {}),
-        ...(horasComp > 0 ? { horasCompensatorio: horasComp, origenesCompensatorio: delSemana.map(c => c.origen_fecha) } : {}),
+        ...(horasComp > 0 ? { horasCompensatorio: horasComp, origenesCompensatorio: delSemana.map(c => c.origen_fecha), fechasCompensatorio: delSemana.map(c => c.fecha_asignada) } : {}),
         ...(festivoPorSemana.get(inicioSemana) ? { horasFestivo: festivoPorSemana.get(inicioSemana) } : {}),
       };
     });
@@ -212,6 +216,27 @@ export function tramosSemana(lunes: string, periodoInicio: string, periodoFin: s
     anterior:  lunes < periodoInicio ? { desde: lunes, hasta: sumarDias(periodoInicio, -1) } : null,
     siguiente: domingo > periodoFin ? { desde: sumarDias(periodoFin, 1), hasta: domingo } : null,
   };
+}
+
+export type ZonaDia = 'anterior' | 'este' | 'siguiente';
+
+/** Los 7 días de una semana (lun–dom) con su zona respecto del período. Espejo de mobile (diasSemanaEnPeriodo). */
+export function diasSemanaEnPeriodo(lunes: string, periodoInicio: string, periodoFin: string): { fecha: string; zona: ZonaDia }[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const fecha = sumarDias(lunes, i);
+    return { fecha, zona: fecha < periodoInicio ? 'anterior' : fecha > periodoFin ? 'siguiente' : 'este' };
+  });
+}
+
+/** Agrupa días consecutivos de la misma zona. */
+export function tramosContiguos(dias: { zona: ZonaDia }[]): { zona: ZonaDia; n: number }[] {
+  const out: { zona: ZonaDia; n: number }[] = [];
+  for (const d of dias) {
+    const ultimo = out[out.length - 1];
+    if (ultimo && ultimo.zona === d.zona) ultimo.n++;
+    else out.push({ zona: d.zona, n: 1 });
+  }
+  return out;
 }
 
 const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -280,4 +305,59 @@ export function explicarHorasExtra(r: Registro): ExplicacionHorasExtra | null {
     topeSemanal: JORNADA_SEMANAL_HORAS,
     lunesSemana: lunesDeSemana(r.fecha),
   };
+}
+
+// ── Desglose del pago (espejo de mobile: features/nomina/pagoDesglose.ts) ───────────────
+
+export type ClaveConcepto = 'base' | 'nocturno' | 'extraDiurna' | 'extraNocturna' | 'festivo';
+export interface ConceptoPago { clave: ClaveConcepto; label: string; monto: number; formula: string }
+export interface DescuentoPago { clave: string; label: string; monto: number }
+export interface DesglosePago {
+  /** Lo que suma el bruto; solo los conceptos con monto > 0 (la base siempre va). */
+  conceptos: ConceptoPago[];
+  bruto: number;
+  descuentos: DescuentoPago[];
+  /** El auxilio de transporte se suma al neto, NO al bruto (no es base de aportes). */
+  auxilio: number;
+  neto: number;
+}
+
+/** Horas y factores con punto decimal, como el resto de la app (`fmtHrs`). */
+const hrs = (n: number) => `${Number(n).toFixed(1)}h`;
+const factor = (n: number) => String(Number(n));
+
+/**
+ * Convierte una línea de la liquidación en lo que se dibuja. Lee los montos de la liquidación (la misma que ve el
+ * trabajador): no recalcula nada, así la pantalla no puede diverger de lo que se paga.
+ */
+export function desglosePago(l: LiquidacionLinea): DesglosePago {
+  const vh = fmtCOP(Number(l.valor_hora));
+  const conceptos: ConceptoPago[] = [
+    {
+      clave: 'base',
+      label: l.salario_base != null ? 'Salario base' : `Horas ordinarias · ${hrs(l.horas_ordinarias)}`,
+      monto: Number(l.pago_ordinario),
+      formula: l.salario_base != null
+        ? `${fmtCOP(Number(l.salario_base))} ÷ 30 × ${l.dias_periodo} días (no depende de las horas)`
+        : `${hrs(l.horas_ordinarias)} × ${vh}`,
+    },
+    { clave: 'nocturno', label: `Recargo nocturno · ${hrs(l.horas_nocturnas)}`, monto: Number(l.pago_nocturno),
+      formula: `${hrs(l.horas_nocturnas)} × ${vh} × ${factor(l.recargo_nocturno)}` },
+    { clave: 'extraDiurna', label: `Extra diurna · ${hrs(l.horas_extra_diurnas)}`, monto: Number(l.pago_extra_diurno),
+      formula: `${hrs(l.horas_extra_diurnas)} × ${vh} × ${factor(RECARGO_EXTRA_DIURNA)}` },
+    { clave: 'extraNocturna', label: `Extra nocturna · ${hrs(l.horas_extra_nocturnas)}`, monto: Number(l.pago_extra_nocturno),
+      formula: `${hrs(l.horas_extra_nocturnas)} × ${vh} × ${factor(RECARGO_EXTRA_NOCTURNA)}` },
+    { clave: 'festivo', label: `Festivo y dominical · ${hrs(l.horas_festivo)}`, monto: Number(l.pago_festivo),
+      formula: `${hrs(l.horas_festivo)} × ${vh} × ${factor(l.recargo_festivo)}` },
+  ].filter(c => c.clave === 'base' || c.monto > 0) as ConceptoPago[];
+
+  const descuentos: DescuentoPago[] = [
+    { clave: 'salud', label: 'Salud (4%)', monto: Number(l.descuento_salud) },
+    { clave: 'pension', label: 'Pensión', monto: Number(l.descuento_pension) },
+    ...l.otros_descuentos.map(d => ({
+      clave: `d${d.id}`, label: d.motivo ? `${TIPO_DESCUENTO_LABELS[d.tipo]} · ${d.motivo}` : TIPO_DESCUENTO_LABELS[d.tipo], monto: Number(d.monto),
+    })),
+  ].filter(d => d.monto > 0);
+
+  return { conceptos, bruto: Number(l.total), descuentos, auxilio: Number(l.subsidio_transporte), neto: Number(l.neto) };
 }

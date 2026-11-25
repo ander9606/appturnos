@@ -37,9 +37,15 @@ export function NominaPage() {
   const periodos: Periodo[] = data?.data?.data ?? [];
   const hoy = bogotaToday();
 
-  const pendientes = periodos.filter(p => p.estado !== 'liquidado');
+  // El resumen de arriba es de TODOS los períodos y no cambia al filtrar la tabla (con «Liquidados» marcaba «$0 pendiente»).
+  // Sin filtro es la misma consulta que la de la tabla: no hay petición extra.
+  const { data: dataTodos } = usePeriodos(undefined, true);
+  const todos: Periodo[] = dataTodos?.data?.data ?? (filtroEstado ? [] : periodos);
+  const pendientes = todos.filter(p => p.estado !== 'liquidado');
   const totalPendiente = pendientes.reduce((s, p) => s + (p.total_estimado ?? 0), 0);
-  const vencidos = periodos.filter(p => p.estado === 'abierto' && p.fecha_fin < hoy).length;
+  const vencidos = todos.filter(p => p.estado === 'abierto' && p.fecha_fin < hoy).length;
+  // Un período abierto aporta un total estimado, no definitivo.
+  const incluyeEstimados = pendientes.some(p => p.estado === 'abierto');
 
   const cerrar = useCerrarPeriodo();
   const liquidar = useLiquidarPeriodo();
@@ -107,9 +113,15 @@ export function NominaPage() {
         ))}
       </div>
 
-      {!isLoading && !isError && periodos.length > 0 && (
+      {!isLoading && !isError && todos.length > 0 && (
         <div className="grid grid-cols-2 gap-4 mb-6">
-          <StatCard label="Total pendiente de pago" value={fmtCOP(totalPendiente)} icon={DollarSign} color={totalPendiente > 0 ? 'warning' : 'success'} />
+          <StatCard
+            label="Total pendiente de pago"
+            value={fmtCOP(totalPendiente)}
+            icon={DollarSign}
+            color={totalPendiente > 0 ? 'warning' : 'success'}
+            badge={incluyeEstimados ? 'Incluye estimados' : undefined}
+          />
           <StatCard
             label={vencidos > 0 ? `${vencidos} período${vencidos !== 1 ? 's' : ''} vencido${vencidos !== 1 ? 's' : ''}` : 'Períodos abiertos al día'}
             value={pendientes.length}

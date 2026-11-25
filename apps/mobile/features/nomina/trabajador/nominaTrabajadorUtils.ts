@@ -126,6 +126,8 @@ export interface ResumenSemana {
    */
   horasCompensatorio?: number;
   origenesCompensatorio?: string[];
+  /** Día(s) de la semana en que se toma el compensatorio que acredita esas horas (fecha_asignada). */
+  fechasCompensatorio?: string[];
 }
 
 // ── Helpers internos ───────────────────────────────────────────────────────
@@ -336,6 +338,43 @@ export function tramosSemana(lunes: string, periodoInicio: string, periodoFin: s
   };
 }
 
+export type ZonaDia = 'anterior' | 'este' | 'siguiente';
+
+/**
+ * Los 7 días de una semana (lun–dom) con la zona a la que pertenecen según el período: antes de su inicio
+ * ('anterior'), dentro ('este') o después de su fin ('siguiente'). Es lo que dibuja la franja de la semana.
+ */
+export function diasSemanaEnPeriodo(lunes: string, periodoInicio: string, periodoFin: string): { fecha: string; zona: ZonaDia }[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(`${lunes}T00:00:00`);
+    d.setDate(d.getDate() + i);
+    const fecha = toISODate(d);
+    return { fecha, zona: fecha < periodoInicio ? 'anterior' : fecha > periodoFin ? 'siguiente' : 'este' };
+  });
+}
+
+/** Agrupa días consecutivos de la misma zona: [anterior×4, este×3] → [{zona:'anterior',n:4},{zona:'este',n:3}]. */
+export function tramosContiguos(dias: { zona: ZonaDia }[]): { zona: ZonaDia; n: number }[] {
+  const out: { zona: ZonaDia; n: number }[] = [];
+  for (const d of dias) {
+    const ultimo = out[out.length - 1];
+    if (ultimo && ultimo.zona === d.zona) ultimo.n++;
+    else out.push({ zona: d.zona, n: 1 });
+  }
+  return out;
+}
+
+/** Agrupa los registros por semana (lun–dom) conservando el orden en que vienen: así la lista del mes se corta por semana. */
+export function agruparRegistrosPorSemana<T extends { fecha: string }>(registros: T[]): { lunes: string; data: T[] }[] {
+  const grupos = new Map<string, T[]>();
+  for (const r of registros) {
+    const lunes = lunesDeSemana(r.fecha);
+    const g = grupos.get(lunes);
+    if (g) g.push(r); else grupos.set(lunes, [r]);
+  }
+  return Array.from(grupos, ([lunes, data]) => ({ lunes, data }));
+}
+
 /** "Lun 12 – Dom 18 Oct" (mismo mes) o "Lun 28 Sep – Dom 4 Oct". Un solo día: "Vie 16 Oct". */
 export function fmtRangoDias(desde: string, hasta: string): string {
   const a = new Date(`${desde}T00:00:00`);
@@ -381,7 +420,7 @@ export interface CreditoCompensatorio { fecha_asignada: string; origen_fecha: st
  * habitual > 0 y ya llegados (`fecha_asignada <= hastaISO`).
  */
 export function creditosDeCompensatorios(
-  compensatorios: ReadonlyArray<Pick<DescansoCompensatorio, 'trabajador_id' | 'estado' | 'fecha_asignada' | 'origen_fecha' | 'horas_festivo_origen'>>,
+  compensatorios: readonly Pick<DescansoCompensatorio, 'trabajador_id' | 'estado' | 'fecha_asignada' | 'origen_fecha' | 'horas_festivo_origen'>[],
   trabajadorId: number | undefined,
   hastaISO: string,
 ): CreditoCompensatorio[] {
@@ -418,6 +457,7 @@ export function aplicarCompensatorios(
         horasExtra: Math.max(0, horasTotales - s.limiteHoras),
         horasCompensatorio: (s.horasCompensatorio ?? 0) + horas,
         origenesCompensatorio: [...(s.origenesCompensatorio ?? []), ...delSemana.map((c) => c.origen_fecha)],
+        fechasCompensatorio: [...(s.fechasCompensatorio ?? []), ...delSemana.map((c) => c.fecha_asignada)],
       };
     }),
   };
@@ -631,14 +671,37 @@ export function horaEntradaMostrada(r: RegistroDiario | null | undefined): strin
   return r?.hora_entrada_inicial ?? r?.hora_entrada ?? null;
 }
 
-export function fmtPeriodo(p: PeriodoNomina): string {
+export function fmtPeriodo(p: PeriodoNomina, conAnio = false): string {
   const [, ms, ds] = p.fecha_inicio.split('-');
-  const [, me, de] = p.fecha_fin.split('-');
+  const [ye, me, de] = p.fecha_fin.split('-');
   const mi = Number(ms) - 1;
   const mf = Number(me) - 1;
-  return mi === mf
+  const rango = mi === mf
     ? `${Number(ds)}–${Number(de)} ${SHORT_MONTHS[mi]}`
     : `${Number(ds)} ${SHORT_MONTHS[mi]} – ${Number(de)} ${SHORT_MONTHS[mf]}`;
+  return conAnio ? `${rango} ${ye}` : rango;
+}
+
+/** true si los períodos caen en más de un año: ahí "1–15 Jun" es ambiguo y hay que mostrar el año. */
+export function abarcanVariosAnios(periodos: readonly Pick<PeriodoNomina, 'fecha_fin'>[]): boolean {
+  return new Set(periodos.map((p) => p.fecha_fin.slice(0, 4))).size > 1;
+}
+
+/**
+ * Lo que un gestor debe mirar de un trabajador en un período: días pasados con entrada y sin salida (olvidó marcar)
+ * y marcajes sospechosos. Un turno de hoy sin salida es un turno en curso, no una novedad.
+ */
+export function novedadesDeRegistros(
+  registros: readonly Pick<RegistroDiario, 'fecha' | 'hora_entrada' | 'hora_salida' | 'sospechoso'>[],
+  hoyISO: string,
+): { sinSalida: number; sospechosos: number } {
+  let sinSalida = 0;
+  let sospechosos = 0;
+  for (const r of registros) {
+    if (r.hora_entrada && !r.hora_salida && r.fecha < hoyISO) sinSalida++;
+    if (r.sospechoso === 1) sospechosos++;
+  }
+  return { sinSalida, sospechosos };
 }
 
 export function fmtFechaCorta(iso: string): string {

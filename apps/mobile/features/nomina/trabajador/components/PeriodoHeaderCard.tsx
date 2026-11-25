@@ -103,12 +103,20 @@ export function PeriodoHeaderCard({
         <View className="flex-1 gap-0.5">
           {miLiquidacion ? (
             <>
-              <Text className="text-white text-lg font-extrabold">
+              <Text className="text-white text-3xl font-extrabold">
                 {mask(formatCOP(miLiquidacion.neto))}
               </Text>
-              <Text className="text-white/70 text-[10px]">
-                {tipoContrato === 'laboral' ? 'Neto del período' : 'Total del período'}
-              </Text>
+              <View className="flex-row items-center gap-1.5">
+                <Text className="text-white/70 text-[10px]">
+                  {tipoContrato === 'laboral' ? 'Neto del período' : 'Total del período'}
+                </Text>
+                {/* Con el período abierto el neto todavía cambia: no debe leerse como definitivo. */}
+                {periodo?.estado === 'abierto' && (
+                  <View className="bg-white/25 rounded-full px-1.5 py-0.5">
+                    <Text className="text-white text-[10px] font-bold">Estimado</Text>
+                  </View>
+                )}
+              </View>
             </>
           ) : (
             <>

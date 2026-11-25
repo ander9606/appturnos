@@ -2,16 +2,16 @@ import { SkeletonStats } from '@/shared/components/Skeleton';
 import { puedeGestionarNomina } from '../permisos';
 import { useState } from 'react';
 import { Download, Plus, Pencil, CalendarClock, BedDouble, ChevronDown, X, Users, Wallet, DollarSign, Landmark, AlertTriangle, Zap } from 'lucide-react';
-import { useCorregirRegistro, useDescartarSospechoso } from '../hooks/useNomina';
+import { useDescartarSospechoso } from '../hooks/useNomina';
 import type { EstadoPeriodo, Registro, DescuentoNomina, DescansoCompensatorio, LiquidacionData, LiquidacionLinea } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { StatCard } from '@/shared/components/StatCard';
 import { UbicacionLink } from '@/shared/components/UbicacionLink';
 import { fmtCOP, fmtHrs, fmtDiaSemana, fmtHora } from '@/shared/lib/format';
-import { TIPO_DIA_LABELS, TIPO_DESCUENTO_LABELS, ESTADO_DESCUENTO_BADGE } from '../constants';
+import { TIPO_DIA_LABELS, ESTADO_DESCUENTO_BADGE } from '../constants';
 import { AlmuerzoIndicator, ExtraIndicator } from './DiaIndicators';
-import { Renglon } from './Renglon';
-import { RECARGO_EXTRA_DIURNA, RECARGO_EXTRA_NOCTURNA } from '@/shared/laboral';
+import { PagoDesglose } from './PagoDesglose';
+import { MarcarCompensatorioModal } from './MarcarCompensatorioModal';
 
 export function LiquidacionTab({
   periodoEstado, liqData, loading, error, onRetry, registros, descuentos,
@@ -34,14 +34,7 @@ export function LiquidacionTab({
 }) {
   const [expandidosLiq, setExpandidosLiq] = useState<Set<number>>(new Set());
   const descartarSospechoso = useDescartarSospechoso();
-  const corregirTipoDia = useCorregirRegistro();
-
-  function marcarCompensatorio(r: Registro) {
-    const ok = window.confirm(
-      `¿Marcar el ${fmtDiaSemana(r.fecha)} de ${r.trabajador_nombre} ${r.trabajador_apellido} como su día de descanso compensatorio?`
-    );
-    if (ok) corregirTipoDia.mutate({ id: r.id, tipo_dia: 'compensatorio' });
-  }
+  const [marcando, setMarcando] = useState<Registro | null>(null);
 
   function toggleExpandidoLiq(trabajadorId: number) {
     setExpandidosLiq(prev => {
@@ -53,11 +46,6 @@ export function LiquidacionTab({
 
   return (
     <div>
-      {periodoEstado === 'abierto' && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-warning text-sm mb-4">
-          Estimado — el período sigue abierto, estos montos pueden cambiar hasta que se cierre.
-        </div>
-      )}
       {loading ? (
         <SkeletonStats />
       ) : error ? (
@@ -74,21 +62,17 @@ export function LiquidacionTab({
             );
             return (
               <div className={`grid gap-4 mb-6 ${esLaboral ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                <StatCard label="Trabajadores" value={trabajadores} icon={Users} />
+                {/* El neto es la cifra que se paga: va primero. Con el período abierto todavía cambia. */}
                 <StatCard
-                  label={esLaboral ? 'Total bruto' : 'Total a pagar'}
-                  value={fmtCOP(total_general)}
-                  icon={Wallet}
+                  label={esLaboral ? 'Total neto a pagar' : 'Total a pagar'}
+                  value={fmtCOP(esLaboral ? total_neto_general : total_general)}
+                  icon={DollarSign}
+                  color="success"
+                  badge={periodoEstado === 'abierto' ? 'Estimado' : undefined}
                   caption={totalExtraPeriodo > 0 ? `⚡ incluye ${fmtCOP(totalExtraPeriodo)} en horas extra` : undefined}
                 />
-                {esLaboral && (
-                  <StatCard
-                    label="Total neto (con descuentos)"
-                    value={fmtCOP(total_neto_general)}
-                    icon={DollarSign}
-                    color="success"
-                  />
-                )}
+                {esLaboral && <StatCard label="Total bruto" value={fmtCOP(total_general)} icon={Wallet} />}
+                <StatCard label="Trabajadores" value={trabajadores} icon={Users} />
               </div>
             );
           })()}
@@ -109,7 +93,6 @@ export function LiquidacionTab({
               const diasTrabajador = registros
                 .filter(r => r.trabajador_id === l.trabajador_id)
                 .sort((a, b) => a.fecha.localeCompare(b.fecha));
-              const esLaboral = liqData.tipo_contrato === 'laboral';
               const pagoExtra =
                 Number(l.pago_nocturno) + Number(l.pago_extra_diurno) +
                 Number(l.pago_extra_nocturno) + Number(l.pago_festivo);
@@ -151,57 +134,9 @@ export function LiquidacionTab({
 
                   {abierto && (
                     <div className="border-t border-border">
-                      {/* Recibo — salario base resaltado, luego recargos/extra desglosados, luego neto */}
-                      <div className="px-4 py-3 flex flex-col gap-3 text-sm">
-                        <div className="bg-muted/60 rounded-lg px-3 py-2.5">
-                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Salario base</p>
-                          <Renglon
-                            label={l.salario_base != null
-                              ? `${fmtCOP(l.salario_base)} ÷ 30 × ${l.dias_periodo} días (sueldo fijo, no depende de las horas)`
-                              : `${fmtHrs(l.horas_ordinarias)} h ordinarias × ${fmtCOP(l.valor_hora)}`}
-                            valor={fmtCOP(l.pago_ordinario)}
-                            fuerte
-                            grande
-                          />
-                        </div>
-
-                        {pagoExtra > 0 && (
-                          <div className="bg-warning-light rounded-lg px-3 py-2.5 flex flex-col gap-1.5">
-                            <p className="text-xs font-semibold text-warning uppercase tracking-wide mb-0.5 flex items-center gap-1">
-                              <Zap size={12} /> Horas extra y recargos
-                            </p>
-                            {Number(l.horas_nocturnas) > 0 && (
-                              <Renglon label={`${fmtHrs(l.horas_nocturnas)} h nocturnas × ${fmtCOP(l.valor_hora)} × ${l.recargo_nocturno}`} valor={fmtCOP(l.pago_nocturno)} />
-                            )}
-                            {Number(l.horas_extra_diurnas) > 0 && (
-                              <Renglon label={`${fmtHrs(l.horas_extra_diurnas)} h extra diurna × ${fmtCOP(l.valor_hora)} × ${RECARGO_EXTRA_DIURNA}`} valor={fmtCOP(l.pago_extra_diurno)} />
-                            )}
-                            {Number(l.horas_extra_nocturnas) > 0 && (
-                              <Renglon label={`${fmtHrs(l.horas_extra_nocturnas)} h extra nocturna × ${fmtCOP(l.valor_hora)} × ${RECARGO_EXTRA_NOCTURNA}`} valor={fmtCOP(l.pago_extra_nocturno)} />
-                            )}
-                            {Number(l.horas_festivo) > 0 && (
-                              <Renglon label={`${fmtHrs(l.horas_festivo)} h festivo/dominical × ${fmtCOP(l.valor_hora)} × ${l.recargo_festivo}`} valor={fmtCOP(l.pago_festivo)} />
-                            )}
-                            <div className="border-t border-warning/30 my-0.5" />
-                            <Renglon label="Subtotal extra" valor={fmtCOP(pagoExtra)} fuerte tono="warning" />
-                          </div>
-                        )}
-
-                        <Renglon label="Total bruto" valor={fmtCOP(l.total)} fuerte grande />
-                        {esLaboral && (
-                          <>
-                            <Renglon label="Salud" valor={`-${fmtCOP(l.descuento_salud)}`} tono="danger" />
-                            <Renglon label="Pensión" valor={`-${fmtCOP(l.descuento_pension)}`} tono="danger" />
-                          </>
-                        )}
-                        {l.otros_descuentos.map(d => (
-                          <Renglon key={d.id} label={d.motivo || TIPO_DESCUENTO_LABELS[d.tipo]} valor={`-${fmtCOP(d.monto)}`} tono="danger" />
-                        ))}
-                        {l.subsidio_transporte > 0 && (
-                          <Renglon label="Auxilio de transporte" valor={`+${fmtCOP(l.subsidio_transporte)}`} tono="success" />
-                        )}
-                        <div className="border-t border-border my-1" />
-                        <Renglon label="Total neto" valor={fmtCOP(l.neto)} fuerte tono="success" grande />
+                      {/* De dónde sale el pago: barra + conceptos + bruto → descuentos → neto */}
+                      <div className="px-4 py-3">
+                        <PagoDesglose linea={l} />
                       </div>
 
                       <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-t border-border bg-muted/40 text-xs flex-wrap">
@@ -307,8 +242,7 @@ export function LiquidacionTab({
                               )}
                               {puedeGestionarNomina() && r.tipo_dia !== 'compensatorio' && (
                                 <button
-                                  onClick={() => marcarCompensatorio(r)}
-                                  disabled={corregirTipoDia.isPending}
+                                  onClick={() => setMarcando(r)}
                                   className="text-muted-foreground/60 hover:text-info transition-colors disabled:opacity-50"
                                   aria-label="Marcar como compensatorio"
                                   title="Marcar como compensatorio"
@@ -328,6 +262,7 @@ export function LiquidacionTab({
           </div>
         </div>
       ) : null}
+      {marcando && <MarcarCompensatorioModal registro={marcando} onClose={() => setMarcando(null)} />}
     </div>
   );
 }
