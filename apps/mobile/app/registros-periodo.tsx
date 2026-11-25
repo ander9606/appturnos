@@ -6,7 +6,8 @@
  * registros nuevos para días sin marcaje.
  */
 import { Text } from '@/components/ui/Text';
-import { Spinner } from '@/components/ui/Spinner';
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import { View, SectionList, TouchableOpacity } from 'react-native';
@@ -23,10 +24,11 @@ import {
   aplicarCompensatorios,
   creditosDeCompensatorios,
   etiquetaPeriodo,
+  novedadesDeRegistros,
+  fmtFechaCorta,
 } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { SemanaRow } from '@/features/nomina/trabajador/components/ResumenCards';
 import { useHorasPreviasSemana } from '@/features/nomina/useHorasPreviasSemana';
-import { useTheme } from '@/lib/theme';
 import { bogotaToday } from '@/lib/formatters';
 import type { ResumenPeriodoNomina } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import type { RegistroDiario, DescansoCompensatorio } from '@api-client';
@@ -53,11 +55,14 @@ type Seccion = {
   /** Total de días del trabajador; `data` queda vacío si la sección está replegada. */
   totalDias:    number;
   resumen:      ResumenPeriodoNomina;
+  /** Lo que el gestor debe mirar de este trabajador. */
+  novedades:    Novedades;
   data:         RegistroDiario[];
 };
 
+interface Novedades { sinSalida: number; sospechosos: number; compPendientes: number }
+
 export default function RegistrosPeriodoScreen() {
-  const theme = useTheme();
   const { periodoId, trabajadorId, fechaInicio, fechaFin } = useLocalSearchParams<{
     periodoId: string; trabajadorId?: string; fechaInicio?: string; fechaFin?: string;
   }>();
@@ -82,6 +87,9 @@ export default function RegistrosPeriodoScreen() {
   const [viendoUbicacion, setViendoUbicacion] = useState<RegistroDiario | null>(null);
 
   const registros = React.useMemo(() => data?.data ?? [], [data]);
+  // La lista llega recortada por `limit`: si hay más, hay que decirlo (si no, parece que faltan días).
+  const totalRegistros = data?.pagination?.total ?? registros.length;
+  const recortado = totalRegistros > registros.length;
   // Si el período empezó a mitad de semana, las horas de esa semana en el período anterior cuentan para las 42 h.
   const previas = useHorasPreviasSemana(registros);
 
@@ -111,10 +119,20 @@ export default function RegistrosPeriodoScreen() {
       }
       map.get(r.trabajador_id)!.registros.push(r);
     }
+    const hoy = bogotaToday();
     return Array.from(map.values())
-      .sort((a, b) => a.nombre.localeCompare(b.nombre))
-      .map((g) => ({
+      .map((g) => {
+        const n = novedadesDeRegistros(g.registros, hoy);
+        const novedades: Novedades = {
+          ...n, compPendientes: compensatorios.filter((c) => c.trabajador_id === g.trabajadorId && c.estado === 'pendiente').length,
+        };
+        return { g, novedades, total: n.sinSalida + n.sospechosos + novedades.compPendientes };
+      })
+      // Quien tiene algo por revisar va primero; dentro de cada grupo, por nombre.
+      .sort((a, b) => b.total - a.total || a.g.nombre.localeCompare(b.g.nombre))
+      .map(({ g, novedades }) => ({
         ...g,
+        novedades,
         resumen: aplicarCompensatorios(
           aplicarHorasPrevias(calcularResumenPeriodo(g.registros, 0), previas.lunes, previas.porTrabajador.get(g.trabajadorId)),
           creditosDeCompensatorios(compensatorios, g.trabajadorId, bogotaToday()),
@@ -128,6 +146,7 @@ export default function RegistrosPeriodoScreen() {
         trabajadorId: g.trabajadorId,
         totalDias: g.registros.length,
         resumen: g.resumen,
+        novedades: g.novedades,
         data: desplegados.has(g.trabajadorId) ? g.registros : [],
       }));
   }, [grupos, desplegados]);
@@ -137,9 +156,9 @@ export default function RegistrosPeriodoScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['bottom']}>
+      <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         <Stack.Screen options={{ title: numTrabId ? 'Registros del trabajador' : 'Registros del equipo', headerShown: true }} />
-        <Spinner size="large" color={theme.primary} />
+        <SkeletonList style={{ paddingHorizontal: 20, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
@@ -169,19 +188,34 @@ export default function RegistrosPeriodoScreen() {
       <UbicacionMarcajeModal registro={viendoUbicacion} onClose={() => setViendoUbicacion(null)} />
 
       {sections.length === 0 ? (
-        <View className="flex-1 items-center justify-center gap-3 px-8">
-          <Ionicons name="calendar-outline" size={48} color={COLORS.placeholder} />
-          <Text className="text-base font-semibold text-foreground text-center">
-            Sin registros en este período
-          </Text>
-          <Text className="text-sm text-muted-foreground text-center">
-            Los trabajadores aún no han marcado jornadas en este período.
-          </Text>
-        </View>
+        <EmptyState
+          title="Sin registros en este período"
+          message="Los trabajadores aún no han marcado jornadas en este período."
+        />
       ) : (
         <SectionList
           sections={sections}
           keyExtractor={(item) => String(item.id)}
+          ListHeaderComponent={
+            <View className="gap-2 pt-3">
+              {fechaInicio && fechaFin && (
+                <View className="flex-row items-center gap-2">
+                  <Ionicons name="calendar-outline" size={14} color={COLORS.mutedForeground} />
+                  <Text className="text-xs text-muted-foreground">
+                    {etiquetaPeriodo(fechaInicio, fechaFin)} · {fmtFechaCorta(fechaInicio)} – {fmtFechaCorta(fechaFin)}
+                  </Text>
+                </View>
+              )}
+              {recortado && (
+                <View className="bg-warning-light rounded-xl px-3 py-2 flex-row items-center gap-2">
+                  <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
+                  <Text className="text-xs text-warning-dark flex-1">
+                    Se muestran {registros.length} de {totalRegistros} registros. Abre un trabajador para ver todos sus días.
+                  </Text>
+                </View>
+              )}
+            </View>
+          }
           renderItem={({ item }) => (
             <RegistroRow
               registro={item}
@@ -221,6 +255,7 @@ export default function RegistrosPeriodoScreen() {
                         {semanaActual && etiqueta !== 'Semana' ? `Semana: ${semanaActual.horasTotales.toFixed(1)}h · ` : ''}
                         {etiqueta}: {resumen.totalHoras.toFixed(1)}h
                       </Text>
+                      <NovedadesChips n={section.novedades} />
                     </View>
                     <Text className="text-xs text-emerald-700">· {section.totalDias} días</Text>
                     <Ionicons name={replegado ? 'chevron-down' : 'chevron-up'} size={16} color={COLORS.success} />
@@ -268,5 +303,31 @@ export default function RegistrosPeriodoScreen() {
         />
       )}
     </SafeAreaView>
+  );
+}
+
+// ── Qué debe mirar el gestor de este trabajador: ícono + número, sin frases ─────
+
+function NovedadesChips({ n }: { n: Novedades }) {
+  const items = [
+    { n: n.sinSalida,       icono: 'time-outline' as const,         color: COLORS.warning, etiqueta: 'días sin salida' },
+    { n: n.sospechosos,     icono: 'alert-circle-outline' as const, color: COLORS.danger,  etiqueta: 'marcajes sospechosos' },
+    { n: n.compPendientes,  icono: 'bed-outline' as const,          color: COLORS.info,    etiqueta: 'compensatorios pendientes' },
+  ].filter((i) => i.n > 0);
+  if (items.length === 0) return null;
+  return (
+    <View className="flex-row gap-1.5 mt-1">
+      {items.map((i) => (
+        <View
+          key={i.etiqueta}
+          accessible
+          accessibilityLabel={`${i.n} ${i.etiqueta}`}
+          className="flex-row items-center gap-0.5 bg-white/70 rounded-full px-1.5 py-0.5"
+        >
+          <Ionicons name={i.icono} size={12} color={i.color} />
+          <Text className="text-[10px] font-bold text-foreground">{i.n}</Text>
+        </View>
+      ))}
+    </View>
   );
 }

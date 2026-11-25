@@ -671,14 +671,37 @@ export function horaEntradaMostrada(r: RegistroDiario | null | undefined): strin
   return r?.hora_entrada_inicial ?? r?.hora_entrada ?? null;
 }
 
-export function fmtPeriodo(p: PeriodoNomina): string {
+export function fmtPeriodo(p: PeriodoNomina, conAnio = false): string {
   const [, ms, ds] = p.fecha_inicio.split('-');
-  const [, me, de] = p.fecha_fin.split('-');
+  const [ye, me, de] = p.fecha_fin.split('-');
   const mi = Number(ms) - 1;
   const mf = Number(me) - 1;
-  return mi === mf
+  const rango = mi === mf
     ? `${Number(ds)}–${Number(de)} ${SHORT_MONTHS[mi]}`
     : `${Number(ds)} ${SHORT_MONTHS[mi]} – ${Number(de)} ${SHORT_MONTHS[mf]}`;
+  return conAnio ? `${rango} ${ye}` : rango;
+}
+
+/** true si los períodos caen en más de un año: ahí "1–15 Jun" es ambiguo y hay que mostrar el año. */
+export function abarcanVariosAnios(periodos: readonly Pick<PeriodoNomina, 'fecha_fin'>[]): boolean {
+  return new Set(periodos.map((p) => p.fecha_fin.slice(0, 4))).size > 1;
+}
+
+/**
+ * Lo que un gestor debe mirar de un trabajador en un período: días pasados con entrada y sin salida (olvidó marcar)
+ * y marcajes sospechosos. Un turno de hoy sin salida es un turno en curso, no una novedad.
+ */
+export function novedadesDeRegistros(
+  registros: readonly Pick<RegistroDiario, 'fecha' | 'hora_entrada' | 'hora_salida' | 'sospechoso'>[],
+  hoyISO: string,
+): { sinSalida: number; sospechosos: number } {
+  let sinSalida = 0;
+  let sospechosos = 0;
+  for (const r of registros) {
+    if (r.hora_entrada && !r.hora_salida && r.fecha < hoyISO) sinSalida++;
+    if (r.sospechoso === 1) sospechosos++;
+  }
+  return { sinSalida, sospechosos };
 }
 
 export function fmtFechaCorta(iso: string): string {

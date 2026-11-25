@@ -1,4 +1,4 @@
-import { ayerDe, calcularElapsedLabel, calcularElapsedMinutes, encontrarRegistroActivo, etiquetaPeriodo, getJornadaLegalSemanal, tramoSemanaPrevia, aplicarHorasPrevias, calcularResumenPeriodo, sumarHoras, estimarExtraSemanaCOP, tramosSemana, fmtRangoDias, aplicarCompensatorios, creditosDeCompensatorios, diasSemanaEnPeriodo, tramosContiguos, agruparRegistrosPorSemana } from '../features/nomina/trabajador/nominaTrabajadorUtils';
+import { ayerDe, calcularElapsedLabel, calcularElapsedMinutes, encontrarRegistroActivo, etiquetaPeriodo, getJornadaLegalSemanal, tramoSemanaPrevia, aplicarHorasPrevias, calcularResumenPeriodo, sumarHoras, estimarExtraSemanaCOP, tramosSemana, fmtRangoDias, aplicarCompensatorios, creditosDeCompensatorios, diasSemanaEnPeriodo, tramosContiguos, agruparRegistrosPorSemana, fmtPeriodo, abarcanVariosAnios, novedadesDeRegistros } from '../features/nomina/trabajador/nominaTrabajadorUtils';
 
 describe('getJornadaLegalSemanal', () => {
   it('2026 en adelante → 42h (tope final de la Ley 2101, coincide con el backend)', () => {
@@ -175,6 +175,35 @@ describe('diasSemanaEnPeriodo / tramosContiguos / agruparRegistrosPorSemana', ()
     const g = agruparRegistrosPorSemana([r('2026-11-12'), r('2026-11-10'), r('2026-11-05'), r('2026-11-03')]);
     expect(g.map((x) => [x.lunes, x.data.length])).toEqual([['2026-11-09', 2], ['2026-11-02', 2]]);
     expect(agruparRegistrosPorSemana([])).toEqual([]);
+  });
+});
+
+// Selector de período (año cuando hace falta) y novedades del equipo.
+describe('fmtPeriodo / abarcanVariosAnios / novedadesDeRegistros', () => {
+  const per = (fecha_inicio: string, fecha_fin: string) => ({ fecha_inicio, fecha_fin }) as never;
+
+  it('fmtPeriodo agrega el año solo si se pide', () => {
+    expect(fmtPeriodo(per('2026-11-16', '2026-11-30'))).toBe('16–30 Nov');
+    expect(fmtPeriodo(per('2026-11-16', '2026-11-30'), true)).toBe('16–30 Nov 2026');
+    expect(fmtPeriodo(per('2026-12-16', '2027-01-15'), true)).toBe('16 Dic – 15 Ene 2027');
+  });
+
+  it('abarcanVariosAnios', () => {
+    expect(abarcanVariosAnios([per('2026-11-01', '2026-11-15'), per('2026-10-16', '2026-10-31')])).toBe(false);
+    expect(abarcanVariosAnios([per('2027-01-01', '2027-01-15'), per('2026-12-16', '2026-12-31')])).toBe(true);
+  });
+
+  it('novedades: días pasados sin salida y sospechosos; el turno de hoy en curso no cuenta', () => {
+    const r = (fecha: string, hora_entrada: string | null, hora_salida: string | null, sospechoso: 0 | 1 = 0) =>
+      ({ fecha, hora_entrada, hora_salida, sospechoso });
+    const n = novedadesDeRegistros([
+      r('2026-11-20', '08:00:00', null),            // olvidó marcar salida
+      r('2026-11-21', '08:00:00', '16:00:00', 1),   // sospechoso
+      r('2026-11-22', '08:00:00', '16:00:00'),      // normal
+      r('2026-11-25', '08:00:00', null),            // hoy, en curso
+      r('2026-11-23', null, null),                  // descanso, sin entrada
+    ], '2026-11-25');
+    expect(n).toEqual({ sinSalida: 1, sospechosos: 1 });
   });
 });
 

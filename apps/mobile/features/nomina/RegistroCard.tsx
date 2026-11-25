@@ -157,7 +157,7 @@ export function RegistroCard({ registro, valorHora = 0, periodoInicio }: Registr
         <View className="items-end gap-1 min-w-[64px]">
           {analisis.valorExtraCOP > 0 ? (
             <>
-              <Text className="text-xs text-muted-foreground">adicional</Text>
+              <Text className="text-xs text-muted-foreground">estimado</Text>
               <Text className="text-sm font-bold text-success">
                 +{formatCOP(analisis.valorExtraCOP)}
               </Text>

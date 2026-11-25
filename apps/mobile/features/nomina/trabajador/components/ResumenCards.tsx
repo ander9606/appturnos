@@ -11,7 +11,7 @@
 
 import { Text } from '@/components/ui/Text';
 import React, { useEffect, useState } from 'react';
-import { View, TouchableOpacity, ScrollView } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { formatCOP } from '@/lib/formatters';
 import { COLORS, HOUR_TYPE_COLORS } from '@/lib/designTokens';
@@ -19,8 +19,8 @@ import { Badge } from '@/components/ui/Badge';
 import { MarcaPeriodoAnterior } from './MarcaPeriodoAnterior';
 import { FranjaSemana } from './FranjaSemana';
 import { PagoDesglose } from '../../PagoDesglose';
+import { PeriodoSelector } from '../../PeriodoSelector';
 import {
-  fmtPeriodo,
   estimarExtraSemanaCOP,
   tramosSemana,
   fmtRangoDias,
@@ -251,30 +251,9 @@ export function ResumenCards({
         </TouchableOpacity>
       )}
 
-      {/* ── Selector de período ───────────────────────────── */}
+      {/* ── Selector de período (el mismo de las vistas del gestor) ── */}
       {periodos.length > 1 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View className="flex-row gap-2 py-0.5">
-            {periodos.map((p) => (
-              <TouchableOpacity
-                key={p.id}
-                onPress={() => onSeleccionarPeriodo(p.id)}
-                className={[
-                  'px-3 py-1.5 rounded-full border',
-                  p.id === periodoActivoId
-                    ? 'bg-foreground border-foreground'
-                    : 'bg-card border-border',
-                ].join(' ')}
-              >
-                <Text className={`text-xs font-medium ${
-                  p.id === periodoActivoId ? 'text-white' : 'text-foreground'
-                }`}>
-                  {fmtPeriodo(p)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </ScrollView>
+        <PeriodoSelector periodos={periodos} activeId={periodoActivoId} onSelect={onSeleccionarPeriodo} />
       )}
     </View>
   );
