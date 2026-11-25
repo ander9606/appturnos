@@ -381,7 +381,7 @@ export interface CreditoCompensatorio { fecha_asignada: string; origen_fecha: st
  * habitual > 0 y ya llegados (`fecha_asignada <= hastaISO`).
  */
 export function creditosDeCompensatorios(
-  compensatorios: ReadonlyArray<Pick<DescansoCompensatorio, 'trabajador_id' | 'estado' | 'fecha_asignada' | 'origen_fecha' | 'horas_festivo_origen'>>,
+  compensatorios: readonly Pick<DescansoCompensatorio, 'trabajador_id' | 'estado' | 'fecha_asignada' | 'origen_fecha' | 'horas_festivo_origen'>[],
   trabajadorId: number | undefined,
   hastaISO: string,
 ): CreditoCompensatorio[] {

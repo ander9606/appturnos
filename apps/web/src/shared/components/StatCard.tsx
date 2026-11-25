@@ -7,7 +7,7 @@ const ICON_BG: Record<StatColor, string> = {
 };
 
 export function StatCard({
-  label, value, icon: Icon, color = 'default', valueSmall, onClick, caption,
+  label, value, icon: Icon, color = 'default', valueSmall, onClick, caption, badge,
 }: {
   label: string;
   value: number | string;
@@ -17,6 +17,8 @@ export function StatCard({
   onClick?: () => void;
   /** Línea pequeña bajo el label — ej. "incluye $X en horas extra". */
   caption?: string;
+  /** Pastilla junto al label — ej. "Estimado" mientras el período sigue abierto. */
+  badge?: string;
 }) {
   const Wrapper = onClick ? 'button' : 'div';
   return (
@@ -28,7 +30,10 @@ export function StatCard({
         <Icon size={18} />
       </div>
       <p className={`font-bold text-foreground mb-0.5 ${valueSmall ? 'text-sm' : 'text-2xl'}`}>{value}</p>
-      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-xs text-muted-foreground">
+        {label}
+        {badge && <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-warning-light text-warning-text">{badge}</span>}
+      </p>
       {caption && <p className="text-xs text-warning font-medium mt-1">{caption}</p>}
     </Wrapper>
   );

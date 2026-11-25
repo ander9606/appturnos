@@ -7,11 +7,11 @@ import {
 import type { EstadoPeriodo, Registro, DescuentoNomina, DescansoCompensatorio } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { fmtPeriodo } from '@/shared/lib/format';
-import { ESTADO_BADGE } from '../constants';
 import { tramoSemanaPrevia, horasDeRegistro } from '../utils';
 import { PendientesCompensatoriosBanner } from '../components/PendientesCompensatoriosBanner';
 import { RegistrosTab } from '../components/RegistrosTab';
 import { LiquidacionTab } from '../components/LiquidacionTab';
+import { PeriodoPasos } from '../components/PeriodoPasos';
 import { CorregirModal } from '../components/CorregirModal';
 import { CrearRegistroModal } from '../components/CrearRegistroModal';
 import { DescuentoModal } from '../components/DescuentoModal';
@@ -122,9 +122,7 @@ export function PeriodoDetailPage() {
             <p className="text-xs text-muted-foreground mb-0.5">Período</p>
             <p className="font-semibold text-foreground">{fmtPeriodo(periodo.fecha_inicio, periodo.fecha_fin)}</p>
           </div>
-          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_BADGE[periodo.estado as EstadoPeriodo]}`}>
-            {periodo.estado.charAt(0).toUpperCase() + periodo.estado.slice(1)}
-          </span>
+          <PeriodoPasos estado={periodo.estado as EstadoPeriodo} />
         </div>
       )}
 

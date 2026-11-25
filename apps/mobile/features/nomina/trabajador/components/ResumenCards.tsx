@@ -17,6 +17,7 @@ import { formatCOP } from '@/lib/formatters';
 import { COLORS, HOUR_TYPE_COLORS } from '@/lib/designTokens';
 import { Badge } from '@/components/ui/Badge';
 import { MarcaPeriodoAnterior } from './MarcaPeriodoAnterior';
+import { PagoDesglose } from '../../PagoDesglose';
 import {
   fmtPeriodo,
   getJornadaLegalSemanal,
@@ -24,7 +25,6 @@ import {
   tramosSemana,
   fmtRangoDias,
   fmtFechaCorta,
-  RECARGO_EXTRA,
   type ResumenPeriodoNomina,
   type ResumenSemana,
 } from '../nominaTrabajadorUtils';
@@ -74,8 +74,7 @@ export function ResumenCards({
     if (pendientes.length > 0) setExpandedPago(true);
   }, [pendientes.length]);
 
-  const tieneDeduccionLegal = tipoContrato === 'laboral' && miLiquidacion && miLiquidacion.neto !== miLiquidacion.total;
-  const tieneDescuentos = tieneDeduccionLegal || pendientes.length > 0 || rechazados.length > 0;
+  const tieneDescuentos = pendientes.length > 0 || rechazados.length > 0;
 
   // Misma fuente de verdad que ve el gestor — reemplaza el estimado del cliente
   // (resumen.valorExtraCOP, fórmula distinta) apenas llega la liquidación real.
@@ -105,6 +104,17 @@ export function ResumenCards({
         />
       </View>
 
+      {/* ── Tu pago del período: de dónde sale, siempre visible cuando hay liquidación ── */}
+      {miLiquidacion && (
+        <View className="bg-card border border-border rounded-2xl px-4 py-4 gap-3">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-sm font-semibold text-foreground">Tu pago del período</Text>
+            {periodoActivo?.estado === 'abierto' && <Badge label="Estimado" variant="warning" size="sm" />}
+          </View>
+          <PagoDesglose linea={miLiquidacion} />
+        </View>
+      )}
+
       {/* ── Detalle de pago — colapsado, solo si hay algo que explicar ── */}
       {tieneDescuentos && (
         <TouchableOpacity
@@ -115,7 +125,7 @@ export function ResumenCards({
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-2">
               {pendientes.length > 0 && <View className="w-2 h-2 rounded-full bg-warning" />}
-              <Text className="text-sm font-semibold text-foreground">Detalle de pago</Text>
+              <Text className="text-sm font-semibold text-foreground">Descuentos</Text>
             </View>
             <Ionicons name={expandedPago ? 'chevron-up' : 'chevron-down'} size={16} color={COLORS.mutedForeground} />
           </View>
@@ -128,42 +138,9 @@ export function ResumenCards({
 
           {expandedPago && (
             <View className="gap-3 mt-3">
-              {miLiquidacion && tieneDeduccionLegal && (
-                <View className="gap-1.5">
-                  <View className="flex-row items-center justify-between">
-                    <Text className="text-xs text-muted-foreground">Bruto</Text>
-                    <Text className="text-xs font-medium text-foreground">{formatCOP(miLiquidacion.total)}</Text>
-                  </View>
-                  <View className="flex-row items-center justify-between">
-                    <Text className="text-xs text-muted-foreground">Salud (4%)</Text>
-                    <Text className="text-xs font-medium text-danger">-{formatCOP(miLiquidacion.descuento_salud)}</Text>
-                  </View>
-                  <View className="flex-row items-center justify-between">
-                    <Text className="text-xs text-muted-foreground">Pensión</Text>
-                    <Text className="text-xs font-medium text-danger">-{formatCOP(miLiquidacion.descuento_pension)}</Text>
-                  </View>
-                  {miLiquidacion.otros_descuentos.map((d) => (
-                    <View key={d.id} className="flex-row items-center justify-between">
-                      <Text className="text-xs text-muted-foreground">{TIPO_DESCUENTO_LABELS[d.tipo]} · {d.motivo}</Text>
-                      <Text className="text-xs font-medium text-danger">-{formatCOP(d.monto)}</Text>
-                    </View>
-                  ))}
-                  {miLiquidacion.subsidio_transporte > 0 && (
-                    <View className="flex-row items-center justify-between">
-                      <Text className="text-xs text-muted-foreground">Auxilio de transporte</Text>
-                      <Text className="text-xs font-medium text-success">+{formatCOP(miLiquidacion.subsidio_transporte)}</Text>
-                    </View>
-                  )}
-                  <View className="flex-row items-center justify-between pt-1.5 mt-0.5 border-t border-border">
-                    <Text className="text-xs font-semibold text-foreground">Neto</Text>
-                    <Text className="text-xs font-bold text-success">{formatCOP(miLiquidacion.neto)}</Text>
-                  </View>
-                </View>
-              )}
-
               {pendientes.length > 0 && (
-                <View className="gap-2 pt-1 border-t border-border">
-                  <Text className="text-xs font-semibold text-foreground mt-2">Por tu aceptación</Text>
+                <View className="gap-2">
+                  <Text className="text-xs font-semibold text-foreground">Por tu aceptación</Text>
                   {pendientes.map((d) => (
                     <View key={d.id} className="flex-row items-center justify-between">
                       <Text className="text-xs text-muted-foreground flex-1">
@@ -256,53 +233,6 @@ export function ResumenCards({
                 </View>
               )}
 
-              {/* Salario base resaltado — para que quede claro qué es fijo y qué es extra */}
-              {miLiquidacion && Number(miLiquidacion.pago_ordinario) > 0 && (
-                <View className="bg-muted rounded-xl px-3 py-3">
-                  <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                    Salario base
-                  </Text>
-                  <View className="flex-row items-center justify-between gap-2">
-                    <Text className="text-xs text-muted-foreground flex-1">
-                      {miLiquidacion.salario_base != null
-                        ? `${formatCOP(miLiquidacion.salario_base)} ÷ 30 × ${miLiquidacion.dias_periodo} días`
-                        : `${Number(miLiquidacion.horas_ordinarias).toFixed(1)}h ordinarias × ${formatCOP(miLiquidacion.valor_hora)}`}
-                    </Text>
-                    <Text className="text-base font-bold text-foreground">
-                      {formatCOP(miLiquidacion.pago_ordinario)}
-                    </Text>
-                  </View>
-                </View>
-              )}
-
-              {/* Horas con recargo por tipo — en pesos cuando ya llegó la liquidación real */}
-              {tieneExtras && (
-                miLiquidacion ? (
-                  <View className="bg-warning-light rounded-xl px-3 py-3 gap-1.5">
-                    <Text className="text-xs font-semibold text-warning uppercase tracking-wide">
-                      ⚡ Horas extra y recargos
-                    </Text>
-                    {Number(miLiquidacion.horas_nocturnas) > 0 && (
-                      <FilaConcepto label={`${Number(miLiquidacion.horas_nocturnas).toFixed(1)}h nocturnas × ${formatCOP(miLiquidacion.valor_hora)} × ${miLiquidacion.recargo_nocturno}`} valor={Number(miLiquidacion.pago_nocturno)} />
-                    )}
-                    {Number(miLiquidacion.horas_extra_diurnas) > 0 && (
-                      <FilaConcepto label={`${Number(miLiquidacion.horas_extra_diurnas).toFixed(1)}h extra diurna × ${formatCOP(miLiquidacion.valor_hora)} × ${RECARGO_EXTRA.EXTRA_DIURNA}`} valor={Number(miLiquidacion.pago_extra_diurno)} />
-                    )}
-                    {Number(miLiquidacion.horas_extra_nocturnas) > 0 && (
-                      <FilaConcepto label={`${Number(miLiquidacion.horas_extra_nocturnas).toFixed(1)}h extra nocturna × ${formatCOP(miLiquidacion.valor_hora)} × ${RECARGO_EXTRA.EXTRA_NOCTURNA}`} valor={Number(miLiquidacion.pago_extra_nocturno)} />
-                    )}
-                    {Number(miLiquidacion.horas_festivo) > 0 && (
-                      <FilaConcepto label={`${Number(miLiquidacion.horas_festivo).toFixed(1)}h festivo/dominical × ${formatCOP(miLiquidacion.valor_hora)} × ${miLiquidacion.recargo_festivo}`} valor={Number(miLiquidacion.pago_festivo)} />
-                    )}
-                    <View className="border-t border-warning/30 my-0.5" />
-                    <View className="flex-row items-center justify-between">
-                      <Text className="text-xs font-semibold text-warning">Subtotal extra</Text>
-                      <Text className="text-sm font-bold text-warning">+{formatCOP(pagoExtraPeriodo)}</Text>
-                    </View>
-                  </View>
-                ) : null
-              )}
-
               {!miLiquidacion && tieneExtras && (
                   <View className="bg-primary-50 rounded-xl px-3 py-3 gap-1.5">
                     <Text className="text-xs font-semibold text-primary-600">
@@ -376,15 +306,6 @@ function StatCard({ label, value, valueClass }: { label: string; value: string; 
     >
       <Text className={`text-base font-extrabold ${valueClass}`}>{value}</Text>
       <Text className="text-[10px] text-muted-foreground">{label}</Text>
-    </View>
-  );
-}
-
-function FilaConcepto({ label, valor }: { label: string; valor: number }) {
-  return (
-    <View className="flex-row items-center justify-between gap-2">
-      <Text className="text-xs text-amber-700 flex-1">{label}</Text>
-      <Text className="text-xs font-semibold text-amber-700">{formatCOP(valor)}</Text>
     </View>
   );
 }

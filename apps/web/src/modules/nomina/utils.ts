@@ -1,5 +1,7 @@
-import type { Registro, DescansoCompensatorio } from './types';
-import { JORNADA_SEMANAL_HORAS } from '@/shared/laboral';
+import type { Registro, DescansoCompensatorio, LiquidacionLinea } from './types';
+import { fmtCOP } from '@/shared/lib/format';
+import { TIPO_DESCUENTO_LABELS } from './constants';
+import { JORNADA_SEMANAL_HORAS, RECARGO_EXTRA_DIURNA, RECARGO_EXTRA_NOCTURNA } from '@/shared/laboral';
 
 // Espejo de JORNADA_CONTINUA_UMBRAL_HORAS en backend/config/constants.js.
 const UMBRAL_JORNADA_CONTINUA_MIN = 6 * 60;
@@ -280,4 +282,59 @@ export function explicarHorasExtra(r: Registro): ExplicacionHorasExtra | null {
     topeSemanal: JORNADA_SEMANAL_HORAS,
     lunesSemana: lunesDeSemana(r.fecha),
   };
+}
+
+// ── Desglose del pago (espejo de mobile: features/nomina/pagoDesglose.ts) ───────────────
+
+export type ClaveConcepto = 'base' | 'nocturno' | 'extraDiurna' | 'extraNocturna' | 'festivo';
+export interface ConceptoPago { clave: ClaveConcepto; label: string; monto: number; formula: string }
+export interface DescuentoPago { clave: string; label: string; monto: number }
+export interface DesglosePago {
+  /** Lo que suma el bruto; solo los conceptos con monto > 0 (la base siempre va). */
+  conceptos: ConceptoPago[];
+  bruto: number;
+  descuentos: DescuentoPago[];
+  /** El auxilio de transporte se suma al neto, NO al bruto (no es base de aportes). */
+  auxilio: number;
+  neto: number;
+}
+
+const hrs = (n: number) => `${Number(n).toFixed(1).replace('.', ',')}h`;
+/** Factor con coma decimal: 1.9 → "1,9". */
+const factor = (n: number) => String(Number(n)).replace('.', ',');
+
+/**
+ * Convierte una línea de la liquidación en lo que se dibuja. Lee los montos de la liquidación (la misma que ve el
+ * trabajador): no recalcula nada, así la pantalla no puede diverger de lo que se paga.
+ */
+export function desglosePago(l: LiquidacionLinea): DesglosePago {
+  const vh = fmtCOP(Number(l.valor_hora));
+  const conceptos: ConceptoPago[] = [
+    {
+      clave: 'base',
+      label: l.salario_base != null ? 'Salario base' : `Horas ordinarias · ${hrs(l.horas_ordinarias)}`,
+      monto: Number(l.pago_ordinario),
+      formula: l.salario_base != null
+        ? `${fmtCOP(Number(l.salario_base))} ÷ 30 × ${l.dias_periodo} días (no depende de las horas)`
+        : `${hrs(l.horas_ordinarias)} × ${vh}`,
+    },
+    { clave: 'nocturno', label: `Recargo nocturno · ${hrs(l.horas_nocturnas)}`, monto: Number(l.pago_nocturno),
+      formula: `${hrs(l.horas_nocturnas)} × ${vh} × ${factor(l.recargo_nocturno)}` },
+    { clave: 'extraDiurna', label: `Extra diurna · ${hrs(l.horas_extra_diurnas)}`, monto: Number(l.pago_extra_diurno),
+      formula: `${hrs(l.horas_extra_diurnas)} × ${vh} × ${factor(RECARGO_EXTRA_DIURNA)}` },
+    { clave: 'extraNocturna', label: `Extra nocturna · ${hrs(l.horas_extra_nocturnas)}`, monto: Number(l.pago_extra_nocturno),
+      formula: `${hrs(l.horas_extra_nocturnas)} × ${vh} × ${factor(RECARGO_EXTRA_NOCTURNA)}` },
+    { clave: 'festivo', label: `Festivo y dominical · ${hrs(l.horas_festivo)}`, monto: Number(l.pago_festivo),
+      formula: `${hrs(l.horas_festivo)} × ${vh} × ${factor(l.recargo_festivo)}` },
+  ].filter(c => c.clave === 'base' || c.monto > 0) as ConceptoPago[];
+
+  const descuentos: DescuentoPago[] = [
+    { clave: 'salud', label: 'Salud (4%)', monto: Number(l.descuento_salud) },
+    { clave: 'pension', label: 'Pensión', monto: Number(l.descuento_pension) },
+    ...l.otros_descuentos.map(d => ({
+      clave: `d${d.id}`, label: d.motivo ? `${TIPO_DESCUENTO_LABELS[d.tipo]} · ${d.motivo}` : TIPO_DESCUENTO_LABELS[d.tipo], monto: Number(d.monto),
+    })),
+  ].filter(d => d.monto > 0);
+
+  return { conceptos, bruto: Number(l.total), descuentos, auxilio: Number(l.subsidio_transporte), neto: Number(l.neto) };
 }
