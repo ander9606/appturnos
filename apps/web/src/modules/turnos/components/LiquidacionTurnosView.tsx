@@ -302,18 +302,19 @@ export function LiquidacionTurnosView() {
                           <ChevronDown size={16} className={`text-muted-foreground transition-transform ${abierto ? 'rotate-180' : ''}`} />
                         </span>
                       </button>
-                      {w.cuenta_cobro_id != null && (
+                      {w.cuentas_cobro.map(c => (
                         <button
-                          onClick={() => handleDescargarCuentaCobro(w.cuenta_cobro_id!)}
-                          disabled={descargandoCuenta === w.cuenta_cobro_id}
-                          title="Descargar cuenta de cobro del ciclo"
+                          key={c.id}
+                          onClick={() => handleDescargarCuentaCobro(c.id)}
+                          disabled={descargandoCuenta === c.id}
+                          title={`Descargar cuenta de cobro ${c.secuencia === 1 ? 'original' : `complementaria ${c.secuencia}`} (${fmtCOP(c.valor_total)})`}
                           className="flex-shrink-0 p-2 rounded-lg text-primary hover:bg-primary-100 disabled:opacity-60 transition-colors"
                         >
-                          {descargandoCuenta === w.cuenta_cobro_id
+                          {descargandoCuenta === c.id
                             ? <Spinner size={14} />
                             : <Download size={14} />}
                         </button>
-                      )}
+                      ))}
                     </div>
                     {abierto && (
                       <div className="border-t border-border">

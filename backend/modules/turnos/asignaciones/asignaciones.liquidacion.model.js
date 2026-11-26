@@ -2,6 +2,18 @@
 
 const { pool } = require('../../../config/database');
 
+/** JSON_ARRAYAGG llega como string (o ya parseado si el driver lo hace); sin filas da NULL. */
+function parseCuentasCobro(json) {
+  if (!json) return [];
+  const cuentas = typeof json === 'string' ? JSON.parse(json) : json;
+  return cuentas.map((c) => ({
+    id: c.id,
+    secuencia: c.secuencia,
+    valor_total: Number(c.valor_total),
+    firmado_trabajador: Boolean(c.firmado_trabajador),
+  }));
+}
+
 /**
  * Avance de cada grupo respecto al rango liquidado: cuántos turnos tiene en total (sin los cancelados), cuántos caen
  * dentro del rango, cuántos quedan para después y la fecha del siguiente. Así la cuenta de cobro puede decir
@@ -70,10 +82,17 @@ module.exports = {
                    WHERE d.asignacion_id = a.id AND d.estado = 'aceptado'), 0) AS descuento_monto,
          (SELECT GROUP_CONCAT(d.motivo SEPARATOR ' · ') FROM descuentos_turno d
           WHERE d.asignacion_id = a.id AND d.estado = 'aceptado') AS descuento_motivo,
-         (SELECT cc.id FROM cuentas_cobro cc
-          WHERE cc.empresa_id = a.empresa_id AND cc.trabajador_id = a.trabajador_id
-            AND cc.fecha_inicio = ? AND cc.fecha_fin = ?
-          ORDER BY cc.secuencia DESC LIMIT 1) AS cuenta_cobro_id,
+         -- Todas las cuentas del rango (original + complementarias), no solo la última:
+         -- un trabajador con 2+ cuentas (p. ej. un ajuste tras un bono tardío) necesita
+         -- que el gestor pueda descargar y pagar cada una, no solo la más reciente.
+         (SELECT JSON_ARRAYAGG(JSON_OBJECT('id', x.id, 'secuencia', x.secuencia,
+                                            'valor_total', x.valor_total,
+                                            'firmado_trabajador', x.firmado_trabajador))
+          FROM (SELECT cc.id, cc.secuencia, cc.valor_total, cc.firmado_trabajador
+                FROM cuentas_cobro cc
+                WHERE cc.empresa_id = a.empresa_id AND cc.trabajador_id = a.trabajador_id
+                  AND cc.fecha_inicio = ? AND cc.fecha_fin = ?
+                ORDER BY cc.secuencia) x) AS cuentas_cobro_json,
          a.hora_ingreso_real,
          a.hora_egreso_real,
          o.id          AS oferta_id,
@@ -124,7 +143,7 @@ module.exports = {
           ranking:            row.ranking ? Number(row.ranking) : null,
           total_calificaciones: row.total_calificaciones,
           // Igual para todas las filas de este trabajador (depende solo del rango pedido, no del turno).
-          cuenta_cobro_id:    row.cuenta_cobro_id ?? null,
+          cuentas_cobro:      parseCuentasCobro(row.cuentas_cobro_json),
           total_turnos:       0,
           total_horas:        0,
           pago_base:          0,
