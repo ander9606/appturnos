@@ -133,19 +133,22 @@ export function LiquidacionRow({
         </View>
       </View>
 
-      {/* ── Composición — siempre visible, no hace falta expandir ── */}
-      <View className="px-4 pb-3 -mt-1">
-        <CompositionBar
-          height={6}
-          segments={[
-            { value: linea.horas_ordinarias,      color: HOUR_TYPE_COLORS.ordinarias },
-            { value: linea.horas_extra_nocturnas, color: HOUR_TYPE_COLORS.extraNocturna },
-            { value: linea.horas_extra_diurnas,   color: HOUR_TYPE_COLORS.extraDiurna },
-            { value: linea.horas_nocturnas,       color: HOUR_TYPE_COLORS.nocturna },
-            { value: linea.horas_festivo,         color: HOUR_TYPE_COLORS.festivo },
-          ]}
-        />
-      </View>
+      {/* ── Composición en horas — solo con la fila plegada: al desplegar, la barra en pesos del desglose
+          cuenta la misma historia y dos barras seguidas eran una redundancia. ── */}
+      {!expanded && (
+        <View className="px-4 pb-3 -mt-1">
+          <CompositionBar
+            height={6}
+            segments={[
+              { value: linea.horas_ordinarias,      color: HOUR_TYPE_COLORS.ordinarias },
+              { value: linea.horas_extra_nocturnas, color: HOUR_TYPE_COLORS.extraNocturna },
+              { value: linea.horas_extra_diurnas,   color: HOUR_TYPE_COLORS.extraDiurna },
+              { value: linea.horas_nocturnas,       color: HOUR_TYPE_COLORS.nocturna },
+              { value: linea.horas_festivo,         color: HOUR_TYPE_COLORS.festivo },
+            ]}
+          />
+        </View>
+      )}
 
       {/* ── Expanded: de dónde sale el pago ─────────────────── */}
       {expanded && (
