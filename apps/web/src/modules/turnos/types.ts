@@ -145,8 +145,8 @@ export interface LiquidacionTurnosTrabajador {
   turnos_pendientes_firma: number;
   /** Turnos en espera de que el trabajador autorice una compensación: no suman ni restan en los totales. */
   turnos_pendientes_autorizacion?: number;
-  /** Cuenta de cobro ya generada para este rango exacto (fecha_inicio/fecha_fin) — null si el rango no coincide con un ciclo generado. */
-  cuenta_cobro_id: number | null;
+  /** Cuentas de cobro ya generadas para este rango exacto (original + complementarias, en orden) — vacío si el rango no coincide con un ciclo generado. */
+  cuentas_cobro: { id: number; secuencia: number; valor_total: number; firmado_trabajador: boolean }[];
   turnos: LiquidacionTurno[];
 }
 
