@@ -64,7 +64,7 @@ export function NominaPage() {
         {puedeGestionarNomina() && vista === 'periodos' && (
           <button
             onClick={() => setShowModal(true)}
-            className="flex items-center gap-1.5 bg-success hover:bg-success-600 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 bg-success-600 hover:bg-success-text text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors"
           >
             <Plus size={16} /> Nuevo período
           </button>
@@ -82,7 +82,7 @@ export function NominaPage() {
             onClick={() => setVista(t.value)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               vista === t.value
-                ? 'border-success text-success'
+                ? 'border-success-600 text-success-600'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -104,7 +104,7 @@ export function NominaPage() {
             onClick={() => setFiltroEstado(t.value)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               filtroEstado === t.value
-                ? 'border-success text-success'
+                ? 'border-success-600 text-success-600'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -202,7 +202,7 @@ export function NominaPage() {
                       )}
                       <button
                         onClick={() => navigate(`/nomina/${p.id}`)}
-                        className="flex items-center gap-1 text-xs text-success hover:text-success-600 font-medium px-2 py-1 rounded-lg hover:bg-success-light transition-colors"
+                        className="flex items-center gap-1 text-xs text-success-600 hover:text-success-text font-medium px-2 py-1 rounded-lg hover:bg-success-light transition-colors"
                       >
                         Ver <ChevronRight size={14} />
                       </button>
@@ -292,7 +292,7 @@ function NuevoPeriodoModal({ onClose }: { onClose: () => void }) {
           <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
             Cancelar
           </button>
-          <button type="submit" disabled={crear.isPending} className="flex-1 bg-success hover:bg-success-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+          <button type="submit" disabled={crear.isPending} className="flex-1 bg-success-600 hover:bg-success-text disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
             {crear.isPending ? 'Creando...' : 'Crear'}
           </button>
         </div>

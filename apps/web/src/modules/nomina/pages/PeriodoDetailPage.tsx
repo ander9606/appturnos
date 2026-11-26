@@ -134,7 +134,7 @@ export function PeriodoDetailPage() {
             key={t}
             onClick={() => setTab(t)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors capitalize ${
-              tab === t ? 'border-success text-success' : 'border-transparent text-muted-foreground hover:text-foreground'
+              tab === t ? 'border-success-600 text-success-600' : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             {t === 'registros' ? 'Registros' : 'Liquidación'}
