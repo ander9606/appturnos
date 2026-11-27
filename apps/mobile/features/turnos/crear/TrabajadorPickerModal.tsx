@@ -6,6 +6,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Modal,
+  KeyboardAvoidingView,
   FlatList,
   TouchableOpacity,
 } from 'react-native';
@@ -67,7 +68,9 @@ export function TrabajadorPickerModal({ visible, seleccionados, onConfirm, onClo
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View className="flex-1 bg-black/40 justify-end">
+      {/* Igual que los modales de horarios (CrearRegistroModal): el teclado encoge el contenedor
+          y la hoja queda por encima en vez de quedar tapada. */}
+      <KeyboardAvoidingView behavior="height" className="flex-1 bg-black/40 justify-end">
         <View className="bg-background rounded-t-3xl" style={{ maxHeight: '80%' }}>
           <View className="flex-row items-center justify-between px-5 pt-5 pb-3">
             <Text className="text-base font-bold text-foreground">Elegir personas</Text>
@@ -91,6 +94,7 @@ export function TrabajadorPickerModal({ visible, seleccionados, onConfirm, onClo
             <SkeletonList count={4} />
           ) : (
             <FlatList
+            keyboardShouldPersistTaps="handled"
               data={filtrados}
               keyExtractor={(item) => String(item.id)}
               contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 12 }}
@@ -137,7 +141,7 @@ export function TrabajadorPickerModal({ visible, seleccionados, onConfirm, onClo
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
