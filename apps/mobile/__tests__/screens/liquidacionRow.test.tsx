@@ -40,3 +40,19 @@ test('plegada: la barra de horas; desplegada: solo la barra grande del desglose'
   fireEvent.press(screen.getByText('Jair Diaz'));
   expect(screen.getByTestId('barra-6')).toBeTruthy();
 });
+
+test('plegada: novedades como ícono + número, sin frases ni emoji', () => {
+  const l = { ...(linea as object), horas_extra_diurnas: 3, horas_extra_nocturnas: 2.5 } as never;
+  render(<LiquidacionRow linea={l} compensatorios={[{ id: 1 }, { id: 2 }] as never} outlier recargoHoras={30} />);
+  expect(screen.getByLabelText('5.5 horas extra')).toBeTruthy();
+  expect(screen.getByLabelText('2 compensatorios')).toBeTruthy();
+  expect(screen.getByLabelText(/30 horas en recargos o extra/)).toBeTruthy();
+  expect(screen.getByTestId('icon-flash-outline')).toBeTruthy();
+  expect(screen.queryByText(/⚠|⚡|comp\./)).toBeNull();
+});
+
+test('sin novedades no pinta chips; la fila es un botón con estado expandido', () => {
+  render(<LiquidacionRow linea={linea} />);
+  expect(screen.queryByTestId('icon-flash-outline')).toBeNull();
+  expect(screen.getByRole('button', { name: /Jair Diaz, neto/ }).props.accessibilityState).toEqual({ expanded: false });
+});
