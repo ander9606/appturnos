@@ -263,8 +263,8 @@ export default function RegistrosPeriodoScreen() {
                   {canEdit && (
                     <TouchableOpacity
                       onPress={() => setCreando({ trabajadorId: section.trabajadorId, nombre: section.title })}
-                      hitSlop={8}
-                      className="w-7 h-7 rounded-full bg-white items-center justify-center"
+                      hitSlop={12}
+                      className="w-9 h-9 rounded-full bg-white items-center justify-center"
                     >
                       <Ionicons name="add" size={16} color={COLORS.success} />
                     </TouchableOpacity>

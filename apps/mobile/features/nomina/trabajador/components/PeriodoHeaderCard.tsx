@@ -83,7 +83,7 @@ export function PeriodoHeaderCard({
       {/* ── Encabezado período ─────────────────────────────── */}
       <View className="flex-row items-start justify-between">
         <View className="gap-1 flex-1">
-          <Text className="text-white/80 text-xs font-medium uppercase tracking-wide">
+          <Text className="text-white text-xs font-medium uppercase tracking-wide">
             Mi Nómina
           </Text>
           <Text className="text-white text-xl font-bold">
@@ -107,13 +107,13 @@ export function PeriodoHeaderCard({
                 {mask(formatCOP(miLiquidacion.neto))}
               </Text>
               <View className="flex-row items-center gap-1.5">
-                <Text className="text-white/70 text-[10px]">
+                <Text className="text-white text-[11px]">
                   {tipoContrato === 'laboral' ? 'Neto del período' : 'Total del período'}
                 </Text>
                 {/* Con el período abierto el neto todavía cambia: no debe leerse como definitivo. */}
                 {periodo?.estado === 'abierto' && (
-                  <View className="bg-white/25 rounded-full px-1.5 py-0.5">
-                    <Text className="text-white text-[10px] font-bold">Estimado</Text>
+                  <View className="bg-white rounded-full px-2 py-0.5">
+                    <Text className="text-foreground text-[11px] font-bold">Estimado</Text>
                   </View>
                 )}
               </View>
@@ -123,7 +123,7 @@ export function PeriodoHeaderCard({
               <Text className="text-white text-lg font-extrabold">
                 {salarioBase != null ? mask(formatCOP(salarioBase)) : '—'}
               </Text>
-              <Text className="text-white/70 text-[10px]">{periodo ? TIPO_PERIODO_LABEL_SALARIO[periodo.tipo] : 'Salario (fijo)'}</Text>
+              <Text className="text-white text-[11px]">{periodo ? TIPO_PERIODO_LABEL_SALARIO[periodo.tipo] : 'Salario (fijo)'}</Text>
             </>
           )}
         </View>
@@ -133,13 +133,13 @@ export function PeriodoHeaderCard({
             <Text className="text-white text-sm font-extrabold">
               +{mask(formatCOP(pagoExtraPeriodo))}
             </Text>
-            <Text className="text-white/70 text-[9px]">Extra período</Text>
+            <Text className="text-white text-[11px]">Extra período</Text>
           </View>
         )}
 
         <TouchableOpacity
           onPress={() => setVisible((v) => !v)}
-          hitSlop={8}
+          hitSlop={12}
           accessibilityLabel={visible ? 'Ocultar salario' : 'Mostrar salario'}
         >
           <Ionicons name={visible ? 'eye-off-outline' : 'eye-outline'} size={18} color="rgba(255,255,255,0.8)" />
@@ -148,13 +148,13 @@ export function PeriodoHeaderCard({
 
       {/* ── Card estado hoy ─────────────────────────────────── */}
       <View className="bg-white/15 rounded-2xl px-4 py-3 gap-1.5">
-        <Text className="text-white/80 text-xs font-medium">{todayLabel}</Text>
+        <Text className="text-white text-xs font-medium">{todayLabel}</Text>
         <View className="flex-row items-center gap-4">
           <View className="gap-0.5">
             <Text className="text-white text-sm font-bold">
               {fmtHora(horaEntradaMostrada(registroHoy))}
             </Text>
-            <Text className="text-white/60 text-[10px]">Entrada</Text>
+            <Text className="text-white text-[11px]">Entrada</Text>
           </View>
 
           <Text className="text-white/40">→</Text>
@@ -163,7 +163,7 @@ export function PeriodoHeaderCard({
             <Text className="text-white text-sm font-bold">
               {fmtHora(registroHoy?.hora_salida)}
             </Text>
-            <Text className="text-white/60 text-[10px]">Salida</Text>
+            <Text className="text-white text-[11px]">Salida</Text>
           </View>
 
           {estadoHoy === 'en_jornada' && registroHoy?.hora_entrada && (
@@ -173,7 +173,7 @@ export function PeriodoHeaderCard({
                 <Text className="text-white text-sm font-bold">
                   {calcularElapsedLabel(registroHoy.hora_entrada)}
                 </Text>
-                <Text className="text-white/60 text-[10px]">Transcurrido</Text>
+                <Text className="text-white text-[11px]">Transcurrido</Text>
               </View>
             </>
           )}
@@ -185,7 +185,7 @@ export function PeriodoHeaderCard({
                 <Text className="text-white text-sm font-bold">
                   {analisisHoy.totalHoras.toFixed(1)}h
                 </Text>
-                <Text className="text-white/60 text-[10px]">Trabajadas</Text>
+                <Text className="text-white text-[11px]">Trabajadas</Text>
               </View>
               {analisisHoy.valorExtraCOP > 0 && (
                 <>
@@ -194,7 +194,7 @@ export function PeriodoHeaderCard({
                     <Text className="text-white text-sm font-bold">
                       +{mask(formatCOP(analisisHoy.valorExtraCOP))}
                     </Text>
-                    <Text className="text-white/60 text-[10px]">Extra hoy</Text>
+                    <Text className="text-white text-[11px]">Extra hoy</Text>
                   </View>
                 </>
               )}
@@ -223,7 +223,7 @@ export function PeriodoHeaderCard({
                 <Text className="text-white text-base font-extrabold">
                   {totalH.toFixed(1)}h
                 </Text>
-                <Text className="text-white/60 text-[10px]">
+                <Text className="text-white text-[11px]">
                   / {limite}h esta semana
                 </Text>
                 {hayExtras && (
@@ -235,8 +235,8 @@ export function PeriodoHeaderCard({
                 )}
               </View>
               {onVerDetalles && (
-                <TouchableOpacity onPress={onVerDetalles} hitSlop={8}>
-                  <Text className="text-white/70 text-[10px] font-semibold underline">
+                <TouchableOpacity onPress={onVerDetalles} hitSlop={12}>
+                  <Text className="text-white text-[11px] font-semibold underline">
                     Ver detalles
                   </Text>
                 </TouchableOpacity>
@@ -260,13 +260,13 @@ export function PeriodoHeaderCard({
               <MarcaPeriodoAnterior horas={horasPeriodoAnterior} limite={limite} color="rgba(15,23,42,0.7)" />
             </View>
             {horasPeriodoAnterior > 0 && (
-              <Text className="text-white/60 text-[9px]">
+              <Text className="text-white text-[11px]">
                 La raya marca dónde termina el período anterior ({horasPeriodoAnterior.toFixed(1)}h)
               </Text>
             )}
 
             {festivoH > 0 && (
-              <Text className="text-white/70 text-[10px]">
+              <Text className="text-white text-[11px]">
                 +{festivoH.toFixed(1)}h festivo (recargo, no cuenta para las {limite}h)
               </Text>
             )}

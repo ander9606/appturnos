@@ -180,7 +180,7 @@ export function NominaTrabajadorView() {
                 </Text>
                 {tab === 'nomina' && descuentosPendientes > 0 && (
                   <View className="min-w-[18px] h-[18px] px-1 rounded-full bg-warning items-center justify-center">
-                    <Text className="text-[10px] font-bold text-white">{descuentosPendientes}</Text>
+                    <Text className="text-[10px] font-bold text-foreground">{descuentosPendientes}</Text>
                   </View>
                 )}
               </View>
@@ -297,14 +297,14 @@ export function NominaTrabajadorView() {
                     <TouchableOpacity
                       onPress={() => setViewMode(v => v === 'lista' ? 'mes' : 'lista')}
                       accessibilityLabel={viewMode === 'lista' ? 'Ver mes' : 'Ver lista'}
-                      hitSlop={8}
+                      hitSlop={12}
                     >
                       <Ionicons name={viewMode === 'lista' ? 'calendar-outline' : 'list-outline'} size={18} color={theme.primary} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => router.push('/historial-ganancias')}
                       className="flex-row items-center gap-1"
-                      hitSlop={8}
+                      hitSlop={12}
                     >
                       <Text className="text-xs font-semibold" style={{ color: theme.primary }}>Historial</Text>
                       <Ionicons name="chevron-forward" size={12} color={theme.primary} />
