@@ -84,3 +84,20 @@ test('«Expandir todo» / «Contraer todo» con varios empleados', () => {
   fireEvent.press(screen.getByText('Contraer todo'));
   expect(screen.queryByText(/^Trabajó el/)).toBeNull();
 });
+
+test('empleado con pendientes y asignados: los asignados van en un subgrupo plegado con su próximo descanso', () => {
+  mockLista = [
+    c(1, 1, 'Laura', '2026-11-01', 'pendiente'),
+    c(2, 1, 'Laura', '2026-10-20', 'asignado', '2026-11-18'),
+    c(3, 1, 'Laura', '2026-10-10', 'tomado', '2026-11-02'),
+  ];
+  render(<GestorCompensatoriosScreen />);
+  fireEvent.press(screen.getByText('Todos'));
+  // Abierta (tiene pendientes): se ve la fila pendiente, no las asignadas.
+  expect(screen.getAllByText(/^Trabajó el/)).toHaveLength(1);
+  const sub = screen.getByLabelText('Ver 2 descansos asignados o tomados');
+  expect(screen.getByText(/^Asignados y tomados · 2 · próximo .*18 Nov$/)).toBeTruthy();
+  fireEvent.press(sub);
+  expect(screen.getAllByText(/^Trabajó el/)).toHaveLength(3);
+  expect(screen.getByLabelText('Ocultar 2 descansos asignados o tomados').props.accessibilityState).toEqual({ expanded: true });
+});

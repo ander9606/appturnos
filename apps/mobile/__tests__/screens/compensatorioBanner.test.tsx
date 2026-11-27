@@ -1,6 +1,6 @@
 /** Banner del trabajador: pendientes y asignados cortos, con ícono de cama y sin prosa de relleno. */
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { CompensatorioBanner } from '../../features/nomina/compensatorios/CompensatorioBanner';
 
 jest.mock('@expo/vector-icons', () => {
@@ -33,4 +33,28 @@ test('asignado próximo: dos líneas, fecha del descanso primero', () => {
 test('sin pendientes ni próximos no pinta nada', () => {
   const { toJSON } = render(<CompensatorioBanner compensatorios={[{ ...base, id: 4, estado: 'tomado', fecha_asignada: '2026-11-01' }] as never} />);
   expect(toJSON()).toBeNull();
+});
+
+test('3 o más pendientes llegan plegados con el vencimiento del más antiguo; se despliegan al tocar', () => {
+  const comps = [1, 2, 3].map((i) => ({ ...base, id: i, estado: 'pendiente', origen_fecha: `2026-11-0${i}` })) as never;
+  render(<CompensatorioBanner compensatorios={comps} />);
+  expect(screen.getByText('3 descansos compensatorios pendientes')).toBeTruthy();
+  // El más antiguo es el del 1 nov → vence el 29; hoy (mockeado) es el 10 → 19 días.
+  expect(screen.getByText('El más antiguo: vence en 19 días')).toBeTruthy();
+  expect(screen.queryByText(/Trabajaste el/)).toBeNull();
+  fireEvent.press(screen.getByLabelText('Desplegar los días trabajados pendientes'));
+  expect(screen.getAllByText(/Trabajaste el/)).toHaveLength(3);
+});
+
+test('varios descansos asignados: el más próximo siempre visible y el resto tras «+N más»', () => {
+  const comps = [
+    { ...base, id: 5, estado: 'tomado', fecha_asignada: '2026-11-20' },
+    { ...base, id: 6, estado: 'tomado', fecha_asignada: '2026-11-12' },
+    { ...base, id: 7, estado: 'tomado', fecha_asignada: '2026-11-25' },
+  ] as never;
+  render(<CompensatorioBanner compensatorios={comps} />);
+  expect(screen.getAllByText(/: no asistes$/)).toHaveLength(1);
+  expect(screen.getByText(/^Descanso el .*12 Nov/)).toBeTruthy();
+  fireEvent.press(screen.getByText('+2 más'));
+  expect(screen.getAllByText(/: no asistes$/)).toHaveLength(3);
 });

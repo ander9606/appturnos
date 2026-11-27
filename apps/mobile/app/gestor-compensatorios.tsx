@@ -23,6 +23,7 @@ import {
 import { AsignadoRow, CompensatorioRow } from '@/features/nomina/compensatorios/FilasCompensatorio';
 import { diasParaVencer, textoVencimiento, colorVencimiento } from '@/features/nomina/compensatorios/disponibles';
 import { Plegable } from '@/components/ui/Plegable';
+import { fmtFechaCorta } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { bogotaToday } from '@/lib/formatters';
 import { agruparPorEmpleado, type GrupoEmpleado } from '@/features/nomina/compensatorios/agruparPorEmpleado';
 import { useRoleGuard } from '@/components/RoleGuard';
@@ -190,13 +191,47 @@ function TablaEmpleado({ grupo: g, abierto, onToggle }: { grupo: GrupoEmpleado; 
         </View>
       }
     >
-      {g.filas.map((c, i) => (
-        <View key={c.id} className={i > 0 ? 'border-t border-border' : ''}>
-          {c.estado === 'pendiente'
-            ? <CompensatorioRow compensatorio={c} sinNombre />
-            : <AsignadoRow compensatorio={c} sinNombre />}
-        </View>
-      ))}
+      <FilasDeEmpleado filas={g.filas} />
     </Plegable>
+  );
+}
+
+/**
+ * Dentro de un empleado: los pendientes (hay que actuar) siempre a la vista; los asignados/tomados (solo consulta)
+ * en un subgrupo plegado cuando conviven con pendientes. Si solo hay una clase, van directos.
+ */
+function FilasDeEmpleado({ filas }: { filas: DescansoCompensatorio[] }) {
+  const [abiertos, setAbiertos] = useState(false);
+  const pendientes = filas.filter((c) => c.estado === 'pendiente');
+  const resto = filas.filter((c) => c.estado !== 'pendiente');
+  const hoy = bogotaToday();
+  const proximo = resto.map((c) => c.fecha_asignada).filter((f): f is string => !!f && f >= hoy).sort()[0];
+  const subgrupo = pendientes.length > 0 && resto.length > 0;
+  const filaDe = (c: DescansoCompensatorio, i: number) => (
+    <View key={c.id} className={i > 0 ? 'border-t border-border' : ''}>
+      {c.estado === 'pendiente'
+        ? <CompensatorioRow compensatorio={c} sinNombre />
+        : <AsignadoRow compensatorio={c} sinNombre />}
+    </View>
+  );
+  if (!subgrupo) return <>{filas.map(filaDe)}</>;
+  return (
+    <>
+      {pendientes.map(filaDe)}
+      <TouchableOpacity
+        onPress={() => setAbiertos((v) => !v)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: abiertos }}
+        accessibilityLabel={`${abiertos ? 'Ocultar' : 'Ver'} ${resto.length} descansos asignados o tomados`}
+        className="px-4 py-3 min-h-[44px] flex-row items-center gap-2 border-t border-border bg-muted"
+      >
+        <Ionicons name="checkmark-done-outline" size={14} color={COLORS.mutedForeground} />
+        <Text className="flex-1 text-xs font-semibold text-muted-foreground">
+          Asignados y tomados · {resto.length}{proximo ? ` · próximo ${fmtFechaCorta(proximo)}` : ''}
+        </Text>
+        <Ionicons name={abiertos ? 'chevron-up' : 'chevron-down'} size={16} color={COLORS.mutedForeground} />
+      </TouchableOpacity>
+      {abiertos && resto.map(filaDe)}
+    </>
   );
 }

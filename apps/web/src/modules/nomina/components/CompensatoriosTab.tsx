@@ -47,6 +47,8 @@ export function CompensatoriosTab() {
   const [filtro, setFiltro] = useState<Filtro>('pendiente');
   const [asignando, setAsignando] = useState<DescansoCompensatorio | null>(null);
   const [reasignando, setReasignando] = useState<DescansoCompensatorio | null>(null);
+  // Empleados con el subgrupo «Asignados y tomados» desplegado (cuando conviven con pendientes).
+  const [asignadosAbiertos, setAsignadosAbiertos] = useState<Set<number>>(new Set());
   // null = «por defecto»: abiertos los empleados con pendientes (hasta 3). En cuanto se toca algo pasa a explícito; cambiar de filtro lo reinicia.
   const [abiertosUsuario, setAbiertosUsuario] = useState<Set<number> | null>(null);
   const todosLista: DescansoCompensatorio[] = data?.data ?? [];
@@ -73,6 +75,48 @@ export function CompensatoriosTab() {
   const totalPendientes = todos.filter(c => c.estado === 'pendiente').length;
   const hoy = bogotaToday();
   const puedeGestionar = puedeGestionarNomina();
+  const renderFila = (c: DescansoCompensatorio) => {
+                      const pendiente = c.estado === 'pendiente';
+                      const vencido = !pendiente && !!c.fecha_asignada && c.fecha_asignada < hoy; // el descanso ya pasó
+                      return (
+                        <tr key={c.id} className="border-t border-border/60 hover:bg-muted/50">
+                          <td className="px-4 py-2.5 text-foreground whitespace-nowrap">{fmtDiaSemana(c.origen_fecha)}</td>
+                          <td className="px-3 py-2.5">
+                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap ${CLASIFICACION_BADGE[c.clasificacion]}`}>
+                              {CLASIFICACION_LABEL[c.clasificacion]}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                              pendiente ? 'bg-warning-light text-warning-text' : vencido ? 'bg-muted text-muted-foreground' : 'bg-success-light text-success-text'
+                            }`}>
+                              {pendiente ? 'Pendiente' : vencido ? 'Tomado' : 'Asignado'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2.5 text-muted-foreground whitespace-nowrap">
+                            {c.fecha_asignada ? fmtDiaSemana(c.fecha_asignada) : '—'}
+                          </td>
+                          <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                            {puedeGestionar && pendiente && (
+                              <button
+                                onClick={() => setAsignando(c)}
+                                className="bg-success-600 hover:bg-success-text text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                              >
+                                Asignar fecha
+                              </button>
+                            )}
+                            {puedeGestionar && !pendiente && !vencido && (
+                              <button
+                                onClick={() => setReasignando(c)}
+                                className="border border-border hover:bg-muted text-foreground text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                              >
+                                Reasignar
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    };
 
   return (
     <>
@@ -157,48 +201,37 @@ export function CompensatoriosTab() {
                     </tr>
                   </thead>
                   <tbody>
-                    {g.filas.map(c => {
-                      const pendiente = c.estado === 'pendiente';
-                      const vencido = !pendiente && !!c.fecha_asignada && c.fecha_asignada < hoy; // el descanso ya pasó
+                    {(() => {
+                      const pend = g.filas.filter(c => c.estado === 'pendiente');
+                      const resto = g.filas.filter(c => c.estado !== 'pendiente');
+                      const subgrupo = pend.length > 0 && resto.length > 0;
+                      const mostrarResto = !subgrupo || asignadosAbiertos.has(g.trabajadorId);
+                      const proximo = resto.map(c => c.fecha_asignada).filter((f): f is string => !!f && f >= hoy).sort()[0];
                       return (
-                        <tr key={c.id} className="border-t border-border/60 hover:bg-muted/50">
-                          <td className="px-4 py-2.5 text-foreground whitespace-nowrap">{fmtDiaSemana(c.origen_fecha)}</td>
-                          <td className="px-3 py-2.5">
-                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap ${CLASIFICACION_BADGE[c.clasificacion]}`}>
-                              {CLASIFICACION_LABEL[c.clasificacion]}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2.5">
-                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                              pendiente ? 'bg-warning-light text-warning-text' : vencido ? 'bg-muted text-muted-foreground' : 'bg-success-light text-success-text'
-                            }`}>
-                              {pendiente ? 'Pendiente' : vencido ? 'Tomado' : 'Asignado'}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2.5 text-muted-foreground whitespace-nowrap">
-                            {c.fecha_asignada ? fmtDiaSemana(c.fecha_asignada) : '—'}
-                          </td>
-                          <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                            {puedeGestionar && pendiente && (
-                              <button
-                                onClick={() => setAsignando(c)}
-                                className="bg-success-600 hover:bg-success-text text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-                              >
-                                Asignar fecha
-                              </button>
-                            )}
-                            {puedeGestionar && !pendiente && !vencido && (
-                              <button
-                                onClick={() => setReasignando(c)}
-                                className="border border-border hover:bg-muted text-foreground text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-                              >
-                                Reasignar
-                              </button>
-                            )}
-                          </td>
-                        </tr>
+                        <>
+                          {pend.map(renderFila)}
+                          {subgrupo && (
+                            <tr className="border-t border-border/60 bg-muted/50">
+                              <td colSpan={5} className="p-0">
+                                <button
+                                  onClick={() => setAsignadosAbiertos(prev => {
+                                    const n = new Set(prev);
+                                    if (!n.delete(g.trabajadorId)) n.add(g.trabajadorId);
+                                    return n;
+                                  })}
+                                  aria-expanded={mostrarResto}
+                                  className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground text-left"
+                                >
+                                  {mostrarResto ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                  Asignados y tomados · {resto.length}{proximo ? ` · próximo ${fmtDiaSemana(proximo)}` : ''}
+                                </button>
+                              </td>
+                            </tr>
+                          )}
+                          {mostrarResto && resto.map(renderFila)}
+                        </>
                       );
-                    })}
+                    })()}
                   </tbody>
                 </table>
               </div>
