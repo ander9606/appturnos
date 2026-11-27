@@ -16,15 +16,15 @@ import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/lib/theme';
-import { confirm } from '@/lib/confirmDialog';
 import type { DescansoCompensatorio } from '@api-client';
-import { fmtFechaCorta } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import {
   useCompensatoriosTodos,
-  useAsignarCompensatorio,
 } from '@/features/nomina/compensatorios/useCompensatorios';
-import { AsignadoRow, ClasificacionBadge } from '@/features/nomina/compensatorios/GestorCompensatoriosPanel';
-import { RangoFechasCompensatorio } from '@/features/nomina/compensatorios/RangoFechasCompensatorio';
+import { AsignadoRow, CompensatorioRow } from '@/features/nomina/compensatorios/FilasCompensatorio';
+import { diasParaVencer, textoVencimiento, colorVencimiento } from '@/features/nomina/compensatorios/disponibles';
+import { Plegable } from '@/components/ui/Plegable';
+import { fmtFechaCorta } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
+import { bogotaToday } from '@/lib/formatters';
 import { agruparPorEmpleado, type GrupoEmpleado } from '@/features/nomina/compensatorios/agruparPorEmpleado';
 import { useRoleGuard } from '@/components/RoleGuard';
 
@@ -54,6 +54,20 @@ export default function GestorCompensatoriosScreen() {
   // Una tarjeta (tabla) por empleado, no una tarjeta por compensatorio con el nombre repetido.
   const grupos = useMemo(() => agruparPorEmpleado(todos.filter((c) => enBucket(c.estado, filtro))), [todos, filtro]);
 
+  // Quién está desplegado: por defecto, los empleados con pendientes (hasta 3: con más, la pantalla sería otra pared de filas).
+  // null = «el valor por defecto»; en cuanto el gestor toca algo se vuelve explícito y se reinicia al cambiar de filtro.
+  const [abiertosUsuario, setAbiertosUsuario] = useState<Set<number> | null>(null);
+  const abiertos = useMemo(
+    () => abiertosUsuario ?? new Set(grupos.filter((g) => g.pendientes > 0).slice(0, 3).map((g) => g.trabajadorId)),
+    [abiertosUsuario, grupos],
+  );
+  const alternar = (id: number) => {
+    const nuevo = new Set(abiertos);
+    if (!nuevo.delete(id)) nuevo.add(id);
+    setAbiertosUsuario(nuevo);
+  };
+  const todosAbiertos = grupos.length > 0 && grupos.every((g) => abiertos.has(g.trabajadorId));
+
   const denied = useRoleGuard(['admin_empresa', 'jefe_nomina']);
   if (denied) return denied;
 
@@ -67,7 +81,9 @@ export default function GestorCompensatoriosScreen() {
         <FlatList
           data={grupos}
           keyExtractor={(g) => String(g.trabajadorId)}
-          renderItem={({ item }) => <TablaEmpleado grupo={item} />}
+          renderItem={({ item }) => (
+            <TablaEmpleado grupo={item} abierto={abiertos.has(item.trabajadorId)} onToggle={() => alternar(item.trabajadorId)} />
+          )}
           ItemSeparatorComponent={() => <View className="h-3" />}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
@@ -81,16 +97,13 @@ export default function GestorCompensatoriosScreen() {
           }
           ListHeaderComponent={
             <View className="gap-3 pb-3">
-              {/* Resumen */}
-              <View className="bg-amber-500 rounded-2xl px-5 py-4 gap-1">
-                <Text className="text-white/80 text-xs font-medium uppercase tracking-wide">
-                  Compensatorios
+              {/* Resumen: una línea, los contadores finos viven en los filtros */}
+              <View className="bg-warning-light rounded-2xl px-4 py-3 flex-row items-center gap-2">
+                <Ionicons name="bed-outline" size={18} color={COLORS.warningText} />
+                <Text className="flex-1 text-sm font-semibold" style={{ color: COLORS.warningText }}>
+                  {pendientes} pendientes · {todos.length} total
                 </Text>
-                <View className="flex-row items-baseline gap-2">
-                  <Text className="text-white text-3xl font-extrabold">{pendientes}</Text>
-                  <Text className="text-white/80 text-base">pendientes · {todos.length} total</Text>
-                </View>
-                <Text className="text-white/60 text-[10px] mt-1">Art. 179 CST</Text>
+                <Text className="text-[11px]" style={{ color: COLORS.warningText }}>Art. 179 CST</Text>
               </View>
 
               {/* Filtros */}
@@ -98,7 +111,9 @@ export default function GestorCompensatoriosScreen() {
                 {FILTROS.map((f) => (
                   <TouchableOpacity
                     key={f.v}
-                    onPress={() => setFiltro(f.v)}
+                    onPress={() => { setFiltro(f.v); setAbiertosUsuario(null); }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: filtro === f.v }}
                     className={[
                       'px-4 py-2 rounded-full border',
                       filtro === f.v
@@ -113,6 +128,19 @@ export default function GestorCompensatoriosScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
+
+              {grupos.length > 1 && (
+                <TouchableOpacity
+                  onPress={() => setAbiertosUsuario(todosAbiertos ? new Set() : new Set(grupos.map((g) => g.trabajadorId)))}
+                  accessibilityRole="button"
+                  className="self-end flex-row items-center gap-1 py-1"
+                >
+                  <Ionicons name={todosAbiertos ? 'contract-outline' : 'expand-outline'} size={14} color={COLORS.primary600} />
+                  <Text className="text-xs font-semibold" style={{ color: COLORS.primary600 }}>
+                    {todosAbiertos ? 'Contraer todo' : 'Expandir todo'}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           }
           ListEmptyComponent={
@@ -127,108 +155,83 @@ export default function GestorCompensatoriosScreen() {
   );
 }
 
-// ── Tabla de un empleado: cabecera con su nombre y una fila por compensatorio ─────
+// ── Tarjeta plegable de un empleado: resumen plegado, una fila por compensatorio al desplegar ─────
 
-function TablaEmpleado({ grupo: g }: { grupo: GrupoEmpleado }) {
+function TablaEmpleado({ grupo: g, abierto, onToggle }: { grupo: GrupoEmpleado; abierto: boolean; onToggle: () => void }) {
+  const dias = g.venceMin ? diasParaVencer(g.venceMin, bogotaToday(), true) : null;
   return (
-    <View className="bg-card border border-border rounded-2xl overflow-hidden">
-      <View className="px-4 py-3 flex-row items-center justify-between gap-2 border-b border-border">
-        <Text className="flex-1 text-sm font-bold text-foreground" numberOfLines={1}>{g.nombre}</Text>
-        {g.pendientes > 0 && (
-          <View className="bg-warning-light px-2 py-0.5 rounded-full">
-            <Text className="text-[10px] font-semibold text-amber-700">
-              {g.pendientes} pendiente{g.pendientes > 1 ? 's' : ''}
+    <Plegable
+      abierto={abierto}
+      onToggle={onToggle}
+      etiqueta={`compensatorios de ${g.nombre}, ${g.pendientes} pendientes`}
+      cabecera={
+        <View className="gap-1">
+          <View className="flex-row items-center justify-between gap-2">
+            <Text className="flex-1 text-sm font-bold text-foreground" numberOfLines={1}>{g.nombre}</Text>
+            <Text className="text-[11px] text-muted-foreground">
+              {g.filas.length} descanso{g.filas.length > 1 ? 's' : ''}
             </Text>
           </View>
-        )}
-        <Text className="text-[11px] text-muted-foreground">
-          {g.filas.length} descanso{g.filas.length > 1 ? 's' : ''}
-        </Text>
-      </View>
-      {g.filas.map((c, i) => (
-        <View key={c.id} className={i > 0 ? 'border-t border-border' : ''}>
-          {c.estado === 'pendiente'
-            ? <CompensatorioRow compensatorio={c} sinNombre />
-            : <AsignadoRow compensatorio={c} sinNombre />}
+          {g.pendientes > 0 && (
+            <View className="flex-row items-center gap-3">
+              <View className="flex-row items-center gap-1">
+                <Ionicons name="bed-outline" size={13} color={COLORS.warningText} />
+                <Text className="text-xs font-semibold" style={{ color: COLORS.warningText }}>
+                  {g.pendientes} pendiente{g.pendientes > 1 ? 's' : ''}
+                </Text>
+              </View>
+              {dias !== null && (
+                <View className="flex-row items-center gap-1">
+                  <Ionicons name="time-outline" size={13} color={colorVencimiento(dias)} />
+                  <Text className="text-xs font-medium" style={{ color: colorVencimiento(dias) }}>{textoVencimiento(dias)}</Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
-      ))}
-    </View>
+      }
+    >
+      <FilasDeEmpleado filas={g.filas} />
+    </Plegable>
   );
 }
 
-// ── Fila pendiente ────────────────────────────────────────────────────────────
-
-function CompensatorioRow({ compensatorio: c, sinNombre = false }: { compensatorio: DescansoCompensatorio; sinNombre?: boolean }) {
-  const [showPicker, setShowPicker] = useState(false);
-  const [fecha, setFecha]           = useState<string | null>(null);
-  const { mutate, isPending }       = useAsignarCompensatorio();
-
-  async function confirmar() {
-    if (!fecha) return;
-    const ok = await confirm({
-      title: 'Confirmar descanso',
-      message: `¿Asignar el ${fmtFechaCorta(fecha)} como descanso para ${c.trabajador_nombre} ${c.trabajador_apellido}?`,
-    });
-    if (ok) mutate({ id: c.id, fecha }, { onSuccess: () => setShowPicker(false) });
-  }
-
-  return (
-    <View className="px-4 py-3 gap-3">
-      <View className="flex-row items-start justify-between">
-        <View className="flex-1">
-          {sinNombre ? (
-            <Text className="text-sm font-semibold text-foreground">Trabajó el {fmtFechaCorta(c.origen_fecha)}</Text>
-          ) : (
-            <>
-              <Text className="text-sm font-semibold text-foreground">
-                {c.trabajador_nombre} {c.trabajador_apellido}
-              </Text>
-              <Text className="text-xs text-amber-700 mt-0.5">
-                Trabajó el {fmtFechaCorta(c.origen_fecha)}
-              </Text>
-            </>
-          )}
-        </View>
-        <View className="items-end gap-1">
-          <ClasificacionBadge clasificacion={c.clasificacion} />
-          <View className="bg-warning-light px-2 py-0.5 rounded-full">
-            <Text className="text-[10px] font-semibold text-amber-700">Pendiente</Text>
-          </View>
-        </View>
-      </View>
-
-      {!showPicker ? (
-        <TouchableOpacity
-          onPress={() => setShowPicker(true)}
-          className="self-start bg-muted rounded-xl px-3 py-2 flex-row items-center gap-2"
-        >
-          <Ionicons name="calendar-outline" size={14} color={COLORS.mutedForeground} />
-          <Text className="text-sm text-foreground">Elegir fecha</Text>
-        </TouchableOpacity>
-      ) : (
-        <View className="gap-2">
-          <RangoFechasCompensatorio compensatorioId={c.id} seleccionada={fecha ?? ''} onSeleccionar={setFecha} />
-
-          <View className="flex-row gap-2 items-center">
-            <TouchableOpacity
-              onPress={() => { setShowPicker(false); setFecha(null); }}
-              className="px-3 py-2 rounded-xl bg-muted"
-            >
-              <Text className="text-sm font-semibold text-muted-foreground">Cancelar</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={confirmar}
-              disabled={isPending || !fecha}
-              className={`flex-1 items-center px-4 py-2 rounded-xl ${isPending || !fecha ? 'bg-muted' : 'bg-primary'}`}
-            >
-              <Text className={`text-sm font-semibold ${isPending || !fecha ? 'text-muted-foreground' : 'text-white'}`}>
-                {isPending ? 'Guardando…' : fecha ? `Asignar ${fmtFechaCorta(fecha)}` : 'Elige una fecha'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
+/**
+ * Dentro de un empleado: los pendientes (hay que actuar) siempre a la vista; los asignados/tomados (solo consulta)
+ * en un subgrupo plegado cuando conviven con pendientes. Si solo hay una clase, van directos.
+ */
+function FilasDeEmpleado({ filas }: { filas: DescansoCompensatorio[] }) {
+  const [abiertos, setAbiertos] = useState(false);
+  const pendientes = filas.filter((c) => c.estado === 'pendiente');
+  const resto = filas.filter((c) => c.estado !== 'pendiente');
+  const hoy = bogotaToday();
+  const proximo = resto.map((c) => c.fecha_asignada).filter((f): f is string => !!f && f >= hoy).sort()[0];
+  const subgrupo = pendientes.length > 0 && resto.length > 0;
+  const filaDe = (c: DescansoCompensatorio, i: number) => (
+    <View key={c.id} className={i > 0 ? 'border-t border-border' : ''}>
+      {c.estado === 'pendiente'
+        ? <CompensatorioRow compensatorio={c} sinNombre />
+        : <AsignadoRow compensatorio={c} sinNombre />}
     </View>
+  );
+  if (!subgrupo) return <>{filas.map(filaDe)}</>;
+  return (
+    <>
+      {pendientes.map(filaDe)}
+      <TouchableOpacity
+        onPress={() => setAbiertos((v) => !v)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: abiertos }}
+        accessibilityLabel={`${abiertos ? 'Ocultar' : 'Ver'} ${resto.length} descansos asignados o tomados`}
+        className="px-4 py-3 min-h-[44px] flex-row items-center gap-2 border-t border-border bg-muted"
+      >
+        <Ionicons name="checkmark-done-outline" size={14} color={COLORS.mutedForeground} />
+        <Text className="flex-1 text-xs font-semibold text-muted-foreground">
+          Asignados y tomados · {resto.length}{proximo ? ` · próximo ${fmtFechaCorta(proximo)}` : ''}
+        </Text>
+        <Ionicons name={abiertos ? 'chevron-up' : 'chevron-down'} size={16} color={COLORS.mutedForeground} />
+      </TouchableOpacity>
+      {abiertos && resto.map(filaDe)}
+    </>
   );
 }

@@ -29,3 +29,17 @@ describe('compensatoriosDisponibles', () => {
     expect(compensatoriosDisponibles(lista, 7, '2026-11-30')).toEqual([]);
   });
 });
+
+describe('vencimiento legible', () => {
+  const { diasParaVencer, textoVencimiento, colorVencimiento } = require('../disponibles');
+  it('días hasta el vencimiento: festivo + 28 días', () => {
+    expect(diasParaVencer('2026-11-01', '2026-11-10')).toBe(19);
+    expect(diasParaVencer('2026-11-01', '2026-11-29')).toBe(0);
+    expect(diasParaVencer('2026-11-01', '2026-12-01')).toBe(-2);
+    expect(diasParaVencer('2026-11-29', '2026-11-10', true)).toBe(19);
+  });
+  it('texto y color: rojo la última semana', () => {
+    expect([textoVencimiento(-1), textoVencimiento(0), textoVencimiento(1), textoVencimiento(5)]).toEqual(['Vencido', 'Vence hoy', 'Vence mañana', 'Vence en 5 días']);
+    expect(colorVencimiento(7)).not.toBe(colorVencimiento(8));
+  });
+});

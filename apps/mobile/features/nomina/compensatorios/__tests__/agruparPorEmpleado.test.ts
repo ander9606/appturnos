@@ -22,6 +22,11 @@ describe('agruparPorEmpleado', () => {
     expect(laura.filas.map((f) => f.id)).toEqual([3, 4, 2]);
   });
 
+  it('venceMin: cuándo vence el pendiente más antiguo (28 días tras el festivo); null sin pendientes', () => {
+    const g = agruparPorEmpleado(lista);
+    expect(g.map((x) => [x.nombre, x.venceMin])).toEqual([['Laura X', '2026-11-29'], ['Ana X', '2026-12-13'], ['Carlos X', null]]);
+  });
+
   it('lista vacía → sin grupos', () => {
     expect(agruparPorEmpleado([])).toEqual([]);
   });
