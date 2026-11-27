@@ -13,6 +13,7 @@ import { getInitials, formatCOP } from '@/lib/formatters';
 import { COLORS, HOUR_TYPE_COLORS, avatarColorForId } from '@/lib/designTokens';
 import { CompositionBar } from '@/components/ui/CompositionBar';
 import { Badge } from '@/components/ui/Badge';
+import { ChipsIconoNumero } from './ChipsIconoNumero';
 import { useCrearDescuento } from './descuentos/useDescuentos';
 import { PagoDesglose } from './PagoDesglose';
 
@@ -79,6 +80,9 @@ export function LiquidacionRow({
     <TouchableOpacity
       onPress={() => setExpanded((v) => !v)}
       activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityState={{ expanded }}
+      accessibilityLabel={`${linea.nombre} ${linea.apellido}, neto ${formatCOP(linea.neto)}`}
       className="bg-card rounded-2xl overflow-hidden"
       style={{ elevation: 1, shadowColor:COLORS.shadow, shadowOpacity:0.05, shadowRadius:6 }}
     >
@@ -96,31 +100,22 @@ export function LiquidacionRow({
 
         {/* Name + days + badges */}
         <View className="flex-1 gap-0.5">
-          <Text className="text-sm font-semibold text-foreground">
+          <Text className="text-sm font-semibold text-foreground" numberOfLines={1}>
             {linea.nombre} {linea.apellido}
           </Text>
           <Text className="text-xs text-muted-foreground">
             {linea.dias_registrados} días · {totalHoras.toFixed(1)}h totales
           </Text>
-          {(extrasTotal > 0 || compensatorios.length > 0 || outlier) && (
-            <View className="flex-row flex-wrap gap-1.5 mt-0.5">
-              {outlier && <Badge label={`⚠ ${recargoHoras.toFixed(0)}h en recargos/extra`} variant="warning" size="sm" />}
-              {extrasTotal > 0 && (
-                <View className="bg-primary/10 px-2 py-0.5 rounded-full">
-                  <Text className="text-[10px] font-semibold text-primary">
-                    ⚡ {extrasTotal.toFixed(1)}h extras
-                  </Text>
-                </View>
-              )}
-              {compensatorios.length > 0 && (
-                <View className="bg-purple-100 px-2 py-0.5 rounded-full">
-                  <Text className="text-[10px] font-semibold text-purple-600">
-                    {compensatorios.length} comp.
-                  </Text>
-                </View>
-              )}
-            </View>
-          )}
+          <ChipsIconoNumero
+            items={[
+              { cantidad: outlier ? recargoHoras : 0, texto: `${recargoHoras.toFixed(0)}h`, icono: 'trending-up-outline', color: COLORS.warning,
+                etiqueta: `${recargoHoras.toFixed(0)} horas en recargos o extra, por encima del promedio del equipo` },
+              { cantidad: extrasTotal, texto: `${extrasTotal.toFixed(1)}h`, icono: 'flash-outline', color: COLORS.primary,
+                etiqueta: `${extrasTotal.toFixed(1)} horas extra` },
+              { cantidad: compensatorios.length, icono: 'bed-outline', color: COLORS.info,
+                etiqueta: `${compensatorios.length} compensatorios` },
+            ]}
+          />
         </View>
 
         {/* Neto a pagar (siempre el neto: así las filas suman la cabecera) + expandir */}

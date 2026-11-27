@@ -8,6 +8,7 @@
 import { Text } from '@/components/ui/Text';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ChipsIconoNumero } from '@/features/nomina/ChipsIconoNumero';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import { View, SectionList, TouchableOpacity } from 'react-native';
@@ -309,25 +310,14 @@ export default function RegistrosPeriodoScreen() {
 // ── Qué debe mirar el gestor de este trabajador: ícono + número, sin frases ─────
 
 function NovedadesChips({ n }: { n: Novedades }) {
-  const items = [
-    { n: n.sinSalida,       icono: 'time-outline' as const,         color: COLORS.warning, etiqueta: 'días sin salida' },
-    { n: n.sospechosos,     icono: 'alert-circle-outline' as const, color: COLORS.danger,  etiqueta: 'marcajes sospechosos' },
-    { n: n.compPendientes,  icono: 'bed-outline' as const,          color: COLORS.info,    etiqueta: 'compensatorios pendientes' },
-  ].filter((i) => i.n > 0);
-  if (items.length === 0) return null;
   return (
-    <View className="flex-row gap-1.5 mt-1">
-      {items.map((i) => (
-        <View
-          key={i.etiqueta}
-          accessible
-          accessibilityLabel={`${i.n} ${i.etiqueta}`}
-          className="flex-row items-center gap-0.5 bg-white/70 rounded-full px-1.5 py-0.5"
-        >
-          <Ionicons name={i.icono} size={12} color={i.color} />
-          <Text className="text-[10px] font-bold text-foreground">{i.n}</Text>
-        </View>
-      ))}
-    </View>
+    <ChipsIconoNumero
+      fondo="bg-white/70"
+      items={[
+        { cantidad: n.sinSalida,      icono: 'time-outline',         color: COLORS.warning, etiqueta: `${n.sinSalida} días sin salida` },
+        { cantidad: n.sospechosos,    icono: 'alert-circle-outline', color: COLORS.danger,  etiqueta: `${n.sospechosos} marcajes sospechosos` },
+        { cantidad: n.compPendientes, icono: 'bed-outline',          color: COLORS.info,    etiqueta: `${n.compPendientes} compensatorios pendientes` },
+      ]}
+    />
   );
 }
