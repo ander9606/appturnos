@@ -7,6 +7,7 @@ import React, { useState, useMemo } from 'react';
 import {
   View,
   Modal,
+  KeyboardAvoidingView,
   FlatList,
   TouchableOpacity,
 } from 'react-native';
@@ -51,7 +52,9 @@ export function CargoModal({ visible, cargos, usedIds, onSelect, onClose }: Prop
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View className="flex-1 bg-black/40 justify-end">
+      {/* Igual que los modales de horarios (CrearRegistroModal): el teclado encoge el contenedor
+          y la hoja queda por encima en vez de quedar tapada. */}
+      <KeyboardAvoidingView behavior="height" className="flex-1 bg-black/40 justify-end">
         <View className="bg-background rounded-t-3xl" style={{ maxHeight: '75%' }}>
           <View className="flex-row items-center justify-between px-5 pt-5 pb-3">
             <Text className="text-base font-bold text-foreground">Seleccionar rol</Text>
@@ -89,6 +92,7 @@ export function CargoModal({ visible, cargos, usedIds, onSelect, onClose }: Prop
           )}
 
           <FlatList
+            keyboardShouldPersistTaps="handled"
             data={filtered}
             keyExtractor={(item) => String(item.id)}
             contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
@@ -123,7 +127,7 @@ export function CargoModal({ visible, cargos, usedIds, onSelect, onClose }: Prop
             )}
           />
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
