@@ -23,8 +23,8 @@ interface Props {
 export function ClasificacionBadge({ clasificacion }: { clasificacion: DescansoCompensatorio['clasificacion'] }) {
   const esHabitual = clasificacion === 'habitual';
   return (
-    <View className={`px-2 py-0.5 rounded-full ${esHabitual ? 'bg-slate-100' : 'bg-blue-50'}`}>
-      <Text className={`text-[10px] font-semibold ${esHabitual ? 'text-slate-700' : 'text-blue-700'}`}>
+    <View className={`px-2 py-0.5 rounded-full ${esHabitual ? 'bg-muted' : 'bg-info-light'}`}>
+      <Text className="text-[11px] font-semibold" style={{ color: esHabitual ? COLORS.slate700 : COLORS.infoText }}>
         {esHabitual ? 'Habitual · recargo' : 'Ocasional'}
       </Text>
     </View>
@@ -46,7 +46,7 @@ export function GestorCompensatoriosPanel({ compensatorios }: Props) {
         </Text>
         {pendientes.length > 0 && (
           <View className="ml-auto bg-warning-light px-2 py-0.5 rounded-full">
-            <Text className="text-[10px] font-semibold text-amber-700">
+            <Text className="text-[11px] font-semibold" style={{ color: COLORS.warningText }}>
               {pendientes.length} pendiente{pendientes.length > 1 ? 's' : ''}
             </Text>
           </View>
@@ -92,15 +92,12 @@ function CompensatorioRow({ compensatorio: c }: { compensatorio: DescansoCompens
           <Text className="text-sm font-semibold text-foreground">
             {c.trabajador_nombre} {c.trabajador_apellido}
           </Text>
-          <Text className="text-xs text-amber-700 mt-0.5">
+          <Text className="text-xs mt-0.5" style={{ color: COLORS.warningText }}>
             Trabajó el {fmtFechaCorta(c.origen_fecha)}
           </Text>
         </View>
         <View className="items-end gap-1">
           <ClasificacionBadge clasificacion={c.clasificacion} />
-          <View className="bg-warning-light px-2 py-0.5 rounded-full">
-            <Text className="text-[10px] font-semibold text-amber-700">Pendiente</Text>
-          </View>
         </View>
       </View>
 
@@ -183,8 +180,8 @@ export function AsignadoRow({ compensatorio: c, sinNombre = false }: { compensat
             accessibilityRole="button"
             accessibilityLabel="Cambiar fecha del descanso"
           >
-            <View className="bg-green-50 px-2 py-0.5 rounded-full">
-              <Text className="text-[10px] font-semibold text-green-700">Asignado</Text>
+            <View className="bg-success-light px-2 py-0.5 rounded-full">
+              <Text className="text-[11px] font-semibold" style={{ color: COLORS.successText }}>Asignado</Text>
             </View>
             <Text className="text-xs text-primary underline">
               {fmtFechaCorta(c.fecha_asignada!)}
