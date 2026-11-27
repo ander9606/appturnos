@@ -261,6 +261,21 @@ export function vencimientoCompensatorio(origenFecha: string): string {
   return sumarDias(origenFecha, COMPENSATORIO_PLAZO_DIAS);
 }
 
+/** Días que le quedan (desde `hoy`) para tomar un descanso que vence el `vence`; negativo si ya venció. */
+export function diasHasta(vence: string, hoy: string): number {
+  return Math.round((Date.parse(`${vence}T12:00:00Z`) - Date.parse(`${hoy}T12:00:00Z`)) / 86_400_000);
+}
+
+export function textoVencimiento(dias: number): string {
+  if (dias < 0) return 'Vencido';
+  if (dias === 0) return 'Vence hoy';
+  if (dias === 1) return 'Vence mañana';
+  return `Vence en ${dias} días`;
+}
+
+/** Rojo la última semana (hay que asignarlo ya), ámbar el resto — ambos con texto fuerte (AA sobre fondo claro). */
+export const claseVencimiento = (dias: number) => (dias <= 7 ? 'text-danger-text' : 'text-warning-text');
+
 /**
  * Compensatorios pendientes de un trabajador que se pueden tomar el día `fecha`: dentro de los 28 días
  * siguientes al festivo trabajado. El más antiguo primero — es el que se preselecciona. Mismo criterio que

@@ -1,7 +1,8 @@
 /**
  * Compensatorios del gestor: una tabla (tarjeta) por empleado, con su nombre una sola vez, quienes tienen
  * pendientes arriba y las filas del compensatorio más antiguo al más nuevo — antes era una tarjeta por
- * compensatorio con el nombre repetido en cada una.
+ * compensatorio con el nombre repetido en cada una. Cada tarjeta es plegable: abiertos por defecto solo quienes
+ * tienen pendientes (hasta 3).
  */
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
@@ -14,6 +15,7 @@ jest.mock('@expo/vector-icons', () => {
 });
 jest.mock('@/components/ui/PlanetIllustration', () => ({ PlanetIllustration: () => null }));
 jest.mock('@/lib/theme', () => ({ useTheme: () => ({ primary: '#111111' }) }));
+jest.mock('@/lib/formatters', () => ({ ...jest.requireActual('@/lib/formatters'), bogotaToday: () => '2026-11-10' }));
 jest.mock('@/components/RoleGuard', () => ({ useRoleGuard: () => null }));
 jest.mock('@/components/ui/Skeleton', () => {
   const { View } = require('react-native');
@@ -56,6 +58,29 @@ test('«Todos» agrega a los empleados con descansos asignados, sin repetir el n
   fireEvent.press(screen.getByText('Todos'));
   expect(screen.getAllByText('Carlos Prueba')).toHaveLength(1);
   expect(screen.getByText('1 descanso')).toBeTruthy();
+  // Carlos no tiene pendientes: llega plegado; se abre tocando su cabecera.
+  expect(screen.getAllByText(/^Trabajó el/).length).toBe(2);
+  fireEvent.press(screen.getByLabelText(/^Desplegar compensatorios de Carlos Prueba/));
   // Las filas dicen cuándo trabajó, no repiten el nombre.
   expect(screen.getAllByText(/^Trabajó el/).length).toBe(3);
+});
+
+test('plegado: el resumen dice cuándo vence el pendiente más antiguo, y el estado queda en accessibilityState', () => {
+  render(<GestorCompensatoriosScreen />);
+  // Laura: el más antiguo es del 1 nov → vence el 29 nov; hoy (mockeado) es el 10 → 19 días.
+  expect(screen.getAllByText('Vence en 19 días').length).toBeGreaterThan(0);
+  const cab = screen.getByLabelText(/^Contraer compensatorios de Laura Prueba/);
+  expect(cab.props.accessibilityState).toEqual({ expanded: true });
+  fireEvent.press(cab);
+  expect(screen.queryByText(/^Trabajó el/)).toBeNull();
+  expect(screen.getByLabelText(/^Desplegar compensatorios de Laura Prueba/).props.accessibilityState).toEqual({ expanded: false });
+});
+
+test('«Expandir todo» / «Contraer todo» con varios empleados', () => {
+  render(<GestorCompensatoriosScreen />);
+  fireEvent.press(screen.getByText('Todos'));
+  fireEvent.press(screen.getByText('Expandir todo'));
+  expect(screen.getAllByText(/^Trabajó el/).length).toBe(3);
+  fireEvent.press(screen.getByText('Contraer todo'));
+  expect(screen.queryByText(/^Trabajó el/)).toBeNull();
 });

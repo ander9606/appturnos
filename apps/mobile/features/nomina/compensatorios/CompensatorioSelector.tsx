@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { fmtFechaCorta } from '../trabajador/nominaTrabajadorUtils';
 import { useCompensatoriosTodos } from './useCompensatorios';
 import { compensatoriosDisponibles, vencimientoCompensatorio } from './disponibles';
-import { ClasificacionBadge } from './GestorCompensatoriosPanel';
+import { ClasificacionBadge } from './FilasCompensatorio';
 
 export function CompensatorioSelector({ trabajadorId, fecha, value, onChange }: {
   trabajadorId: number;
