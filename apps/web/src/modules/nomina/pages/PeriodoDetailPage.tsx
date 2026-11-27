@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   usePeriodos, useRegistros, useRegistrosRango, useLiquidacion, useDescuentosPeriodo, useCompensatorios,
 } from '../hooks/useNomina';
@@ -12,6 +12,8 @@ import { PendientesCompensatoriosBanner } from '../components/PendientesCompensa
 import { RegistrosTab } from '../components/RegistrosTab';
 import { LiquidacionTab } from '../components/LiquidacionTab';
 import { PeriodoPasos } from '../components/PeriodoPasos';
+import { ConfirmarAccionPeriodo, type AccionPeriodo } from '../components/ConfirmarAccionPeriodo';
+import { puedeGestionarNomina } from '../permisos';
 import { CorregirModal } from '../components/CorregirModal';
 import { CrearRegistroModal } from '../components/CrearRegistroModal';
 import { DescuentoModal } from '../components/DescuentoModal';
@@ -29,9 +31,16 @@ export function PeriodoDetailPage() {
   const [descuentoTrabajador, setDescuentoTrabajador] = useState<{ id: number; nombre: string } | null>(null);
   const [reasignando, setReasignando] = useState<DescansoCompensatorio | null>(null);
   const [asignando, setAsignando] = useState<DescansoCompensatorio | null>(null);
+  const [accion, setAccion] = useState<AccionPeriodo | null>(null);
 
   const { data: periodosData, isLoading: loadingPeriodos, isError: errorPeriodos, error: errPeriodos, refetch: refetchPeriodos } = usePeriodos();
-  const periodo = (periodosData?.data?.data ?? []).find((p: { id: number }) => p.id === periodoId);
+  const periodos = periodosData?.data?.data ?? [];
+  const periodo = periodos.find((p: { id: number }) => p.id === periodoId);
+  // Anterior / siguiente en el tiempo (no depende del orden en que llegue la lista).
+  const cronologicos = [...periodos].sort((a, b) => a.fecha_inicio.localeCompare(b.fecha_inicio));
+  const idx = cronologicos.findIndex((p) => p.id === periodoId);
+  const anterior = idx > 0 ? cronologicos[idx - 1] : null;
+  const siguiente = idx >= 0 && idx < cronologicos.length - 1 ? cronologicos[idx + 1] : null;
 
   const { data: descuentosData } = useDescuentosPeriodo(periodoId);
   const descuentos: DescuentoNomina[] = descuentosData?.data ?? [];
@@ -117,21 +126,57 @@ export function PeriodoDetailPage() {
       {volverBtn}
 
       {periodo && (
-        <div className="bg-card border border-border rounded-xl p-4 mb-6 flex items-center gap-4">
-          <div className="flex-1">
+        <div className="bg-card border border-border rounded-xl p-4 mb-6 flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => anterior && navigate(`/nomina/${anterior.id}`)}
+              disabled={!anterior}
+              aria-label={anterior ? `Período anterior: ${fmtPeriodo(anterior.fecha_inicio, anterior.fecha_fin)}` : 'No hay período anterior'}
+              className="p-2 rounded-lg border border-border hover:bg-muted disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              onClick={() => siguiente && navigate(`/nomina/${siguiente.id}`)}
+              disabled={!siguiente}
+              aria-label={siguiente ? `Período siguiente: ${fmtPeriodo(siguiente.fecha_inicio, siguiente.fecha_fin)}` : 'No hay período siguiente'}
+              className="p-2 rounded-lg border border-border hover:bg-muted disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+          <div className="flex-1 min-w-[10rem]">
             <p className="text-xs text-muted-foreground mb-0.5">Período</p>
             <p className="font-semibold text-foreground">{fmtPeriodo(periodo.fecha_inicio, periodo.fecha_fin)}</p>
           </div>
           <PeriodoPasos estado={periodo.estado as EstadoPeriodo} />
+          {puedeGestionarNomina() && periodo.estado === 'abierto' && (
+            <button
+              onClick={() => setAccion({ type: 'cerrar', periodo })}
+              className="text-sm border border-border hover:bg-muted px-3 py-1.5 rounded-lg transition-colors"
+            >
+              Cerrar período
+            </button>
+          )}
+          {puedeGestionarNomina() && periodo.estado === 'cerrado' && (
+            <button
+              onClick={() => setAccion({ type: 'liquidar', periodo })}
+              className="text-sm border border-amber-300 text-warning-text hover:bg-warning-light px-3 py-1.5 rounded-lg transition-colors"
+            >
+              Liquidar período
+            </button>
+          )}
         </div>
       )}
 
       <PendientesCompensatoriosBanner pendientes={pendientesEnPeriodo} onAsignar={setAsignando} />
 
-      <div className="flex gap-1 mb-6 border-b border-border">
+      <div role="tablist" aria-label="Vista del período" className="flex gap-1 mb-6 border-b border-border">
         {(['liquidacion', 'registros'] as const).map(t => (
           <button
             key={t}
+            role="tab"
+            aria-selected={tab === t}
             onClick={() => setTab(t)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors capitalize ${
               tab === t ? 'border-success-600 text-success-600' : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -177,6 +222,8 @@ export function PeriodoDetailPage() {
           onShowCrear={(trabajador) => { setCrearPara(trabajador); setShowCrear(true); }}
         />
       )}
+
+      {accion && <ConfirmarAccionPeriodo accion={accion} onDone={() => setAccion(null)} />}
 
       {corrigiendo && (
         <CorregirModal

@@ -3,14 +3,14 @@ import { puedeGestionarNomina } from '../permisos';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Plus, ChevronRight, DollarSign, Users, AlertTriangle } from 'lucide-react';
-import { usePeriodos, useCrearPeriodo, useCerrarPeriodo, useLiquidarPeriodo } from '../hooks/useNomina';
+import { usePeriodos, useCrearPeriodo } from '../hooks/useNomina';
 import type { EstadoPeriodo, TipoPeriodo, Periodo } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { Modal } from '@/shared/components/Modal';
-import { ConfirmModal } from '@/shared/components/ConfirmModal';
+import { ConfirmarAccionPeriodo } from '../components/ConfirmarAccionPeriodo';
 import { StatCard } from '@/shared/components/StatCard';
-import { fmtDate, fmtPeriodo, fmtCOP, bogotaToday } from '@/shared/lib/format';
+import { fmtPeriodo, fmtCOP, bogotaToday } from '@/shared/lib/format';
 import { LiquidacionEventualView } from '../components/LiquidacionEventualView';
 import { CompensatoriosTab } from '../components/CompensatoriosTab';
 
@@ -46,9 +46,6 @@ export function NominaPage() {
   const vencidos = todos.filter(p => p.estado === 'abierto' && p.fecha_fin < hoy).length;
   // Un período abierto aporta un total estimado, no definitivo.
   const incluyeEstimados = pendientes.some(p => p.estado === 'abierto');
-
-  const cerrar = useCerrarPeriodo();
-  const liquidar = useLiquidarPeriodo();
 
   const tabs: { label: string; value: EstadoPeriodo | undefined }[] = [
     { label: 'Todos', value: undefined },
@@ -185,7 +182,6 @@ export function NominaPage() {
                       {puedeGestionarNomina() && p.estado === 'abierto' && (
                         <button
                           onClick={() => setConfirmAction({ type: 'cerrar', periodo: p })}
-                          disabled={cerrar.isPending}
                           className="text-xs border border-border hover:bg-muted px-2 py-1 rounded-lg transition-colors"
                         >
                           Cerrar
@@ -194,8 +190,7 @@ export function NominaPage() {
                       {puedeGestionarNomina() && p.estado === 'cerrado' && (
                         <button
                           onClick={() => setConfirmAction({ type: 'liquidar', periodo: p })}
-                          disabled={liquidar.isPending}
-                          className="text-xs border border-amber-300 text-warning hover:bg-warning-light px-2 py-1 rounded-lg transition-colors"
+                          className="text-xs border border-amber-300 text-warning-text hover:bg-warning-light px-2 py-1 rounded-lg transition-colors"
                         >
                           Liquidar
                         </button>
@@ -220,24 +215,7 @@ export function NominaPage() {
 
       {showModal && <NuevoPeriodoModal onClose={() => setShowModal(false)} />}
 
-      {confirmAction && (
-        <ConfirmModal
-          title={confirmAction.type === 'cerrar' ? 'Cerrar período' : 'Liquidar período'}
-          detail={
-            confirmAction.type === 'cerrar'
-              ? `Se congelará el valor hora de todos los registros de ${fmtDate(confirmAction.periodo.fecha_inicio)} — ${fmtDate(confirmAction.periodo.fecha_fin)}. Ya no se podrán editar registros de este período.`
-              : `Se marcará como pagado el período ${fmtDate(confirmAction.periodo.fecha_inicio)} — ${fmtDate(confirmAction.periodo.fecha_fin)}. Esta acción no se puede deshacer.`
-          }
-          confirmLabel={confirmAction.type === 'cerrar' ? 'Cerrar período' : 'Marcar liquidado'}
-          pending={confirmAction.type === 'cerrar' ? cerrar.isPending : liquidar.isPending}
-          onCancel={() => setConfirmAction(null)}
-          onConfirm={() => {
-            const { type, periodo } = confirmAction;
-            const mutation = type === 'cerrar' ? cerrar : liquidar;
-            mutation.mutate(periodo.id, { onSuccess: () => setConfirmAction(null) });
-          }}
-        />
-      )}
+      {confirmAction && <ConfirmarAccionPeriodo accion={confirmAction} onDone={() => setConfirmAction(null)} />}
     </div>
   );
 }
