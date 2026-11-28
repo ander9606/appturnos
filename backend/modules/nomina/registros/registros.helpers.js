@@ -74,6 +74,13 @@ function ahoraHHMMSS() {
   return ahoraColombiaSQL().slice(11, 19);
 }
 
+/** 'YYYY-MM-DD' del día siguiente a `fecha`. */
+function diaSiguiente(fecha) {
+  const d = new Date(`${fecha}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
 /**
  * Lo que sigue al acumulado semanal en todo cálculo de horas de un día: la configuración de
  * recargos de la empresa y la clasificación del día (festivo / domingo, habitual u ocasional).
@@ -123,4 +130,4 @@ function horasDeSesionAbierta(registro, { horaSalida, jornadaContinua, ordinaria
     : horasSesion;
 }
 
-module.exports = { clasificarDiaFestivo, contextoFestivo, horasDeSesionAbierta, resolverTrabajadorPropio, getLunesDeSemana, hoyISO, ahoraHHMMSS };
+module.exports = { clasificarDiaFestivo, contextoFestivo, horasDeSesionAbierta, resolverTrabajadorPropio, getLunesDeSemana, hoyISO, ahoraHHMMSS, diaSiguiente };

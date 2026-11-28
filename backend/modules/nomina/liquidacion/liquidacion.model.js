@@ -22,7 +22,7 @@ const LiquidacionModel = {
               -- en el mismo período tienen el mismo snapshot.
               MAX(r.valor_hora_snapshot)    AS valor_hora_snapshot,
               MAX(r.salario_base_snapshot)  AS salario_base_snapshot,
-              COUNT(*)                   AS dias_registrados,
+              COUNT(DISTINCT r.fecha)    AS dias_registrados,
               -- Días sin auxilio de transporte: no hubo desplazamiento al trabajo ese
               -- día. Si además tiene hora_entrada (p. ej. una incapacidad de medio día
               -- en que sí fue a trabajar antes de retirarse), sí hubo desplazamiento y

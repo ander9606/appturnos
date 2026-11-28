@@ -145,7 +145,9 @@ export default function RegistrosPeriodoScreen() {
     return grupos.map((g) => ({
         title: g.nombre,
         trabajadorId: g.trabajadorId,
-        totalDias: g.registros.length,
+        // Un turno que cruza medianoche son 2 filas (una por fecha) — se cuentan fechas
+        // distintas, no filas, para no inflar "días" por un solo turno.
+        totalDias: new Set(g.registros.map((r) => r.fecha)).size,
         resumen: g.resumen,
         novedades: g.novedades,
         data: desplegados.has(g.trabajadorId) ? g.registros : [],

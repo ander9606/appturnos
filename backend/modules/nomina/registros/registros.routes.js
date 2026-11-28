@@ -181,6 +181,9 @@ router.put(
     body('sesiones').optional().isArray({ min: 2 }).withMessage('sesiones debe traer 2 o más'),
     body('sesiones.*.hora_entrada').matches(RE_HORA).withMessage('hora_entrada de sesión inválida'),
     body('sesiones.*.hora_salida').optional({ values: 'falsy' }).matches(RE_HORA).withMessage('hora_salida de sesión inválida'),
+    // Solo tiene sentido en la última sesión: su hora_salida cae en el día calendario siguiente
+    // (análogo a ofertas_turno.fin_dia_siguiente) — ver sesionesUtils.js validarSesiones().
+    body('sesiones.*.sale_dia_siguiente').optional().isBoolean().withMessage('sale_dia_siguiente inválido'),
   ],
   validar,
   ctrl.corregir

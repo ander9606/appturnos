@@ -48,6 +48,10 @@ function validarSesiones(sesiones, { cantidad, ultimaAbierta = false }) {
     const esUltima = i === sesiones.length - 1;
     // La última, si el registro sigue abierto, puede cerrarse (con salida) o seguir abierta (sin ella).
     const abierta = esUltima && ultimaAbierta && !s?.hora_salida;
+    const saleDiaSiguiente = Boolean(s?.sale_dia_siguiente);
+    if (saleDiaSiguiente && !esUltima) {
+      throw new AppError(`Sesión ${n}: solo la última sesión puede terminar al día siguiente`, 422);
+    }
 
     if (typeof s?.hora_entrada !== 'string' || !RE_HORA.test(s.hora_entrada)) {
       throw new AppError(`Sesión ${n}: hora de entrada inválida`, 422);
@@ -62,13 +66,24 @@ function validarSesiones(sesiones, { cantidad, ultimaAbierta = false }) {
 
     let fin = inicio;
     if (!abierta) {
-      fin = horaAMinutos(s.hora_salida);
-      if (fin === inicio % MIN_POR_DIA) {
-        throw new AppError(`Sesión ${n}: la salida no puede ser igual a la entrada`, 422);
+      const finCrudo = horaAMinutos(s.hora_salida);
+      if (saleDiaSiguiente) {
+        // Explícito: no se infiere por magnitud (ver sale_dia_siguiente, análogo a
+        // ofertas_turno.fin_dia_siguiente) — siempre el día calendario siguiente al de esta
+        // entrada, caiga la hora cruda antes o después de la hora de entrada.
+        fin = finCrudo + (Math.floor(inicio / MIN_POR_DIA) + 1) * MIN_POR_DIA;
+      } else {
+        fin = finCrudo;
+        if (fin === inicio % MIN_POR_DIA) {
+          throw new AppError(`Sesión ${n}: la salida no puede ser igual a la entrada`, 422);
+        }
+        while (fin < inicio) fin += MIN_POR_DIA;
       }
-      while (fin < inicio) fin += MIN_POR_DIA;
     }
-    if (fin - inicioDia > MIN_POR_DIA) {
+    // El límite de 24h desde la primera entrada es una guarda anti-typo (ver tests): no aplica
+    // cuando la sesión declara explícitamente que termina al día siguiente, porque ahí ya no hay
+    // nada que adivinar — corregir() parte el registro en dos filas para esa sesión.
+    if (!saleDiaSiguiente && fin - inicioDia > MIN_POR_DIA) {
       throw new AppError(
         `Sesión ${n}: las sesiones deben estar en orden y caber en 24 h desde la primera entrada`,
         422
