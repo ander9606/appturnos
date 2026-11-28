@@ -216,6 +216,20 @@ describe('calcularHoras — jornada en festivo', () => {
     expect(r.horas_festivo).toBeCloseTo(8, 1);
   });
 
+  test('domingo que cruza a lunes no festivo: solo las horas hasta las 24:00 son festivas', () => {
+    // Dom 2026-11-22 20:43 → lunes 13:02 (el lunes 23 no es festivo)
+    const r = calcularHoras({ horaEntrada: '20:43', horaSalida: '13:02', fecha: '2026-11-22', jornadaContinua: true });
+    expect(r.es_festivo).toBe(1);
+    expect(r.horas_festivo).toBe(3.5); // 20:43 → 24:00 = 3h17m
+    expect(r.total_horas).toBeGreaterThan(r.horas_festivo);
+  });
+
+  test('turno que cruza a un lunes festivo conserva el recargo después de medianoche', () => {
+    // Dom 2026-11-15 22:00 → lunes 16 (festivo, Independencia de Cartagena) 06:00
+    const r = calcularHoras({ horaEntrada: '22:00', horaSalida: '06:00', fecha: '2026-11-15', jornadaContinua: true });
+    expect(r.horas_festivo).toBe(8);
+  });
+
   test('detecta no-festivo por fecha (martes normal)', () => {
     const r = calcularHoras({ horaEntrada: '08:00', horaSalida: '16:00', fecha: '2025-03-11', jornadaContinua: true });
     expect(r.es_festivo).toBe(0);

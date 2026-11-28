@@ -333,6 +333,12 @@ function calcularHoras({
   const festivo =
     typeof esFestivo === 'boolean' ? esFestivo : fecha ? esDiaFestivo(fecha) : false;
 
+  // Un turno que cruza medianoche: los minutos >= 1440 caen al día siguiente, que puede
+  // NO ser festivo (domingo 20:00 → lunes 13:00: solo hasta las 24:00 es festivo).
+  const festivoDiaSig = !fecha ? false : esDiaFestivo(
+    sumarDias(new Date(`${typeof fecha === 'string' ? fecha.slice(0, 10) : aISODate(fecha)}T00:00:00Z`), 1),
+  );
+
   // El inicio del nocturno depende de la fecha trabajada (Ley 2466); sin fecha, regla de hoy.
   const horaInicioNoct = horaInicioNocturno(fecha);
   const esAlmuerzo = calcularMinutosAlmuerzo(inicio, fin, jornadaContinua, horaInicioNoct);
@@ -353,7 +359,8 @@ function calcularHoras({
     // Sin recargos no se distingue noche ni festivo: ordinaria hasta 42 h, después extra diurna.
     const nocturno = sumarNocturnasFestivo && esMinutoNocturno(m, horaInicioNoct);
 
-    if (sumarNocturnasFestivo && festivo && recargoFestivo) {
+    const festivoMinuto = m >= MIN_POR_DIA ? festivoDiaSig : festivo;
+    if (sumarNocturnasFestivo && festivoMinuto && recargoFestivo) {
       festivoMin++;
     } else if (esOrdinario) {
       if (nocturno) ordinariasNocturnas++;
