@@ -2,6 +2,7 @@
 
 const RegistrosModel = require('./registros.model');
 const PeriodosModel = require('../periodos/periodos.model');
+const PeriodosService = require('../periodos/periodos.service');
 const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
 const CompensatoriosService = require('../compensatorios/compensatorios.service');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
@@ -10,7 +11,7 @@ const { validarSesiones, calcularHorasSesiones } = require('../../../utils/sesio
 const AppError = require('../../../utils/AppError');
 const logger = require('../../../utils/logger');
 const { ROLES } = require('../../../config/constants');
-const { contextoFestivo, horasDeSesionAbierta, resolverTrabajadorPropio, getLunesDeSemana, hoyISO, ahoraHHMMSS } = require('./registros.helpers');
+const { contextoFestivo, horasDeSesionAbierta, resolverTrabajadorPropio, getLunesDeSemana, hoyISO, ahoraHHMMSS, diaSiguiente } = require('./registros.helpers');
 
 /**
  * Gestión de registros diarios de nómina por el gestor: consultar, crear, corregir y reprocesar.
@@ -41,13 +42,6 @@ async function conHorasEnVivo(empresaId, registro) {
   });
 
   return { ...registro, ...horas, en_vivo: true };
-}
-
-/** 'YYYY-MM-DD' del día siguiente a `fecha`. */
-function diaSiguiente(fecha) {
-  const d = new Date(`${fecha}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + 1);
-  return d.toISOString().slice(0, 10);
 }
 
 /**
@@ -148,6 +142,44 @@ async function avisarCorreccion(empresaId, usuario, registro, id) {
     mensaje: `Tu horario del ${registro.fecha} fue modificado por ${usuario.nombre || 'tu gestor'}.`,
     data: { registro_id: id },
   }).catch(() => {});
+}
+
+/**
+ * Crea la fila del día siguiente para la porción de un turno que cruzó medianoche al
+ * corregirlo (ver `sale_dia_siguiente` en sesionesUtils.js) — mismo patrón que marcarEntrada()
+ * para resolver/auto-crear el período (líneas de registros.marcaje.service.js). Solo cubre el
+ * caso común (sin registro previo esa fecha): si el trabajador ya tiene uno, corregir() lo
+ * rechaza antes de llegar aquí (ver validación en corregir()).
+ */
+async function crearContinuacionDiaSiguiente(empresaId, { trabajadorId, fecha, horaSalida, jornadaContinua }) {
+  let periodo = await PeriodosModel.obtenerAbiertoPorFecha(empresaId, fecha);
+  if (!periodo) periodo = await PeriodosService.autoCrear(empresaId);
+  if (!periodo) throw new AppError('No hay un período de nómina abierto para el día siguiente', 409);
+
+  const dia = await calcularHorasDelDia(empresaId, trabajadorId, fecha,
+    ({ ordinariasAcum, recargoFestivo, sumarNocturnasFestivo }) => calcularHoras({
+      horaEntrada: '00:00:00', horaSalida, fecha, horasOrdinariasAcumuladas: ordinariasAcum,
+      jornadaContinua, recargoFestivo, sumarNocturnasFestivo,
+    }));
+
+  const id = await RegistrosModel.crear(empresaId, {
+    trabajador_id: trabajadorId,
+    periodo_id: periodo.id,
+    fecha,
+    hora_entrada: '00:00:00',
+    hora_salida: horaSalida,
+    ...columnasDeHoras(dia.horas),
+    novedad: null,
+    tipo_dia: 'ordinario',
+    jornada_continua: jornadaContinua,
+    horas_acumuladas_semana: dia.ordinariasAcum,
+  });
+
+  await crearCompensatorioDelDia(empresaId, {
+    trabajadorId, periodoId: periodo.id, fecha, registroId: id, tipoDia: 'ordinario',
+  }, dia);
+
+  return id;
 }
 
 const RegistrosGestionService = {
@@ -325,12 +357,21 @@ const RegistrosGestionService = {
     // Solo en la corrección por sesiones: qué cambia en sesiones_detalle y en la primera entrada.
     let camposSesiones = {};
     let sesiones = null;
+    // Si el turno cruza medianoche, HOY se cierra a las 23:59:59 y la porción real de mañana
+    // se guarda en su propia fila (ver crearContinuacionDiaSiguiente) — nunca lumped en esta.
+    let horaSalidaManana = null;
 
     if (porSesiones) {
       sesiones = validarSesiones(datos.sesiones, { cantidad: registro.sesiones, ultimaAbierta: !registro.hora_salida });
       const ultima = sesiones[sesiones.length - 1];
-      horaEntrada = ultima.hora_entrada;
-      horaSalida = ultima.hora_salida;
+      const saleDiaSiguiente = Boolean(datos.sesiones[datos.sesiones.length - 1]?.sale_dia_siguiente) && Boolean(ultima.hora_salida);
+      if (saleDiaSiguiente) {
+        horaSalidaManana = ultima.hora_salida;
+        sesiones = [...sesiones.slice(0, -1), { ...ultima, hora_salida: '23:59:59' }];
+      }
+      const ultimaAjustada = sesiones[sesiones.length - 1];
+      horaEntrada = ultimaAjustada.hora_entrada;
+      horaSalida = ultimaAjustada.hora_salida;
       camposSesiones = {
         sesiones_detalle: sesiones.slice(0, -1),
         hora_entrada_inicial: sesiones[0].hora_entrada,
@@ -339,6 +380,17 @@ const RegistrosGestionService = {
       // No se bloquea salida < entrada aquí: un registro creado por marcarEntrada/marcarSalida
       // puede cruzar medianoche legítimamente. Solo la igualdad exacta es inequívocamente inválida.
       throw new AppError('La hora de salida no puede ser igual a la de entrada', 422);
+    } else if (horaEntrada && horaSalida && horaSalida < horaEntrada) {
+      // 'HH:MM' o 'HH:MM:SS' (RE_HORA admite ambos) — se guarda siempre con segundos.
+      horaSalidaManana = horaSalida.length === 5 ? `${horaSalida}:00` : horaSalida;
+      horaSalida = '23:59:59';
+    }
+
+    if (horaSalidaManana) {
+      const yaExiste = await RegistrosModel.obtenerPorFecha(empresaId, registro.trabajador_id, diaSiguiente(registro.fecha));
+      if (yaExiste) {
+        throw new AppError('El trabajador ya tiene un registro al día siguiente — corrígelo aparte.', 409);
+      }
     }
 
     // Si no viene en la corrección, se preserva el flag ya persistido — de lo
@@ -396,6 +448,15 @@ const RegistrosGestionService = {
       registroId: id,
       tipoDia: tipoDiaEfectivo,
     }, dia);
+
+    if (horaSalidaManana) {
+      await crearContinuacionDiaSiguiente(empresaId, {
+        trabajadorId: registro.trabajador_id,
+        fecha: diaSiguiente(registro.fecha),
+        horaSalida: horaSalidaManana,
+        jornadaContinua,
+      });
+    }
 
     if (notificar) await avisarCorreccion(empresaId, usuario, registro, id);
 

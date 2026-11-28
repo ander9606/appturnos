@@ -112,6 +112,9 @@ export function RegistrosTab({
         <div className="flex flex-col gap-2">
           {gruposPorTrabajador.map(g => {
             const abierto = expandidos.has(g.trabajadorId) || gruposPorTrabajador.length === 1;
+            // Un turno que cruza medianoche son 2 filas (una por fecha) — se cuentan fechas
+            // distintas, no filas, para no inflar "días" por un solo turno.
+            const diasDistintos = new Set(g.registros.map(r => r.fecha)).size;
             const totalOrd = g.registros.reduce((s, r) => s + Number(r.horas_ordinarias), 0);
             const totalExtra = g.registros.reduce((s, r) => s + Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas), 0);
             const totalNoct = g.registros.reduce((s, r) => s + Number(r.horas_nocturnas), 0);
@@ -139,7 +142,7 @@ export function RegistrosTab({
                     )}
                   </div>
                   <button onClick={() => toggleExpandido(g.trabajadorId)} className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span>{g.registros.length} día{g.registros.length !== 1 ? 's' : ''}</span>
+                    <span>{diasDistintos} día{diasDistintos !== 1 ? 's' : ''}</span>
                     <span>
                       Período: {fmtHrs(totalOrd)} hrs ord · {fmtHrs(totalExtra)} hrs extra
                       {totalNoct > 0 && ` · ${fmtHrs(totalNoct)} hrs noct.`}

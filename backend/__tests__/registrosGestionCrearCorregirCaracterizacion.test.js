@@ -382,14 +382,72 @@ describe('corregir — caracterización', () => {
     ['sesiones en un día sin reingreso', () => registro(), { sesiones: dosSesiones }, 422, ['registro.obtenerPorId']],
     ['período cerrado', () => registro(), {}, 409, ['registro.obtenerPorId', 'periodo.obtenerPorId']],
     ['entrada igual a salida', () => registro(), { hora_salida: '07:00' }, 422, ['registro.obtenerPorId', 'periodo.obtenerPorId']],
+    ['ya existe registro al día siguiente', () => registro(), { hora_salida: '06:00' }, 409,
+      ['registro.obtenerPorId', 'periodo.obtenerPorId', 'registro.obtenerPorFecha']],
   ])('rechazo: %s → %i', async (nombre, fila, datos, status, esperado) => {
     RegistrosModel.obtenerPorId.mockReset();
     anotar(RegistrosModel.obtenerPorId, 'registro.obtenerPorId', fila);
     if (nombre === 'período cerrado') anotar(PeriodosModel.obtenerPorId, 'periodo.obtenerPorId', { id: 1, estado: 'cerrado' });
+    if (nombre === 'ya existe registro al día siguiente') anotar(RegistrosModel.obtenerPorFecha, 'registro.obtenerPorFecha', { id: 100 });
 
     await expect(RegistrosService.corregir(1, GESTOR, 99, datos)).rejects.toMatchObject({ statusCode: status });
     expect(nombres()).toEqual(esperado);
     expect(RegistrosModel.actualizar).not.toHaveBeenCalled();
     expect(CompensatoriosService.crearSiCorresponde).not.toHaveBeenCalled();
+  });
+
+  // ── Turno que cruza medianoche: hoy cierra a las 23:59:59 y mañana se crea aparte ──────────
+
+  describe('corregir — cruza medianoche', () => {
+    beforeEach(() => {
+      anotar(RegistrosModel.obtenerPorFecha, 'registro.obtenerPorFecha', null); // nadie en el día siguiente
+      anotar(PeriodosModel.obtenerAbiertoPorFecha, 'periodo.obtenerAbiertoPorFecha', { id: 1 });
+      anotar(RegistrosModel.crear, 'registro.crear', 200);
+    });
+
+    test('una sola sesión, hora_salida < hora_entrada: hoy a 23:59:59 y mañana fila nueva', async () => {
+      await RegistrosService.corregir(1, GESTOR, 99, { hora_entrada: '20:00', hora_salida: '06:00' });
+
+      expect(nombres()).toEqual([
+        'registro.obtenerPorId',
+        'periodo.obtenerPorId',
+        'registro.obtenerPorFecha',
+        'registro.sumarOrdinariasEnSemana',
+        'empresa.obtenerConfigRecargos',
+        'registro.actualizar',
+        'compensatorio.crearSiCorresponde',
+        'periodo.obtenerAbiertoPorFecha',
+        'registro.sumarOrdinariasEnSemana',
+        'empresa.obtenerConfigRecargos',
+        'registro.crear',
+        'compensatorio.crearSiCorresponde',
+        'trabajador.obtenerUsuarioId',
+        'notificacion.notificar',
+        'registro.obtenerPorId',
+      ]);
+      expect(llamada('registro.obtenerPorFecha').slice(1)).toEqual([1, 5, '2026-06-11']);
+      expect(llamada('registro.actualizar')[3]).toMatchObject({ hora_entrada: '20:00', hora_salida: '23:59:59' });
+      expect(llamada('registro.crear')[2]).toMatchObject({
+        trabajador_id: 5, periodo_id: 1, fecha: '2026-06-11',
+        hora_entrada: '00:00:00', hora_salida: '06:00:00', tipo_dia: 'ordinario',
+      });
+    });
+
+    test('por sesiones, última con sale_dia_siguiente: igual que arriba, vía sesiones', async () => {
+      RegistrosModel.obtenerPorId.mockReset();
+      anotar(RegistrosModel.obtenerPorId, 'registro.obtenerPorId', registro({ sesiones: 2, hora_entrada: '20:00', hora_salida: '06:00' }));
+
+      await RegistrosService.corregir(1, GESTOR, 99, {
+        sesiones: [{ hora_entrada: '08:00', hora_salida: '12:00' }, { hora_entrada: '20:00', hora_salida: '06:00', sale_dia_siguiente: true }],
+      });
+
+      expect(llamada('registro.actualizar')[3]).toMatchObject({
+        sesiones_detalle: [{ hora_entrada: '08:00:00', hora_salida: '12:00:00' }],
+        hora_entrada: '20:00:00', hora_salida: '23:59:59',
+      });
+      expect(llamada('registro.crear')[2]).toMatchObject({
+        fecha: '2026-06-11', hora_entrada: '00:00:00', hora_salida: '06:00:00',
+      });
+    });
   });
 });

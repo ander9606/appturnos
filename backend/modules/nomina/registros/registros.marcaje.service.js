@@ -15,7 +15,8 @@ const { haversineMetros } = require('../../../utils/geoUtils');
 const { buscarMatch, VENTANA_SEG: SOSPECHA_VENTANA_SEG } = require('../../../utils/marcajeSospechoso');
 const AppError = require('../../../utils/AppError');
 const { HORAS_EXTRA_MAX_SEMANA } = require('../../../config/constants');
-const { contextoFestivo, horasDeSesionAbierta, resolverTrabajadorPropio, getLunesDeSemana, hoyISO, ahoraHHMMSS } = require('./registros.helpers');
+const { contextoFestivo, horasDeSesionAbierta, resolverTrabajadorPropio, getLunesDeSemana, hoyISO, ahoraHHMMSS, diaSiguiente } = require('./registros.helpers');
+const { calcularHoras } = require('../../../utils/laboralUtils');
 
 /**
  * Marcaje del propio trabajador de nómina: perfil, entrada y salida (con geofence y detección de marcajes sospechosos).
@@ -94,6 +95,55 @@ async function revisarMarcajeSospechoso(empresaId, registroId, trabajador, fecha
 /** Returns yesterday's date as 'YYYY-MM-DD' in Colombia time. */
 function ayerISO() {
   return ahoraColombiaSQL(-MS_POR_DIA).slice(0, 10);
+}
+
+/**
+ * Crea la fila del día siguiente para la porción de un turno que cruzó medianoche al marcar
+ * salida (ver `cruzaMedianoche` en marcarSalida()). No hace falta chequear si el trabajador ya
+ * tiene registro esa fecha: el guard de marcarEntrada() (líneas arriba) impide abrir una entrada
+ * nueva mientras el turno de ayer siga abierto, así que en el camino normal de marcaje nunca hay
+ * fila previa en la fecha de continuación.
+ */
+async function crearContinuacionSalida(empresaId, { trabajador, trabajadorId, horaSalida, fecha, jornadaContinua, latitud, longitud, deviceId }) {
+  let periodo = await PeriodosModel.obtenerAbiertoPorFecha(empresaId, fecha);
+  if (!periodo) periodo = await PeriodosService.autoCrear(empresaId);
+  if (!periodo) throw new AppError('No hay un período de nómina abierto para el día siguiente', 409);
+
+  const lunes = getLunesDeSemana(fecha);
+  const { ordinarias: ordinariasAcum } = await RegistrosModel.sumarOrdinariasEnSemana(empresaId, trabajadorId, lunes, fecha);
+  const { sumarNocturnasFestivo, clasificacion, recargoFestivo, numeroDiaFestivo } = await contextoFestivo(empresaId, trabajadorId, fecha);
+
+  const horas = calcularHoras({
+    horaEntrada: '00:00:00', horaSalida, fecha, horasOrdinariasAcumuladas: ordinariasAcum,
+    jornadaContinua: Boolean(jornadaContinua), recargoFestivo, sumarNocturnasFestivo,
+  });
+
+  const id = await RegistrosModel.crear(empresaId, {
+    trabajador_id: trabajadorId,
+    periodo_id: periodo.id,
+    fecha,
+    hora_entrada: '00:00:00',
+    hora_salida: horaSalida,
+    horas_ordinarias: horas.horas_ordinarias,
+    horas_extra_diurnas: horas.horas_extra_diurnas,
+    horas_extra_nocturnas: horas.horas_extra_nocturnas,
+    horas_nocturnas: horas.horas_nocturnas,
+    horas_festivo: horas.horas_festivo,
+    es_festivo: horas.es_festivo,
+    tipo_dia: 'ordinario',
+    jornada_continua: Boolean(jornadaContinua),
+    horas_acumuladas_semana: ordinariasAcum,
+  });
+
+  await revisarMarcajeSospechoso(empresaId, id, trabajador, fecha, 'salida', horaSalida, latitud, longitud, deviceId);
+
+  await CompensatoriosService.crearSiCorresponde(empresaId, {
+    trabajadorId, periodoId: periodo.id, fecha,
+    esFestivo: Boolean(horas.es_festivo), registroId: id,
+    clasificacion, numeroDiaFestivo, sumarNocturnasFestivo, tipoDia: 'ordinario',
+  });
+
+  return id;
 }
 
 const RegistrosMarcajeService = {
@@ -243,7 +293,11 @@ const RegistrosMarcajeService = {
     const { ordinarias: ordinariasAcum, extras: extrasAcum } =
       await RegistrosModel.sumarOrdinariasEnSemana(empresaId, trabajadorId, lunes, registro.fecha);
 
-    const horaSalida = ahoraHHMMSS();
+    const horaSalidaReal = ahoraHHMMSS();
+    // Turno que cruza medianoche: hoy se cierra a las 23:59:59 y la porción real de mañana se
+    // guarda en su propia fila (crearContinuacionSalida) — nunca lumped en el registro de hoy.
+    const cruzaMedianoche = horaSalidaReal < registro.hora_entrada;
+    const horaSalida = cruzaMedianoche ? '23:59:59' : horaSalidaReal;
 
     const { sumarNocturnasFestivo, clasificacion, recargoFestivo, numeroDiaFestivo } =
       await contextoFestivo(empresaId, trabajadorId, registro.fecha);
@@ -260,7 +314,11 @@ const RegistrosMarcajeService = {
     });
     if (updated === 0) throw new AppError('Ya marcaste tu salida para hoy', 409);
 
-    await revisarMarcajeSospechoso(empresaId, registroId, trabajador, registro.fecha, 'salida', horaSalida, latitud, longitud, deviceId);
+    // El chequeo de marcaje sospechoso sigue al evento real de salida: si cruzó medianoche, ese
+    // evento ocurrió mañana (ver más abajo), no a las 23:59:59 de hoy.
+    if (!cruzaMedianoche) {
+      await revisarMarcajeSospechoso(empresaId, registroId, trabajador, registro.fecha, 'salida', horaSalida, latitud, longitud, deviceId);
+    }
 
     // Notifica a gestores de nómina que el trabajador marcó salida (best-effort).
     const gestoresSalidaIds = await NotificacionesModel.idsGestoresNomina(empresaId);
@@ -286,6 +344,13 @@ const RegistrosMarcajeService = {
       sumarNocturnasFestivo,
       tipoDia: 'ordinario', // marcarSalida() es siempre un día efectivamente trabajado
     });
+
+    if (cruzaMedianoche) {
+      await crearContinuacionSalida(empresaId, {
+        trabajador, trabajadorId, horaSalida: horaSalidaReal,
+        fecha: diaSiguiente(registro.fecha), jornadaContinua, latitud, longitud, deviceId,
+      });
+    }
 
     const registroFinal = await RegistrosModel.obtenerPorId(empresaId, registroId);
 

@@ -52,6 +52,40 @@ describe('validarSesiones', () => {
       .toThrow(/24 h/);
   });
 
+  // sale_dia_siguiente (análogo a ofertas_turno.fin_dia_siguiente): la última sesión declara
+  // explícitamente que su salida cae en el día calendario siguiente, en vez de inferirlo por
+  // magnitud — así una sesión con hueco grande (caso real: registro 1260) no choca con el
+  // límite de 24h de arriba, que sigue protegiendo contra typos cuando el flag no viene.
+  describe('sale_dia_siguiente', () => {
+    test('dos sesiones con hueco grande y la última cruzando medianoche: válida con el flag', () => {
+      // Caso real: 10:16→16:39 y 20:43→13:02 del día siguiente (26h46 transcurridas en total).
+      expect(() => validarSesiones(
+        [s('10:16', '16:39'), { hora_entrada: '20:43', hora_salida: '13:02', sale_dia_siguiente: true }],
+        { cantidad: 2 }
+      )).not.toThrow();
+    });
+
+    test('normaliza la hora de salida tal cual, sin desplazarla', () => {
+      const r = validarSesiones(
+        [s('10:16', '16:39'), { hora_entrada: '20:43', hora_salida: '13:02', sale_dia_siguiente: true }],
+        { cantidad: 2 }
+      );
+      expect(r[1]).toEqual({ hora_entrada: '20:43:00', hora_salida: '13:02:00' });
+    });
+
+    test('solo la última sesión puede traer el flag', () => {
+      expect(() => validarSesiones(
+        [{ hora_entrada: '08:00', hora_salida: '12:00', sale_dia_siguiente: true }, s('13:00', '18:00')],
+        { cantidad: 2 }
+      )).toThrow(/Sesión 1: solo la última sesión puede terminar al día siguiente/);
+    });
+
+    test('sin el flag, el mismo hueco grande sigue rechazado (protección anti-typo intacta)', () => {
+      expect(() => validarSesiones([s('10:16', '16:39'), s('20:43', '13:02')], { cantidad: 2 }))
+        .toThrow(/24 h/);
+    });
+  });
+
   test('última sesión abierta: puede seguir abierta si ya lo estaba', () => {
     expect(validarSesiones([s('08:00', '12:00'), { hora_entrada: '14:00', hora_salida: null }], { cantidad: 2, ultimaAbierta: true }))
       .toEqual([s('08:00:00', '12:00:00'), { hora_entrada: '14:00:00', hora_salida: null }]);

@@ -762,7 +762,7 @@ describe('RegistrosService.marcarEntrada — turno que cruza la medianoche', () 
 // ── marcarSalida: el turno de ayer se cierra pasada la medianoche ─────────────
 
 describe('RegistrosService.marcarSalida — turno que cruza la medianoche', () => {
-  test('entró 22:53 el 13 y sale 01:10 del 14 → 2 h 17 min (2.5 h con el redondeo a media hora), en el registro del 13', async () => {
+  test('entró 22:53 el 13 y sale 01:10 del 14 → el 13 cierra a las 23:59:59 y el 14 se crea aparte, cada tramo redondeado a su media hora', async () => {
     jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-14T06:10:00Z')); // 01:10 Bogotá
     TrabajadoresModel.obtenerPorId.mockResolvedValue({ id: 5, usuario_id: 20, tipo_marcacion: 'libre' });
     RegistrosModel.sumarOrdinariasEnSemana.mockResolvedValue({ ordinarias: 0, extras: 0 });
@@ -770,16 +770,24 @@ describe('RegistrosService.marcarSalida — turno que cruza la medianoche', () =
       .mockResolvedValueOnce({ id: 9, trabajador_id: 5, hora_entrada: '22:53:00', hora_salida: null, periodo_id: 3, fecha: '2026-10-13', sesiones: 1 })
       .mockResolvedValueOnce({ id: 9 });
     PeriodosModel.obtenerPorId.mockResolvedValue({ id: 3, estado: 'abierto' });
+    PeriodosModel.obtenerAbiertoPorFecha.mockResolvedValue({ id: 3 }); // mismo período cubre el 14
     RegistrosModel.actualizarSalida.mockResolvedValue(1);
+    RegistrosModel.crear.mockResolvedValue(10);
 
     await RegistrosService.marcarSalida(1, { sub: 20, rol: ROLES.TRABAJADOR_NOMINA }, 9, {});
 
-    const horas = RegistrosModel.actualizarSalida.mock.calls[0][2];
-    expect(horas.hora_salida).toBe('01:10:00');
-    const total = horas.horas_ordinarias + horas.horas_extra_diurnas + horas.horas_extra_nocturnas + horas.horas_nocturnas + horas.horas_festivo;
-    // 137 min, todos nocturnos; cada tipo de hora se redondea a la media hora (redondearMediaHora).
-    expect(total).toBe(2.5);
-    expect(horas.horas_nocturnas).toBe(2.5);
+    // Tramo de hoy (13): 22:53 → 23:59:59 = 66 min nocturnos → redondea a 1.0 h.
+    const horasHoy = RegistrosModel.actualizarSalida.mock.calls[0][2];
+    expect(horasHoy.hora_salida).toBe('23:59:59');
+    expect(horasHoy.horas_nocturnas).toBe(1);
+
+    // Tramo de mañana (14): 00:00 → 01:10 = 70 min nocturnos → redondea a 1.0 h, fila nueva.
+    expect(RegistrosModel.crear).toHaveBeenCalledTimes(1);
+    const filaManana = RegistrosModel.crear.mock.calls[0][1];
+    expect(filaManana).toMatchObject({
+      trabajador_id: 5, periodo_id: 3, fecha: '2026-10-14',
+      hora_entrada: '00:00:00', hora_salida: '01:10:00', horas_nocturnas: 1,
+    });
     jest.restoreAllMocks();
   });
 });
